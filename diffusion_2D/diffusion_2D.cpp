@@ -20,8 +20,6 @@
 // ODE and DAE problem defining functions
 // -----------------------------------------------------------------------------
 
-#if defined(BENCHMARK_ODE)
-
 int diffusion(sunrealtype t, N_Vector u, N_Vector f, void* user_data)
 {
   // Access problem data
@@ -45,61 +43,12 @@ int diffusion_jac(sunrealtype t, N_Vector u, N_Vector f, SUNMatrix Jac,
   SUNDIALS_CXX_MARK_FUNCTION(udata->prof);
 
   // Compute the Laplacian matrix
-#if defined(USE_SUPERLU_DIST)
-  int flag = laplacian_matrix_sludist(u, Jac, udata);
-  if (check_flag(&flag, "laplacian_matrix_sludist", 1)) return -1;
-#else
   std::cerr << "ERROR: Diffusion Jacobian not implemented!\n";
   return -1;
-#endif
 
   return 0;
 }
 
-#elif defined(BENCHMARK_DAE)
-
-int diffusion(sunrealtype t, N_Vector u, N_Vector up, N_Vector res,
-              void* user_data)
-{
-  // Access problem data
-  UserData* udata = (UserData*)user_data;
-
-  SUNDIALS_CXX_MARK_FUNCTION(udata->prof);
-
-  // Compute the Laplacian
-  int flag = laplacian(t, u, res, udata);
-  if (check_flag(&flag, "laplacian", 1)) return -1;
-
-  // Compute the residual
-  N_VLinearSum(ONE, up, -ONE, res, res);
-
-  return 0;
-}
-
-int diffusion_jac(sunrealtype t, sunrealtype cj, N_Vector u, N_Vector up,
-                  N_Vector res, SUNMatrix Jac, void* user_data, N_Vector tmp1,
-                  N_Vector tmp2, N_Vector tmp3)
-{
-  // Access problem data
-  UserData* udata = (UserData*)user_data;
-
-  SUNDIALS_CXX_MARK_FUNCTION(udata->prof);
-
-  // Compute the Laplacian matrix
-#if defined(USE_SUPERLU_DIST)
-  int flag = laplacian_matrix_sludist(u, cj, Jac, udata);
-  if (check_flag(&flag, "laplacian_matrix_sludist", 1)) return -1;
-#else
-  std::cerr << "ERROR: Diffusion Jacobian not implemented!\n";
-  return -1;
-#endif
-
-  return 0;
-}
-
-#else
-#error "Missing ODE/DAE preprocessor directive"
-#endif
 
 // -----------------------------------------------------------------------------
 // UserData public functions

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.20)
 
-project (CEDA-demonstrations CXX)
+project (CEDA-demonstrations C CXX)
 
 # prohibit in-source build
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
