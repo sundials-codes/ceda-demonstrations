@@ -189,19 +189,6 @@ int main(int argc, char* argv[])
     // Set up implicit solver, if applicable
     SUNLinearSolver LS = nullptr;
     SUNMatrix A        = nullptr;
-#if defined(USE_SUPERLU_DIST)
-    // SuperLU-DIST objects
-    SuperMatrix A_super;
-    gridinfo_t grid;
-    dLUstruct_t A_lu;
-    dScalePermstruct_t A_scaleperm;
-    dSOLVEstruct_t A_solve;
-    SuperLUStat_t A_stat;
-    superlu_dist_options_t A_opts;
-    sunrealtype* A_data      = nullptr;
-    sunindextype* A_col_idxs = nullptr;
-    sunindextype* A_row_ptrs = nullptr;
-#endif
     if (uopts.implicit)
     {
       // ---------------------
@@ -232,7 +219,7 @@ int main(int argc, char* argv[])
 #else
         udata.diag = N_VClone(u);
         if (check_flag((void*)(udata.diag), "N_VClone", 0)) { return 1; }
-#endif        
+#endif
       }
     }
 
@@ -411,7 +398,7 @@ int main(int argc, char* argv[])
   // Finalize hypre if v2.20.0 or newer
 #if HYPRE_RELEASE_NUMBER >= 22000
       if (uopts.preconditioning)
-      {}
+      {
         flag = HYPRE_Finalize();
         if (check_flag(&flag, "HYPRE_Finalize", 1)) { return 1; }
       }

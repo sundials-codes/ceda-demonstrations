@@ -88,13 +88,6 @@ message(STATUS "Found SUNDIALS: ${SUNDIALS_DIR}")
 
 option(USE_HYPRE "Use HYPRE for preconditioning" OFF)
 
-set(HYPRE_ROOT "$ENV{HYPRE_ROOT}"
-  CACHE PATH "Root directory of HYPRE install")
-
-if(USE_HYPRE)
-  find_package(HYPRE REQUIRED)
-endif()
-
 # --------------------------------------------------------
 # add subdirectories for specific demonstration test codes
 # --------------------------------------------------------

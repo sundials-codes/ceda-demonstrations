@@ -136,6 +136,24 @@ int UserData::parse_args(vector<string>& args, bool outproc)
     args.erase(it);
   }
 
+#ifdef USE_HYPRE
+  it = find(args.begin(), args.end(), "--pfmg_relax");
+  if (it != args.end())
+  {
+    int pfmg_relax_int = stoi(*(it + 1));
+    pfmg_relax = static_cast<HYPRE_Int>(pfmg_relax_int);
+    args.erase(it, it + 2);
+  }
+
+  it = find(args.begin(), args.end(), "--pfmg_nrelax");
+  if (it != args.end())
+  {
+    int pfmg_nrelax_int = stoi(*(it + 1));
+    pfmg_nrelax = static_cast<HYPRE_Int>(pfmg_nrelax_int);
+    args.erase(it, it + 2);
+  }
+#endif
+
   // Recompute total number of nodes
   nodes = nx * ny;
 
@@ -157,8 +175,12 @@ void UserData::help()
   cout << "  --yu <yu>    : y-direction upper bound" << endl;
   cout << "  --kx <kx>    : x-direction diffusion coefficient" << endl;
   cout << "  --ky <kx>    : y-direction diffusion coefficient" << endl;
-  cout << "  --noforcing  : disable forcing term" << endl;
   cout << "  --tf <time>  : final time" << endl;
+  cout << "  --noforcing  : disable forcing term" << endl;
+#ifdef USE_HYPRE
+  cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacogi, 2=symmGS, 3=nonsymmGS)" << endl;
+  cout << "  --pfmg_nrelax <num> : num pre/post relaxation sweeps" << endl;
+#endif
 }
 
 void UserData::print()
@@ -183,6 +205,11 @@ void UserData::print()
   cout << "  dx             = " << dx << endl;
   cout << "  dy             = " << dy << endl;
   cout << " --------------------------------- " << endl;
+#ifdef USE_HYPRE
+  cout << "  pfmg relaxtype = " << pfmg_relax << endl;
+  cout << "  pfmg num relax = " << pfmg_nrelax << endl;
+  cout << " --------------------------------- " << endl;
+#endif
 }
 
 int UserData::setup()
@@ -570,11 +597,54 @@ UserData::~UserData()
   free_buffers();
 
   // Free preconditioner data
+#ifdef USE_HYPRE
+  if (grid)
+  {
+    HYPRE_StructGridDestroy(grid);
+    grid = NULL;
+  }
+  if (stencil)
+  {
+    HYPRE_StructStencilDestroy(stencil);
+    stencil = NULL;
+  }
+  if (Jmatrix)
+  {
+    HYPRE_StructMatrixDestroy(Jmatrix);
+    Jmatrix = NULL;
+  }
+  if (Amatrix)
+  {
+    HYPRE_StructMatrixDestroy(Amatrix);
+    Amatrix = NULL;
+  }
+  if (bvec)
+  {
+    HYPRE_StructVectorDestroy(bvec);
+    bvec = NULL;
+  }
+  if (xvec)
+  {
+    HYPRE_StructVectorDestroy(xvec);
+    xvec = NULL;
+  }
+  if (vvec)
+  {
+    HYPRE_StructVectorDestroy(vvec);
+    vvec = NULL;
+  }
+  if (precond)
+  {
+    HYPRE_StructPFMGDestroy(precond);
+    precond = NULL;
+  }
+#else
   if (diag)
   {
     N_VDestroy(diag);
     diag = NULL;
   }
+#endif
 }
 
 // -----------------------------------------------------------------------------
