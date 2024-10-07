@@ -122,6 +122,16 @@ int main(int argc, char* argv[])
       return 1;
     }
 
+#ifdef USE_HYPRE
+#if HYPRE_RELEASE_NUMBER >= 22000
+    if (uopts.implicit && uopts.preconditioning)
+    {
+      flag = HYPRE_Init();
+      if (check_flag(&flag, "HYPRE_Init", 1)) { return 1; }
+    }
+#endif
+#endif
+
     // Return with error on unsupported LSRK method type
     if (!uopts.implicit)
     {
@@ -212,57 +222,17 @@ int main(int argc, char* argv[])
         LS = SUNLinSol_SPGMR(u, prectype, uopts.liniters, ctx);
         if (check_flag((void*)LS, "SUNLinSol_SPGMR", 0)) { return 1; }
       }
-      else
-      {
-#if defined(USE_SUPERLU_DIST)
-        // Initialize SuperLU-DIST grid
-        superlu_gridinit(udata.comm_c, udata.npx, udata.npy, &grid);
-
-        // Create arrays for CSR matrix: data, column indices, and row pointers
-        sunindextype nnz_loc = 5 * udata.nodes_loc;
-
-        A_data = (sunrealtype*)malloc(nnz_loc * sizeof(sunrealtype));
-        if (check_flag((void*)A_data, "malloc Adata", 0)) return 1;
-
-        A_col_idxs = (sunindextype*)malloc(nnz_loc * sizeof(sunindextype));
-        if (check_flag((void*)A_col_idxs, "malloc Acolind", 0)) return 1;
-
-        A_row_ptrs =
-          (sunindextype*)malloc((udata.nodes_loc + 1) * sizeof(sunindextype));
-        if (check_flag((void*)A_row_ptrs, "malloc Arowptr", 0)) return 1;
-
-        // Create and initialize SuperLU_DIST structures
-        dCreate_CompRowLoc_Matrix_dist(&A_super, udata.nodes, udata.nodes,
-                                       nnz_loc, udata.nodes_loc, 0, A_data,
-                                       A_col_idxs, A_row_ptrs, SLU_NR_loc,
-                                       SLU_D, SLU_GE);
-        dScalePermstructInit(udata.nodes, udata.nodes, &A_scaleperm);
-        dLUstructInit(udata.nodes, &A_lu);
-        PStatInit(&A_stat);
-        set_default_options_dist(&A_opts);
-        A_opts.PrintStat = NO;
-
-        // SUNDIALS structures
-        A = SUNMatrix_SLUNRloc(&A_super, &grid, ctx);
-        if (check_flag((void*)A, "SUNMatrix_SLUNRloc", 0)) return 1;
-
-        LS = SUNLinSol_SuperLUDIST(u, A, &grid, &A_lu, &A_scaleperm, &A_solve,
-                                   &A_stat, &A_opts, ctx);
-        if (check_flag((void*)LS, "SUNLinSol_SuperLUDIST", 0)) return 1;
-
-        uopts.preconditioning = false;
-#else
-        std::cerr
-          << "ERROR: Benchmark was not built with SuperLU_DIST enabled\n";
-        return 1;
-#endif
-      }
 
       // Allocate preconditioner workspace
       if (uopts.preconditioning)
       {
+#ifdef USE_HYPRE
+        flag = SetupHypre(udata);
+        if (check_flag(&flag, "SetupHypre", 1)) { return 1; }
+#else
         udata.diag = N_VClone(u);
         if (check_flag((void*)(udata.diag), "N_VClone", 0)) { return 1; }
+#endif        
       }
     }
 
@@ -297,14 +267,6 @@ int main(int argc, char* argv[])
       // Attach linear solver
       flag = ARKodeSetLinearSolver(arkode_mem, LS, A);
       if (check_flag(&flag, "ARKodeSetLinearSolver", 1)) { return 1; }
-
-#if defined(USE_SUPERLU_DIST)
-      if (uopts.ls == "sludist")
-      {
-        ARKodeSetJacFn(arkode_mem, diffusion_jac);
-        if (check_flag(&flag, "ARKodeSetJacFn", 1)) return 1;
-      }
-#endif
 
       if (uopts.preconditioning)
       {
@@ -446,16 +408,12 @@ int main(int argc, char* argv[])
     {
       SUNLinSolFree(LS);
 
-      // Free the SuperLU_DIST structures (also frees user allocated arrays
-      // A_data, A_col_idxs, and A_row_ptrs)
-#if defined(USE_SUPERLU_DIST)
-      if (uopts.ls == "sludist")
-      {
-        PStatFree(&A_stat);
-        dScalePermstructFree(&A_scaleperm);
-        dLUstructFree(&A_lu);
-        Destroy_CompRowLoc_Matrix_dist(&A_super);
-        superlu_gridexit(&grid);
+  // Finalize hypre if v2.20.0 or newer
+#if HYPRE_RELEASE_NUMBER >= 22000
+      if (uopts.preconditioning)
+      {}
+        flag = HYPRE_Finalize();
+        if (check_flag(&flag, "HYPRE_Finalize", 1)) { return 1; }
       }
 #endif
     }
@@ -664,33 +622,20 @@ void UserOptions::print()
     cout << " linear RHS  = " << linear << endl;
     cout << " --------------------------------- " << endl;
     cout << endl;
-    if (ls == "sludist")
-    {
-      cout << " Linear solver options:" << endl;
-      cout << " --------------------------------- " << endl;
-#if defined(HAVE_HIP)
-      cout << " LS       = SuperLU_DIST (HIP enabled)" << endl;
-#elif defined(HAVE_CUDA)
-      cout << " LS       = SuperLU_DIST (CUDA enabled)" << endl;
+    cout << " Linear solver options:" << endl;
+    cout << " --------------------------------- " << endl;
+    cout << " LS       = " << ls << endl;
+    cout << " precond  = " << preconditioning << endl;
+#ifdef USE_HYPRE
+    cout << " HYPRE preconditioner" << endl;
 #else
-      cout << " LS       = SuperLU_DIST" << endl;
+    cout << " Jacobi preconditioner" << endl;
 #endif
-      cout << " LS info  = " << lsinfo << endl;
-      cout << " msbp     = " << msbp << endl;
-      cout << " --------------------------------- " << endl;
-    }
-    else
-    {
-      cout << " Linear solver options:" << endl;
-      cout << " --------------------------------- " << endl;
-      cout << " LS       = " << ls << endl;
-      cout << " precond  = " << preconditioning << endl;
-      cout << " LS info  = " << lsinfo << endl;
-      cout << " LS iters = " << liniters << endl;
-      cout << " msbp     = " << msbp << endl;
-      cout << " epslin   = " << epslin << endl;
-      cout << " --------------------------------- " << endl;
-    }
+    cout << " LS info  = " << lsinfo << endl;
+    cout << " LS iters = " << liniters << endl;
+    cout << " msbp     = " << msbp << endl;
+    cout << " epslin   = " << epslin << endl;
+    cout << " --------------------------------- " << endl;
   }
   else
   {

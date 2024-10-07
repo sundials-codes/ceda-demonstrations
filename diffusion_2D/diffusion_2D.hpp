@@ -161,8 +161,40 @@ struct UserData
   MPI_Request reqSS;
   MPI_Request reqSN;
 
-  // Inverse of Jacobian diagonal for preconditioner
+  // Preconditioner data
+#ifdef USE_HYPRE
+  HYPRE_StructGrid grid;
+  HYPRE_StructStencil stencil;
+  HYPRE_StructMatrix Jmatrix;
+  HYPRE_StructMatrix Amatrix;
+  HYPRE_StructVector bvec;
+  HYPRE_StructVector xvec;
+  HYPRE_StructVector vvec;
+  HYPRE_StructVector Jvvec;
+  HYPRE_StructSolver precond;
+
+  // hypre grid extents
+  HYPRE_Int ilower[2];
+  HYPRE_Int iupper[2];
+
+  // hypre workspace
+  HYPRE_Int nwork;
+  HYPRE_Real* work;
+
+  // hypre counters
+  HYPRE_Int pfmg_its;
+
+  // hypre PFMG settings (hypre defaults)
+  HYPRE_Int pfmg_relax;  // type of relaxation:
+                         //   0 - Jacobi
+                         //   1 - Weighted Jacobi
+                         //   2 - symmetric R/B Gauss-Seidel (*)
+                         //   3 - nonsymmetric R/B Gauss-Seidel
+  HYPRE_Int pfmg_nrelax; // number of pre and post relaxation sweeps (2)
+
+#else
   N_Vector diag = NULL;
+#endif
 
   UserData(SUNProfiler prof_) : prof(prof_) {}
 
