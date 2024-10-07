@@ -178,6 +178,8 @@ void UserData::help()
   cout << "  --tf <time>  : final time" << endl;
   cout << "  --noforcing  : disable forcing term" << endl;
 #ifdef USE_HYPRE
+  cout << endl;
+  cout << "Hypre preconditioner command line options:" << endl;
   cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacogi, 2=symmGS, 3=nonsymmGS)" << endl;
   cout << "  --pfmg_nrelax <num> : num pre/post relaxation sweeps" << endl;
 #endif

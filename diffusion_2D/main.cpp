@@ -113,11 +113,18 @@ int main(int argc, char* argv[])
     // Check for unparsed inputs
     if (args.size() > 0)
     {
+      // output any un-processed input arguments
       if (find(args.begin(), args.end(), "--help") == args.end())
       {
         cerr << "ERROR: Unknown inputs: ";
         for (auto i = args.begin(); i != args.end(); ++i) { cerr << *i << ' '; }
         cerr << endl;
+      }
+      // the user specified "--help" on the command-line, so exit gracefully.
+      else
+      {
+        flag = MPI_Finalize();
+        return 0;
       }
       return 1;
     }
@@ -558,6 +565,13 @@ int UserOptions::parse_args(vector<string>& args, bool outproc)
   {
     epslin = stod(*(it + 1));
     args.erase(it, it + 2);
+  }
+
+  it = find(args.begin(), args.end(), "--noprec");
+  if (it != args.end())
+  {
+    preconditioning = false;
+    args.erase(it);
   }
 
   return 0;
