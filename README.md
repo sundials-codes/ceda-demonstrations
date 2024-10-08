@@ -7,7 +7,7 @@ This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based appli
 
 ## Installation
 
-The following steps describe how to build the demonstration code in a Linux or OS X environment.
+The following steps describe how to build the demonstration code in a Linux or OS X environment.  **Note: these instructions are currently outdated**
 
 ### Gettting the Code
 
