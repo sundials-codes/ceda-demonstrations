@@ -76,12 +76,3 @@ In-source builds are not permitted, as such the code should be configured and bu
 ```
 where `[install-path]` is the path to where the binary and test input files
 should be installed and `[sundials-path]` is the path to the top-levle folder containing the SUNDIALS installation.
-
-
-## Authors
-
-[Daniel R. Reynolds](https://people.smu.edu/dreynolds),
-Mustafa Aggul,
-Sylvia Amihere,
-Manaure Francisquez, and
-Ammar Hakim.
