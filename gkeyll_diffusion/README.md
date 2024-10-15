@@ -3,7 +3,7 @@ Gkeyll diffusion example
 
 The program 'gk_diffusion_1x1v_p1.c' here is a minimum working example of how we would solve the equation
 ```math
-\frac{\partial f(x,v_parallel)}{t} = \frac{\partial}{\partial x} D(x)\frac{\partial f(x,v_\parallel)}{\partial x}
+\frac{\partial f(x,v_\parallel)}{\partial t} = \frac{\partial}{\partial x} D(x)\frac{\partial f(x,v_\parallel)}{\partial x}
 ```
 in gkylzero with an infrastructure that mimics the gyrokinetic app.
 
