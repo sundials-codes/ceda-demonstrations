@@ -14,7 +14,7 @@ To compile and run this program:
 4. Run `make`.
 5. Run the executable `./gk_diffusion_1x1v_p1`.
 
-To plot the result of this simulation one can use [postgkyl](https://gkeyll.readthedocs.io/en/latest/postgkyl/main.html) (see sections on installing postgkyl and the postgkyl reference) in command line or in script mode. An example of a Python script can be found in this directory (`post_gk_diffusion_1x1v_p1.py`). Some examples of command line usage include: 
+To plot the result of this simulation one can use [postgkyl](https://gkeyll.readthedocs.io/en/latest/postgkyl/main.html) (see sections on installing postgkyl and the postgkyl reference) in command line or in script mode. An example of a Python script can be found in this directory (`post_gk_diffusion.py`). Some examples of command line usage include: 
 
 - Plot solution at vpar=0, overlaying each slice in time.
 ```
