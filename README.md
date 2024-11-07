@@ -2,12 +2,13 @@
 
 [Note: this project is in active development.]
 
-This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based applications to assess and demonstrate the parallel performance of new super-time-stepping (STS) method capabilities that have been added to SUNDIALS as part of the [CEDA SciDAC project](https://sites.google.com/pppl.gov/ceda-scidac-5?usp=sharing). Namely:
+This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based applications to assess and demonstrate the parallel performance of new super-time-stepping (STS) method capabilities that have been added to SUNDIALS as part of the [CEDA SciDAC project](https://sites.google.com/pppl.gov/ceda-scidac-5?usp=sharing).
 
 
 ## Installation
 
-The following steps describe how to build the demonstration code in a Linux or OS X environment.  **Note: these instructions are currently outdated**
+The following steps describe how to build the demonstration code in a Linux or OS X environment.  **Note: these instructions are still under construction**
+
 
 ### Gettting the Code
 
@@ -17,19 +18,58 @@ To obtain the code, clone this repository with Git:
   git clone https://github.com/sundials-codes/ceda-demonstrations.git
 ```
 
+
 ### Requirements
 
-To compile the code you will need:
+To compile the codes in this repository you will need:
 
-* [CMake](https://cmake.org) 3.20 or newer
+* [CMake](https://cmake.org) 3.20 or newer (both for SUNDIALS and for this repository)
 
-* modern C and C++ compilers
-
-* the NVIDIA [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+* C compiler (C99 standard) and C++ compiler (C++11 standard)
 
 * an MPI library e.g., [OpenMPI](https://www.open-mpi.org/), [MPICH](https://www.mpich.org/), etc.
 
-* the [SUNDIALS](https://computing.llnl.gov/projects/sundials) library of time integrators and nonlinear solvers
+* optionally, the NVIDIA [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) (**if building with GPU support**)
+
+
+The codes in this repository depend on two external libraries:
+
+* [SUNDIALS](https://github.com/LLNL/sundials)
+
+* [Gkeyll](https://github.com/ammarhakim/gkyl)
+
+If these are not already available on your system, they may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
+
+```bash
+  cd ceda-demonstrations/deps
+  git submodule init
+  git submodule update
+```
+
+We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.
+
+
+### Building the Dependencies
+
+We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll:
+
+* [SUNDIALS build instructions](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
+
+  * MPI
+
+  * [HYPRE](https://github.com/hypre-space/hypre)
+
+  Assuming that *hypre* has been installed in the folder `hypre_dir`, the following steps can be used to build SUNDIALS using this minimal configuration from the `deps/` folder:
+
+  ```bash
+  mkdir deps/sundials/build
+  cd deps/sundials/build
+  cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_HYPRE -DHYPRE_DIR=hypre_dir ..
+  make -j install
+  ```
+
+* [Gkeyll build instructions](https://gkeyll.readthedocs.io/en/latest/install.html).
+
 
 
 ### Configuration Options
@@ -63,16 +103,22 @@ Once the necessary dependencies are installed, the following CMake variables can
 
 ### Building
 
-In-source builds are not permitted, as such the code should be configured and built from a separate build directory e.g.,
+Like most CMake-based projects, in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
+
 ```bash
-  cd ceda-demonstration
-  mkdir build
-  cd build
-  cmake ../. \
-    -DCMAKE_INSTALL_PREFIX="[install-path]" \
-    -DSUNDIALS_ROOT="[sundials-path]"
-  make
-  make install
+  mkdir ceda-demonstrations/build
+  cd ceda-demonstrations/build
+  cmake -DCMAKE_INSTALL_PREFIX="[install-path]" -DSUNDIALS_ROOT="[sundials-path] .."
+  make -j install
 ```
-where `[install-path]` is the path to where the binary and test input files
-should be installed and `[sundials-path]` is the path to the top-levle folder containing the SUNDIALS installation.
+
+where `[install-path]` is the path to where the binary and test input files should be installed and `[sundials-path]` is the path to the top-level folder containing the SUNDIALS installation.
+
+If both SUNDIALS and Gkeyll were installed using the submodule-based instructions above, then the following commands should be sufficient to install into a new `ceda-demonstrations/install` directory:
+
+```bash
+  mkdir ceda-demonstrations/build
+  cd ceda-demonstrations/build
+  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install -DGKYL_ROOT=../deps/gkyl-install .."
+  make -j install
+```

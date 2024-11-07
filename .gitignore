@@ -36,3 +36,7 @@ build
 
 # Temporary files
 *~
+
+# Submodule builds
+deps/sundials-install
+deps/gkyl-install

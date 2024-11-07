@@ -291,8 +291,8 @@ int main(int argc, char* argv[])
     else // Configure explicit STS solver
     {
       // Select LSRK method
-      flag = LSRKStepSetMethod(arkode_mem, uopts.lsrkmethod);
-      if (check_flag(&flag, "LSRKStepSetMethod", 1)) { return 1; }
+      flag = LSRKStepSetSTSMethod(arkode_mem, uopts.lsrkmethod);
+      if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
       // Provide dominant eigenvalue function
       flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
@@ -646,6 +646,7 @@ void UserOptions::print()
     {
     case (ARKODE_LSRK_RKC_2): cout << " method = RKC_2 " << endl; break;
     case (ARKODE_LSRK_RKL_2): cout << " method = RKL_2 " << endl; break;
+    default: cout << " method unkown (will likely fail)" << endl;
     }
     cout << " --------------------------------- " << endl;
   }
