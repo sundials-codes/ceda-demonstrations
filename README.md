@@ -51,30 +51,81 @@ We note that a particular benefit of retrieving these dependencies using the sub
 
 ### Building the Dependencies
 
-We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll:
+We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll.
 
-* [SUNDIALS build instructions](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
+#### SUNDIALS
 
-  * MPI
+[The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
 
-  * [HYPRE](https://github.com/hypre-space/hypre)
+* MPI (**this must be GPU-aware if building with either CUDA or HIP GPU support**)
 
-  Assuming that *hypre* has been installed in the folder `hypre_dir`, the following steps can be used to build SUNDIALS using this minimal configuration from the `deps/` folder:
+* [HYPRE](https://github.com/hypre-space/hypre) (**optional, for enabling multigrid preconditioning**)
+
+* CUDA Toolkit >=12.0 (**optional, for building with NVIDIA GPU support**)
+
+* HIP >=5.0.0 (**optional, for building with AMD GPU support**)
+
+The following steps can be used to build SUNDIALS using this minimal configuration (all of the above options disabled):
+
+```bash
+mkdir deps/sundials/build
+cd deps/sundials/build
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 ..
+make -j install
+```
+
+Alternately, if CMake is able to find both *hypre* and CUDA automatically (e.g., these were enabled via `module load` or `spack load` on a system where [Linux environment modules](https://modules.readthedocs.io/en/latest/) and/or [Spack](https://spack.readthedocs.io/en/latest/) are available), a build that enables both *hypre* and CUDA may be possible via the steps:
+
+```bash
+mkdir deps/sundials/build
+cd deps/sundials/build
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
+make -j install
+```
+  
+Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
+
+#### Gkeyll
+
+[The Gkeyll build instructions are linked here](https://gkeyll.readthedocs.io/en/latest/install.html).
+
+Gkeyll uses a Makefile-based build system, that relies on "machine files" for configuration.  For systems where existing machine files can be used, we recommend that users follow the "Gkeyll build instructions" linked above.  We recommend that the same MPI library is used when building SUNDIALS, Gkeyll's dependencies, Gkeyll, and this repository, so it may be necessary to rebuild SUNDIALS above using the same MPI compiler wrappers as are used in the Gkeyll machine files.
+
+The remainder of this section assumes that Gkeyll has not been built on this machine before, and summarize the minimal steps to install Gkeyll and its dependencies into the `deps/gkyl-install` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
+
+We assume that SUNDIALS was already installed with MPI support, using the `mpicc` and `mpicxx` compiler wrappers that are already in the user's current `$PATH`.
+
+* Gkylzero and its dependencies (without CUDA)
+
+  From in the top-level folder for this repository,
 
   ```bash
-  mkdir deps/sundials/build
-  cd deps/sundials/build
-  cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_HYPRE -DHYPRE_DIR=hypre_dir ..
+  cd deps
+  export GKYLSOFT=$PWD/gkyl-install
+  cd gkyl/install-deps
+  git clone https://github.com/ammarhakim/gkylzero.git
+  cd gkylzero/install-deps
+  ./mkdeps.sh CC=mpicc CXX=mpicxx FC=mpif90 MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-openblas=yes --build-superlu=yes
+  cd ..
+  ./configure CC=mpicc --prefix=$GKYLSOFT
   make -j install
-  ```
+  cd ../../install-deps
+  ./mkdeps.sh CC=mpicc CXX=mpicxx MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-adios=yes --build-luajit=yes
+  cd ..
+  ./waf configure CC=mpicc CXX=mpicxx --luajit-inc-dir=$GKYLSOFT/luajit/include/luajit-2.1 --luajit-lib-dir=$GKYLSOFT/luajit/lib --adios-inc-dir=$GKYLSOFT/adios2/include --adios-lib-dir=$GKYLSOFT/adios2/lib --gkylzero-inc-dir=$GKYLSOFT/gkylzero/include --gkylzero-lib-dir=$GKYLSOFT/gkylzero/lib --enable-superlu --superlu-inc-dir=$GKYLSOFT/superlu/include --superlu-lib-dir=$GKYLSOFT/superlu/lib --enable-openblas --openblas-inc-dir=$GKYLSOFT/OpenBLAS/include --openblas-lib-dir=$GKYLSOFT/OpenBLAS/lib --prefix=$GKYLSOFT
+  ./waf build install
+  ``` 
+  
 
-* [Gkeyll build instructions](https://gkeyll.readthedocs.io/en/latest/install.html).
+
 
 
 
 ### Configuration Options
 
-Once the necessary dependencies are installed, the following CMake variables can be used to configure the demonstration code build:
+When building the codes in this repository, we denote the top-level installation folder for Gkeyll as `GKYLSOFT` -- we note that by default, Gkeyll currently installs into `$HOME/gkylsoft`.
+
+Once the necessary dependencies have been installed, the following CMake variables can be used to configure the build for this repository:
 
 * `CMAKE_INSTALL_PREFIX` - the path where executables and input files should be installed e.g., `my/install/path`. The executables will be installed in the `bin` directory and input files in the `tests` directory under the given path.
 
