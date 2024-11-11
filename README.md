@@ -7,7 +7,7 @@ This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based appli
 
 ## Installation
 
-The following steps describe how to build the demonstration code in a Linux or OS X environment.  **Note: these instructions are still under construction**
+The following steps describe how to build the demonstration code in a Linux or OS X environment.
 
 
 ### Gettting the Code
@@ -142,7 +142,7 @@ source .venv/bin/activate
 
 
 
-### Configuration Options
+### Configuration Options (*this section is under construction*)
 
 When building the codes in this repository, we denote the top-level installation folder for Gkeyll as `GKYLSOFT` -- we note that by default, Gkeyll currently installs into `$HOME/gkylsoft`.
 
