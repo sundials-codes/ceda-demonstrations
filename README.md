@@ -120,16 +120,23 @@ Assuming that you downloaded all of the relevant submodules above, then we recom
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r deps/requirements.txt
+cd deps/postgkyl
+pip install -e .[adios,test]
 ```
 
-After this installation is complete, you can "deactivate" this Python environment with the command
+After this installation is complete, you can "test" the installation by running
+
+```bash
+pytest [-v]
+```
+
+You may "deactivate" this Python environment from your current shell with the command
 
 ```bash
 deactivate
 ```
 
-And in the future, you can "reactivate" the python environment by running from the top-level directory of this repository
+and in the future you can "reactivate" the python environment in your shell by running from the top-level directory of this repository
 
 ```bash
 source .venv/bin/activate
