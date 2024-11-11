@@ -59,15 +59,15 @@ We recommend that users follow the posted instructions for installing both SUNDI
 
 [The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
 
-* MPI (**this must be GPU-aware if building with either CUDA or HIP GPU support**)
+* MPI (**required**) -- note that if building with either CUDA or HIP GPU support then the MPI implementation is assumed to be GPU-aware
 
-* [HYPRE](https://github.com/hypre-space/hypre) (**optional, for enabling multigrid preconditioning**)
+* *[HYPRE](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
 
-* CUDA Toolkit >=12.0 (**optional, for building with NVIDIA GPU support**)
+* *CUDA Toolkit >=12.0* (**optional**, for building with NVIDIA GPU support)
 
-* HIP >=5.0.0 (**optional, for building with AMD GPU support**)
+* *HIP >=5.0.0* (**optional**, for building with AMD GPU support)
 
-The following steps can be used to build SUNDIALS using this minimal configuration (all of the above options disabled):
+The following steps can be used to build SUNDIALS using a minimal configuration (without the optional features above):
 
 ```bash
 mkdir deps/sundials/build
@@ -97,21 +97,19 @@ The remainder of this section assumes that GkeyllZero has not been built on this
 
 We assume that SUNDIALS was already installed with MPI support, using the `mpicc` and `mpicxx` compiler wrappers that are already in the user's current `$PATH`.
 
-* GkeyllZero and its dependencies (without CUDA)
+To install GkeyllZero and its dependencies (without CUDA), from the top-level folder for this repository,
 
-  From the top-level folder for this repository,
-
-  ```bash
-  cd deps
-  export GKYLSOFT=$PWD/gkyl-install
-  cd gkyl/install-deps
-  git clone https://github.com/ammarhakim/gkylzero.git
-  cd gkylzero/install-deps
-  ./mkdeps.sh CC=mpicc CXX=mpicxx FC=mpif90 MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-openblas=yes --build-superlu=yes
-  cd ..
-  ./configure CC=mpicc --prefix=$GKYLSOFT
-  make -j install
-  ``` 
+```bash
+cd deps
+export GKYLSOFT=$PWD/gkyl-install
+cd gkyl/install-deps
+git clone https://github.com/ammarhakim/gkylzero.git
+cd gkylzero/install-deps
+./mkdeps.sh CC=mpicc CXX=mpicxx FC=mpif90 MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-openblas=yes --build-superlu=yes
+cd ..
+./configure CC=mpicc --prefix=$GKYLSOFT
+make -j install
+``` 
 
 #### PostGkeyll
 
