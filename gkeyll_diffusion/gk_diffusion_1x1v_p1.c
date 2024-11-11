@@ -269,16 +269,19 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   gkyl_cart_modal_serendip(&app->basis_conf, cdim, inp->poly_order);
 
   // Ranges
-  int ghost_conf[GKYL_MAX_CDIM] = { 1 }; // Number of ghost cells in conf-space.
-  int ghost_vel[3] = { 0 }; // Number of ghost cells in vel-space.
+  int ghost_conf[GKYL_MAX_CDIM]; // Number of ghost cells in conf-space.
+  int ghost_vel[3] = {0}; // Number of ghost cells in vel-space.
   int ghost[GKYL_MAX_DIM] = {0}; // Number of ghost cells in phase-space.
+  for (int d=0; d<cdim; d++) ghost_conf[d] = 1;
+  for (int d=0; d<vdim; d++) ghost_vel[d] = 0;
   for (int d=0; d<cdim; d++) ghost[d] = ghost_conf[d];
   gkyl_create_grid_ranges(&app->grid_conf, ghost_conf, &app->local_conf_ext, &app->local_conf);
   gkyl_create_grid_ranges(&app->grid_vel, ghost_vel, &app->local_vel_ext, &app->local_vel);
   gkyl_create_grid_ranges(&app->grid, ghost, &app->local_ext, &app->local);
 
   // Communicator object.
-  int cuts[GKYL_MAX_DIM] = { 1 };
+  int cuts[GKYL_MAX_DIM];
+  for (int d=0; d<cdim+vdim; d++) cuts[d] = 1;
   app->decomp = gkyl_rect_decomp_new_from_cuts(cdim+vdim, cuts, &app->local);
   app->comm = gkyl_null_comm_inew( &(struct gkyl_null_comm_inp) {
       .decomp = app->decomp,
