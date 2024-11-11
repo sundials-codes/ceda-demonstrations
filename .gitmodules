@@ -1,3 +1,6 @@
 [submodule "deps/sundials"]
 	path = deps/sundials
 	url = git@github.com:LLNL/sundials.git
+[submodule "deps/gkylzero"]
+	path = deps/gkylzero
+	url = git@github.com:ammarhakim/gkylzero.git
