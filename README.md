@@ -36,7 +36,7 @@ The codes in this repository depend on two external libraries:
 
 * [SUNDIALS](https://github.com/LLNL/sundials)
 
-* [Gkeyll](https://github.com/ammarhakim/gkyl)
+* [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that this is a subset of [Gkeyll](https://github.com/ammarhakim/gkyl)
 
 If these are not already available on your system, they may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
 
@@ -85,19 +85,19 @@ make -j install
   
 Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
 
-#### Gkeyll
+#### GkeyllZero
 
-[The Gkeyll build instructions are linked here](https://gkeyll.readthedocs.io/en/latest/install.html).
+[The GkeyllZero build instructions are linked here](https://gkeyll.readthedocs.io/en/latest/install.html).  Note that these instructions are for Gkeyll as a whole, only a subset of these instructions pertain to GkeyllZero.
 
-Gkeyll uses a Makefile-based build system, that relies on "machine files" for configuration.  For systems where existing machine files can be used, we recommend that users follow the "Gkeyll build instructions" linked above.  We recommend that the same MPI library is used when building SUNDIALS, Gkeyll's dependencies, Gkeyll, and this repository, so it may be necessary to rebuild SUNDIALS above using the same MPI compiler wrappers as are used in the Gkeyll machine files.
+GkeyllZero uses a Makefile-based build system, that relies on "machine files" for configuration.  For systems where existing machine files can be used, we recommend that users follow the "Gkeyll build instructions" linked above.  We recommend that the same MPI library is used when building SUNDIALS, GkeyllZero's dependencies, GkeyllZero, and this repository, so it may be necessary to rebuild SUNDIALS above using the same MPI compiler wrappers as are used in the Gkeyll machine files.
 
-The remainder of this section assumes that Gkeyll has not been built on this machine before, and summarize the minimal steps to install Gkeyll and its dependencies into the `deps/gkyl-install` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
+The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkyl-install` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
 
 We assume that SUNDIALS was already installed with MPI support, using the `mpicc` and `mpicxx` compiler wrappers that are already in the user's current `$PATH`.
 
-* Gkylzero and its dependencies (without CUDA)
+* GkeyllZero and its dependencies (without CUDA)
 
-  From in the top-level folder for this repository,
+  From the top-level folder for this repository,
 
   ```bash
   cd deps
@@ -109,16 +109,8 @@ We assume that SUNDIALS was already installed with MPI support, using the `mpicc
   cd ..
   ./configure CC=mpicc --prefix=$GKYLSOFT
   make -j install
-  cd ../../install-deps
-  ./mkdeps.sh CC=mpicc CXX=mpicxx MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-adios=yes --build-luajit=yes
-  cd ..
-  ./waf configure CC=mpicc CXX=mpicxx --luajit-inc-dir=$GKYLSOFT/luajit/include/luajit-2.1 --luajit-lib-dir=$GKYLSOFT/luajit/lib --adios-inc-dir=$GKYLSOFT/adios2/include --adios-lib-dir=$GKYLSOFT/adios2/lib --gkylzero-inc-dir=$GKYLSOFT/gkylzero/include --gkylzero-lib-dir=$GKYLSOFT/gkylzero/lib --enable-superlu --superlu-inc-dir=$GKYLSOFT/superlu/include --superlu-lib-dir=$GKYLSOFT/superlu/lib --enable-openblas --openblas-inc-dir=$GKYLSOFT/OpenBLAS/include --openblas-lib-dir=$GKYLSOFT/OpenBLAS/lib --prefix=$GKYLSOFT
-  ./waf build install
   ``` 
   
-
-
-
 
 
 ### Configuration Options
