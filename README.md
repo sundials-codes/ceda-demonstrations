@@ -142,7 +142,7 @@ source .venv/bin/activate
 
 
 
-### Configuration Options (*this section is under construction*)
+### Configuration Options (*this and the next sections are under construction*)
 
 When building the codes in this repository, we denote the top-level installation folder for Gkeyll as `GKYLSOFT` -- we note that by default, Gkeyll currently installs into `$HOME/gkylsoft`.
 
