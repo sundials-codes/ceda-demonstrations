@@ -38,6 +38,8 @@ The codes in this repository depend on two external libraries:
 
 * [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that this is a subset of [Gkeyll](https://github.com/ammarhakim/gkyl)
 
+* [PostGkeyll](https://github.com/ammarhakim/postgkyl) -- this is only used for postprocessing results from Gkeyll-based runs
+
 If these are not already available on your system, they may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
 
 ```bash
@@ -110,7 +112,29 @@ We assume that SUNDIALS was already installed with MPI support, using the `mpicc
   ./configure CC=mpicc --prefix=$GKYLSOFT
   make -j install
   ``` 
-  
+
+#### PostGkeyll
+
+Assuming that you downloaded all of the relevant submodules above, then we recommend that you set up a Python virtual environment to install PostGkeyll.  From the top-level folder in this repository:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r deps/requirements.txt
+```
+
+After this installation is complete, you can "deactivate" this Python environment with the command
+
+```bash
+deactivate
+```
+
+And in the future, you can "reactivate" the python environment by running from the top-level directory of this repository
+
+```bash
+source .venv/bin/activate
+```
+
 
 
 ### Configuration Options
