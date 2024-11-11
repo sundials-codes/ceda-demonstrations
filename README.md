@@ -102,8 +102,6 @@ To install GkeyllZero and its dependencies (without CUDA), from the top-level fo
 ```bash
 cd deps
 export GKYLSOFT=$PWD/gkyl-install
-cd gkyl/install-deps
-git clone https://github.com/ammarhakim/gkylzero.git
 cd gkylzero/install-deps
 ./mkdeps.sh CC=mpicc CXX=mpicxx FC=mpif90 MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-openblas=yes --build-superlu=yes
 cd ..
