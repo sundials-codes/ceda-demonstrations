@@ -115,7 +115,7 @@ We assume that SUNDIALS was already installed with MPI support, using the `mpicc
 
 #### PostGkeyll
 
-Assuming that you downloaded all of the relevant submodules above, then we recommend that you set up a Python virtual environment to install PostGkeyll.  From the top-level folder in this repository:
+Assuming that you downloaded all of the relevant submodules above, then we recommend that you set up a Python virtual environment to install PostGkeyll.  Similarly to the [posted installation instructions](https://github.com/ammarhakim/postgkyl), from the top-level folder in this repository:
 
 ```bash
 python3 -m venv .venv
