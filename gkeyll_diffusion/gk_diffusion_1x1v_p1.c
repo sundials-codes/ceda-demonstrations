@@ -776,6 +776,8 @@ int main(int argc, char **argv)
     // Initial condition.
     .initial_f_func = init_distf_1x1v,
     .initial_f_ctx = &ctx,
+
+    .use_gpu = app_args.use_gpu, // Whether to run on GPU.
   };
   strcpy(app_inp.name, ctx.name);
 
