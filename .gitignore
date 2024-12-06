@@ -36,6 +36,9 @@ build
 
 # Temporary files
 *~
+*
+!*/
+!*.*
 
 # Submodule builds
 deps/sundials-install
@@ -43,3 +46,6 @@ deps/gkyl-install
 
 # Python virtual environment
 .venv
+
+# VS Project files
+*.vscode
