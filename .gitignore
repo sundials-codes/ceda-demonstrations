@@ -43,3 +43,6 @@ deps/gkyl-install
 
 # Python virtual environment
 .venv
+
+# VS Project files
+*.vscode

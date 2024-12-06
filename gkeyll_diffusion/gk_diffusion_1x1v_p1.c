@@ -86,7 +86,7 @@ struct gkyl_diffusion_app_inp {
   int cells[GKYL_MAX_DIM]; // Number of cells.
   int poly_order; // Polynomial order of the basis.
   bool use_gpu; // Whether to run on GPU.
- 
+
   // Mapping from computational to physical space.
   void (*mapc2p_func)(double t, const double *xn, double *fout, void *ctx);
   void *mapc2p_ctx; // Context.
@@ -428,18 +428,18 @@ forward_euler(struct gkyl_diffusion_app* app, double tcurr, double dt,
     // Compute RHS of gyrokinetic equation and the minimum stable dt.
     gkyl_array_clear(app->cflrate, 0.0);
     gkyl_array_clear(fout, 0.0);
-  
+
     gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
       app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
-  
+
     gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
-  
+
     double omega_cfl_ho[1];
     if (app->use_gpu)
       gkyl_cu_memcpy(omega_cfl_ho, app->omega_cfl, sizeof(double), GKYL_CU_MEMCPY_D2H);
     else
       omega_cfl_ho[0] = app->omega_cfl[0];
-  
+
     double dt1 = app->cfl/omega_cfl_ho[0];
 
     dtmin = fmin(dtmin, dt1);
