@@ -17,6 +17,8 @@
 #include <float.h>
 #include <mpack.h>
 
+#include "nvector_gkylzero.h"
+
 #include <rt_arg_parse.h>
 
 // Struct with context parameters.
