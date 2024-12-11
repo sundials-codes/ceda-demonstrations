@@ -42,6 +42,7 @@ G0_LIB = -lgkylzero
 
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
 SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
+SUNDIALS_LIB = -lsundials_arkode -lsundials_core
 
 USING_NVCC =
 NVCC_FLAGS =
@@ -137,12 +138,15 @@ endif
 
 INCLUDES = -I${G0_INC_DIR} -I${SUNDIALS_INC_DIR} -I${LAPACK_INC} -I${SUPERLU_INC} -I${MPI_INC_DIR} -I${LUA_INC_DIR} -I${NCCL_INC_DIR} -I${CUDSS_INC_DIR}
 LIB_DIRS = -L${SUNDIALS_LIB_DIR} -L${LAPACK_LIB_DIR} -L${SUPERLU_LIB_DIR} -L${MPI_LIB_DIR} -L${LUA_LIB_DIR} -L${NCCL_LIB_DIR} -L${CUDSS_LIB_DIR}
-EXT_LIBS = ${LAPACK_LIB} ${SUPERLU_LIB} ${MPI_RPATH} ${MPI_LIBS} ${LUA_RPATH} ${LUA_LIBS} ${NCCL_LIBS} ${CUDSS_RPATH} ${CUDSS_LIBS} -lm -lpthread -ldl
+EXT_LIBS = ${LAPACK_LIB} ${SUNDIALS_LIB} ${SUPERLU_LIB} ${MPI_RPATH} ${MPI_LIBS} ${LUA_RPATH} ${LUA_LIBS} ${NCCL_LIBS} ${CUDSS_RPATH} ${CUDSS_LIBS} -lm -lpthread -ldl
 
 all: gk_diffusion_1x1v_p1
 
-gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c
-	 ${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c -o gk_diffusion_1x1v_p1 -L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
+gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c -o gk_diffusion_1x1v_p1 -L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS} nvector_gkylzero.o
+
+nvector_gkylzero.o: nvector_gkylzero.c
+	${CC} ${CFLAGS} -c ${INCLUDES} nvector_gkylzero.c -o nvector_gkylzero.o
 
 clean:
-	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl
+	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl *.o
