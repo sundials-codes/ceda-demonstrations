@@ -17,7 +17,206 @@
 #include <float.h>
 #include <mpack.h>
 
+#include "nvector_gkylzero.h"
+
 #include <rt_arg_parse.h>
+
+void test_nvector_gkylzero (bool use_gpu) {
+
+  int num_of_failures = 0;
+  long int num_basis = 100;
+  long int size = 100;
+
+  printf("\nTESTING nvector_gkylzero:\n");
+
+  /* Create the SUNDIALS context object for this simulation */
+  SUNContext ctx;
+  SUNContext_Create(SUN_COMM_NULL, &ctx);
+
+  struct gkyl_array *testarray;
+
+  testarray = mkarr(use_gpu, num_basis, size);
+
+  double *ta_data = testarray->data;
+
+  for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
+    ta_data[i] = (double)i;
+  }
+
+  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, ctx);
+
+  struct gkyl_array *testarrayreturn;
+
+  testarrayreturn = N_VGetVector_Gkylzero(NV_test);
+
+  double *tar_data = testarrayreturn->data;
+
+  bool failure = ((testarray->size != testarrayreturn->size) ||
+                  (testarray->ncomp != testarrayreturn->ncomp));
+
+
+  for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
+    failure = ((tar_data[i] - ta_data[i]) > 0.000001) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VMake_Gkylzero or N_VGetVector_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VMake_Gkylzero and N_VGetVector_Gkylzero PASSED the test");
+  }
+
+  N_Vector NV_test_clone = N_VClone_Gkylzero(NV_test);
+
+  struct gkyl_array *testarrayclone;
+
+  testarrayclone = N_VGetVector_Gkylzero(NV_test_clone);
+
+  double *tac_data = testarrayclone->data;
+
+  failure = ((testarray->size != testarrayclone->size) ||
+                  (testarray->ncomp != testarrayclone->ncomp));
+
+
+  for (unsigned int i=0; i<(testarrayclone->size*testarrayclone->ncomp); ++i) {
+    failure = ((tac_data[i] - ta_data[i]) > 0.000001) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VCloneEmpty_Gkylzero or N_VClone_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VCloneEmpty_Gkylzero and N_VClone_Gkylzero PASSED the test");
+  }
+
+  N_VDestroy_Gkylzero(NV_test_clone);
+
+  failure = !(NV_test_clone == NULL);
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VDestroy_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VDestroy_Gkylzero PASSED the test");
+  }
+
+  N_Vector NV_test_return = N_VClone_Gkylzero(NV_test);
+
+  N_VScale_Gkylzero(2.0, NV_test, NV_test_return);
+
+  testarrayreturn = N_VGetVector_Gkylzero(NV_test_return);
+
+  double *tas_data = testarrayreturn->data;
+
+  failure = ((testarray->size != testarrayreturn->size) ||
+                  (testarray->ncomp != testarrayreturn->ncomp));
+
+  for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
+    failure = ((tas_data[i] - 2.0*ta_data[i]) > 0.000001) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VScale_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VScale_Gkylzero PASSED the test");
+  }
+
+  N_VConst_Gkylzero(173.0, NV_test_return);
+
+  testarrayreturn = N_VGetVector_Gkylzero(NV_test_return);
+
+  double *tacon_data = testarrayreturn->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
+    failure = ((tacon_data[i] - 173.0) > 0.000001) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n            FAILED in N_VConst_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VConst_Gkylzero PASSED the test");
+  }
+
+  double a = 2.0;
+  double b = 3.0;
+  double c = 1.75;
+  double d = 2.89;
+
+  struct gkyl_array* v1 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* v2 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array *lin_sum = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, ctx);
+  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, ctx);
+  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+  N_VConst_Gkylzero(d, Nv2);
+
+  N_VLinearSum_Gkylzero(a, Nv1, b, Nv2, Nlin_sum);
+
+  lin_sum = N_VGetVector_Gkylzero(Nlin_sum);
+
+  double *lin_sum_data = lin_sum->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
+    failure = ((lin_sum_data[i] - (a*c + b*d)) > 0.000001) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VLinearSum_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VLinearSum_Gkylzero PASSED the test");
+  }
+
+  N_VConst_Gkylzero(-0.5, Nv1);
+  N_VConst_Gkylzero( 0.5, Nv2);
+
+  double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
+
+  /* ans should equal 1/4 */
+  failure = (wrmsnorm < 0.0) ? 1 : ((wrmsnorm - 1.0/4.0) > 0.000001);
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VWrmsNorm_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VWrmsNorm_Gkylzero PASSED the test");
+  }
+
+  if(num_of_failures == 0) {
+    printf("\n\n nvector_gkylzero PASSED all tests!\n");
+  }
+  else {
+    printf("\n\n nvector_gkylzero failed in %d test(s)!\n\n", num_of_failures);
+  }
+}
 
 // Struct with context parameters.
 struct diffusion_ctx {
@@ -86,7 +285,7 @@ struct gkyl_diffusion_app_inp {
   int cells[GKYL_MAX_DIM]; // Number of cells.
   int poly_order; // Polynomial order of the basis.
   bool use_gpu; // Whether to run on GPU.
- 
+
   // Mapping from computational to physical space.
   void (*mapc2p_func)(double t, const double *xn, double *fout, void *ctx);
   void *mapc2p_ctx; // Context.
@@ -203,18 +402,6 @@ struct gkyl_diffusion_app {
 
   double tcurr; // Current simulation time.
 };
-
-static struct gkyl_array*
-mkarr(bool on_gpu, long nc, long size)
-{
-  // Allocate array (filled with zeros).
-  struct gkyl_array* a;
-  if (on_gpu)
-    a = gkyl_array_cu_dev_new(GKYL_DOUBLE, nc, size);
-  else
-    a = gkyl_array_new(GKYL_DOUBLE, nc, size);
-  return a;
-}
 
 static void
 apply_bc(struct gkyl_diffusion_app* app, double tcurr, struct gkyl_array *distf)
@@ -428,18 +615,18 @@ forward_euler(struct gkyl_diffusion_app* app, double tcurr, double dt,
     // Compute RHS of gyrokinetic equation and the minimum stable dt.
     gkyl_array_clear(app->cflrate, 0.0);
     gkyl_array_clear(fout, 0.0);
-  
+
     gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
       app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
-  
+
     gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
-  
+
     double omega_cfl_ho[1];
     if (app->use_gpu)
       gkyl_cu_memcpy(omega_cfl_ho, app->omega_cfl, sizeof(double), GKYL_CU_MEMCPY_D2H);
     else
       omega_cfl_ho[0] = app->omega_cfl[0];
-  
+
     double dt1 = app->cfl/omega_cfl_ho[0];
 
     dtmin = fmin(dtmin, dt1);
@@ -748,6 +935,8 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
+  test_nvector_gkylzero(false);
+
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
   // Create the context struct.
