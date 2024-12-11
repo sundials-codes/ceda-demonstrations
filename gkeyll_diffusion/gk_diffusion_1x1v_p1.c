@@ -192,6 +192,24 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VLinearSum_Gkylzero PASSED the test");
   }
 
+  N_VConst_Gkylzero(-0.5, Nv1);
+  N_VConst_Gkylzero( 0.5, Nv2);
+
+  double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
+
+  /* ans should equal 1/4 */
+  failure = (wrmsnorm < 0.0) ? 1 : ((wrmsnorm - 1.0/4.0) > 0.000001);
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VWrmsNorm_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VWrmsNorm_Gkylzero PASSED the test");
+  }
+
   if(num_of_failures == 0) {
     printf("\n\n nvector_gkylzero PASSED all tests!\n");
   }

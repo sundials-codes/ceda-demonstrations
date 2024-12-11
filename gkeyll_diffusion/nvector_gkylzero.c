@@ -213,5 +213,30 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
 {
-  /* fill this in */
+  sunrealtype norm = N_VWSqrSumLocal_Gkylzero(x, w);
+  norm = SUNRsqrt(norm);
+  return norm;
+}
+
+sunrealtype N_VWSqrSumLocal_Gkylzero(N_Vector x, N_Vector w)
+{
+  sunrealtype asum, prodi;
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  asum = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    prodi = x_data[i] * w_data[i];
+    asum += SUNSQR(prodi);
+  }
+
+  asum = asum/N;
+
+  return (asum);
 }

@@ -13,6 +13,7 @@
 #include <sundials/sundials_nvector.h>
 #include <sundials/sundials_context.h>
 #include <sundials/sundials_types.h> /* definition of type sunrealtype          */
+#include <sundials/sundials_math.h>
 
 /* gkylzero header files -- ADD MORE AS NECESSARY */
 #include <gkyl_array.h>
@@ -55,6 +56,7 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z);
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z);
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w);
+sunrealtype N_VWSqrSumLocal_Gkylzero(N_Vector x, N_Vector w);
 
 #ifdef __cplusplus
 }
