@@ -29,6 +29,7 @@ extern "C" {
 struct _N_VectorContent_Gkylzero
 {
   sunbooleantype own_vector;  /* ownership Gkylzero vector */
+  sunbooleantype use_gpu;     /* where to reside */
   struct gkyl_array* dataptr; /* the actual Gkylzero object pointer */
   /* ADD ANY GKEYLLZERO OBJECTS HERE THAT WILL BE NEEDED, E.G., MPI COMMUNICATOR */
 };
@@ -42,11 +43,11 @@ struct gkyl_array*
 mkarr(bool on_gpu, long nc, long size);
 
 N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx);
-N_Vector N_VMake_Gkylzero(struct gkyl_array* x, SUNContext sunctx);
+N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu, SUNContext sunctx);
 struct gkyl_array* N_VGetVector_Gkylzero(N_Vector v);
 
 N_Vector N_VCloneEmpty_Gkylzero(N_Vector w);
-N_Vector N_VClone_Gkylzero(N_Vector w, sunbooleantype use_gpu);
+N_Vector N_VClone_Gkylzero(N_Vector w);
 void N_VDestroy_Gkylzero(N_Vector v);
 
 /* vector operations -- DELETE ALL THAT WILL BE UNUSED BY LSRKSTEP */

@@ -43,7 +43,7 @@ void test_nvector_gkylzero (bool use_gpu) {
     ta_data[i] = (double)i;
   }
 
-  N_Vector NV_test = N_VMake_Gkylzero(testarray, ctx);
+  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, ctx);
 
   struct gkyl_array *testarrayreturn;
 
@@ -69,7 +69,7 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VMake_Gkylzero and N_VGetVector_Gkylzero PASSED the test");
   }
 
-  N_Vector NV_test_clone = N_VClone_Gkylzero(NV_test, use_gpu);
+  N_Vector NV_test_clone = N_VClone_Gkylzero(NV_test);
 
   struct gkyl_array *testarrayclone;
 
@@ -109,7 +109,7 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VDestroy_Gkylzero PASSED the test");
   }
 
-  N_Vector NV_test_return = N_VClone_Gkylzero(NV_test, use_gpu);
+  N_Vector NV_test_return = N_VClone_Gkylzero(NV_test);
 
   N_VScale_Gkylzero(2.0, NV_test, NV_test_return);
 
@@ -164,9 +164,9 @@ void test_nvector_gkylzero (bool use_gpu) {
   struct gkyl_array* v2 = mkarr(use_gpu, num_basis, size);
   struct gkyl_array *lin_sum = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nv1      = N_VMake_Gkylzero(v1, ctx);
-  N_Vector Nv2      = N_VMake_Gkylzero(v2, ctx);
-  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, ctx);
+  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, ctx);
+  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, ctx);
+  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, ctx);
 
   N_VConst_Gkylzero(c, Nv1);
   N_VConst_Gkylzero(d, Nv2);

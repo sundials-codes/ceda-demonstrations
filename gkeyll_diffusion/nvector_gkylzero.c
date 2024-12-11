@@ -46,7 +46,7 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   /* Attach operations -- DELETE ANY THAT WERE DELETED FROM nvector_gkylzero.h */
 
   /* constructors, destructors, and utility operations */
-  // v->ops->nvclone           = N_VClone_Gkylzero;
+  v->ops->nvclone           = N_VClone_Gkylzero;
   v->ops->nvcloneempty      = N_VCloneEmpty_Gkylzero;
   v->ops->nvdestroy         = N_VDestroy_Gkylzero;
 
@@ -70,20 +70,22 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
 
   /* Attach gkyl_array */
   content->own_vector    = SUNFALSE;
+  content->use_gpu       = SUNFALSE;
   content->dataptr       = NULL;
 
   return (v);
 }
 
 /* Create a Gkylzero N_Vector wrapper around user supplied gkl_array. */
-N_Vector N_VMake_Gkylzero(struct gkyl_array* x, SUNContext sunctx)
+N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu, SUNContext sunctx)
 {
   N_Vector v;
   v = NULL;
   v = N_VNewEmpty_Gkylzero(sunctx);
   if (v == NULL) { return (NULL); }
   NV_CONTENT_GKZ(v)->own_vector = SUNFALSE;
-  NV_CONTENT_GKZ(v)->dataptr = x;
+  NV_CONTENT_GKZ(v)->use_gpu    = use_gpu;
+  NV_CONTENT_GKZ(v)->dataptr    = x;
   return (v);
 }
 
@@ -134,7 +136,7 @@ N_Vector N_VCloneEmpty_Gkylzero(N_Vector w)
   return (v);
 }
 
-N_Vector N_VClone_Gkylzero(N_Vector w, sunbooleantype use_gpu)
+N_Vector N_VClone_Gkylzero(N_Vector w)
 {
   N_Vector v;
   struct gkyl_array* vdptr;
@@ -144,7 +146,7 @@ N_Vector N_VClone_Gkylzero(N_Vector w, sunbooleantype use_gpu)
   v = N_VCloneEmpty_Gkylzero(w);
   if (v == NULL) { return (NULL); }
 
-  vdptr = use_gpu? mkarr(true, wdptr->ncomp, wdptr->size) : mkarr(false, wdptr->ncomp, wdptr->size);
+  vdptr = mkarr(NV_CONTENT_GKZ(w)->use_gpu, wdptr->ncomp, wdptr->size);
 
   NV_CONTENT_GKZ(v)->dataptr = vdptr;
   NV_CONTENT_GKZ(v)->own_vector = SUNTRUE;
