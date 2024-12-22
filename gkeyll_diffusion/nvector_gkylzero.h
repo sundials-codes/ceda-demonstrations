@@ -56,7 +56,6 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z);
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z);
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w);
-sunrealtype N_VWSqrSumLocal_Gkylzero(N_Vector x, N_Vector w);
 
 #ifdef __cplusplus
 }

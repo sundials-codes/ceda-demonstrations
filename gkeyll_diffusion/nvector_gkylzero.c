@@ -199,7 +199,10 @@ void N_VConst_Gkylzero(sunrealtype c, N_Vector z)
 {
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_set(zdptr, c, zdptr);
+  double *zdptr_data = zdptr->data;
+
+  for (unsigned int i=0; i<(zdptr->size*zdptr->ncomp); ++i)
+    zdptr_data[i] = c;
 }
 
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
@@ -207,18 +210,11 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  zdptr = gkyl_array_scale(xdptr, c);
+  zdptr = gkyl_array_set(zdptr, c, xdptr);
 
 }
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
-{
-  sunrealtype norm = N_VWSqrSumLocal_Gkylzero(x, w);
-  norm = SUNRsqrt(norm);
-  return norm;
-}
-
-sunrealtype N_VWSqrSumLocal_Gkylzero(N_Vector x, N_Vector w)
 {
   sunrealtype asum, prodi;
 
@@ -235,8 +231,6 @@ sunrealtype N_VWSqrSumLocal_Gkylzero(N_Vector x, N_Vector w)
     prodi = x_data[i] * w_data[i];
     asum += SUNSQR(prodi);
   }
-
-  asum = asum/N;
-
-  return (asum);
+  asum = SUNRsqrt(asum/N);
+  return asum;
 }

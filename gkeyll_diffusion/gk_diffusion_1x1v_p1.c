@@ -26,6 +26,7 @@ void test_nvector_gkylzero (bool use_gpu) {
   int num_of_failures = 0;
   long int num_basis = 100;
   long int size = 100;
+  double eq_check_tol = 1e-10;
 
   printf("\nTESTING nvector_gkylzero:\n");
 
@@ -56,7 +57,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
 
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = ((tar_data[i] - ta_data[i]) > 0.000001) || failure;
+    failure = (abs(tar_data[i] - ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -78,12 +79,8 @@ void test_nvector_gkylzero (bool use_gpu) {
   double *tac_data = testarrayclone->data;
 
   failure = ((testarray->size != testarrayclone->size) ||
-                  (testarray->ncomp != testarrayclone->ncomp));
-
-
-  for (unsigned int i=0; i<(testarrayclone->size*testarrayclone->ncomp); ++i) {
-    failure = ((tac_data[i] - ta_data[i]) > 0.000001) || failure;
-  }
+                  (testarray->ncomp != testarrayclone->ncomp) ||
+                  (tac_data == ta_data));
 
   if(failure)
   {
@@ -121,7 +118,7 @@ void test_nvector_gkylzero (bool use_gpu) {
                   (testarray->ncomp != testarrayreturn->ncomp));
 
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = ((tas_data[i] - 2.0*ta_data[i]) > 0.000001) || failure;
+    failure = (abs(tas_data[i] - 2.0*ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -142,7 +139,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = ((tacon_data[i] - 173.0) > 0.000001) || failure;
+    failure = (abs(tacon_data[i] - 173.0) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -179,7 +176,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = ((lin_sum_data[i] - (a*c + b*d)) > 0.000001) || failure;
+    failure = (abs(lin_sum_data[i] - (a*c + b*d)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -198,7 +195,7 @@ void test_nvector_gkylzero (bool use_gpu) {
   double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
 
   /* ans should equal 1/4 */
-  failure = (wrmsnorm < 0.0) ? 1 : ((wrmsnorm - 1.0/4.0) > 0.000001);
+  failure = (wrmsnorm < 0.0) ? 1 : (abs(wrmsnorm - 1.0/4.0) > eq_check_tol);
 
   if(failure)
   {
