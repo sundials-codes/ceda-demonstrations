@@ -191,7 +191,7 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_accumulate(zdptr, a, xdptr);
+  gkyl_array_set(zdptr, a, xdptr);
   gkyl_array_accumulate(zdptr, b, ydptr);
 }
 
@@ -199,10 +199,7 @@ void N_VConst_Gkylzero(sunrealtype c, N_Vector z)
 {
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  double *zdptr_data = zdptr->data;
-
-  for (unsigned int i=0; i<(zdptr->size*zdptr->ncomp); ++i)
-    zdptr_data[i] = c;
+  gkyl_array_clear(zdptr, c);
 }
 
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
@@ -210,8 +207,7 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  zdptr = gkyl_array_set(zdptr, c, xdptr);
-
+  gkyl_array_set(zdptr, c, xdptr);
 }
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
