@@ -11,8 +11,8 @@ CUDA_ARCH ?= 70
 # Warning flags: -Wall -Wno-unused-variable -Wno-unused-function -Wno-missing-braces
 CFLAGS ?= -O3 -g -ffast-math -fPIC -MMD -MP -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 LDFLAGS =
-PREFIX ?= ${HOME}/gkylsoft
-SUN_PREFIX = $(shell dirname $(PREFIX))
+PREFIX = ${PWD}/../deps/gkyl-install
+SUN_PREFIX = $(shell dirname ${PREFIX})
 
 # determine OS we are running on
 UNAME = $(shell uname)
@@ -32,7 +32,7 @@ else
 endif
 
 # Include config.mak file (if it exists)
--include /home/maggul/ceda/ceda-demonstrations/deps/gkyl-install/gkylzero/share/config.mak
+-include $(PREFIX)/gkylzero/share/config.mak
 
 CFLAGS = -O3 -g -ffast-math -I. -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 
@@ -43,6 +43,7 @@ G0_LIB = -lgkylzero
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
 SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
 SUNDIALS_LIB = -lsundials_arkode -lsundials_core
+SUNDIALS_RPATH = -Wl,-rpath,${SUNDIALS_LIB_DIR}
 
 USING_NVCC =
 NVCC_FLAGS =
@@ -138,7 +139,7 @@ endif
 
 INCLUDES = -I${G0_INC_DIR} -I${SUNDIALS_INC_DIR} -I${LAPACK_INC} -I${SUPERLU_INC} -I${MPI_INC_DIR} -I${LUA_INC_DIR} -I${NCCL_INC_DIR} -I${CUDSS_INC_DIR}
 LIB_DIRS = -L${SUNDIALS_LIB_DIR} -L${LAPACK_LIB_DIR} -L${SUPERLU_LIB_DIR} -L${MPI_LIB_DIR} -L${LUA_LIB_DIR} -L${NCCL_LIB_DIR} -L${CUDSS_LIB_DIR}
-EXT_LIBS = ${LAPACK_LIB} ${SUNDIALS_LIB} ${SUPERLU_LIB} ${MPI_RPATH} ${MPI_LIBS} ${LUA_RPATH} ${LUA_LIBS} ${NCCL_LIBS} ${CUDSS_RPATH} ${CUDSS_LIBS} -lm -lpthread -ldl
+EXT_LIBS = ${LAPACK_LIB} ${SUNDIALS_LIB} ${SUNDIALS_RPATH} ${SUPERLU_LIB} ${MPI_RPATH} ${MPI_LIBS} ${LUA_RPATH} ${LUA_LIBS} ${NCCL_LIBS} ${CUDSS_RPATH} ${CUDSS_LIBS} -lm -lpthread -ldl
 
 all: gk_diffusion_1x1v_p1
 

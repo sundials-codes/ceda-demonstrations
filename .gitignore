@@ -49,3 +49,7 @@ deps/gkyl-install
 
 # VS Project files
 *.vscode
+
+# GkylZero example build and output files
+*.gkyl
+*.o

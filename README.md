@@ -84,7 +84,7 @@ cd deps/sundials/build
 cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
 make -j install
 ```
-  
+
 Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
 
 #### GkeyllZero
@@ -107,7 +107,7 @@ cd gkylzero/install-deps
 cd ..
 ./configure CC=mpicc --prefix=$GKYLSOFT
 make -j install
-``` 
+```
 
 #### PostGkeyll
 
@@ -139,41 +139,9 @@ source .venv/bin/activate
 ```
 
 
+### Building the CMake-based tests (`diffusion_2D` and `adr_1D`)
 
-### Configuration Options (*this and the next sections are under construction*)
-
-When building the codes in this repository, we denote the top-level installation folder for Gkeyll as `GKYLSOFT` -- we note that by default, Gkeyll currently installs into `$HOME/gkylsoft`.
-
-Once the necessary dependencies have been installed, the following CMake variables can be used to configure the build for this repository:
-
-* `CMAKE_INSTALL_PREFIX` - the path where executables and input files should be installed e.g., `my/install/path`. The executables will be installed in the `bin` directory and input files in the `tests` directory under the given path.
-
-* `CMAKE_C_COMPILER` - the C compiler to use e.g., `mpicc`. If not set, CMake will attempt to automatically detect the C compiler.
-
-* `CMAKE_C_FLAGS` - the C compiler flags to use e.g., `-g -O2`.
-
-* `CMAKE_C_STANDARD` - the C standard to use, defaults to `99`.
-
-* `CMAKE_CXX_COMPILER` - the C++ compiler to use e.g., `mpicxx`. If not set,
-  CMake will attempt to automatically detect the C++ compiler.
-
-* `CMAKE_CXX_FLAGS` - the C++ flags to use e.g., `-g -O2`.
-
-* `CMAKE_CXX_STANDARD` - the C++ standard to use, defaults to `11`.
-
-* `SUNDIALS_ROOT` - the root directory of the SUNDIALS installation, defaults to the value of the `SUNDIALS_ROOT` environment variable. If not set, CMake will attempt to automatically locate a SUNDIALS install on the system.
-
-* `CMAKE_CUDA_COMPILER` - the CUDA compiler to use e.g., `nvcc`. If not set,
-  CMake will attempt to automatically detect the CUDA compiler.
-
-* `CMAKE_CUDA_FLAGS` - the CUDA compiler flags to use.
-
-* `CMAKE_CUDA_ARCHITECTURES` - the CUDA architecture to target e.g., `70`.
-
-
-### Building
-
-Like most CMake-based projects, in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
+The CMake-based test problems follow the standard pattern for CMake-based projects: in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
 
 ```bash
   mkdir ceda-demonstrations/build
@@ -189,6 +157,19 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install -DGKYL_ROOT=../deps/gkyl-install .."
+  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install .."
   make -j install
+```
+
+
+### Building the Makefile-based tests (`gkeyll_diffusion`)
+
+The examples that leverage GkeyllZero do not currently use CMake for compilation, and must be handled separately.
+
+Assuming that both SUNDIALS and GkylZero were installed following the above instructions, then the following commands will build the `gkeyll_diffusion` example:
+
+```bash
+  cd ceda-demonstrations/gkeyll_diffusion
+  export CC=mpicc
+  make
 ```
