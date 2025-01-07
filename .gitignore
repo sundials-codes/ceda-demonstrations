@@ -16,6 +16,7 @@ deps/gkyl-install
 *.lo
 *.o
 *.obj
+*.dSYM
 
 # Precompiled Headers
 *.gch
@@ -50,6 +51,5 @@ build
 # VS Project files
 .vscode
 
-# GkylZero example build and output files
+# GkylZero example output files
 *.gkyl
-*.o
