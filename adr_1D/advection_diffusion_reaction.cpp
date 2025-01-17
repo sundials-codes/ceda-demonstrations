@@ -100,7 +100,9 @@ int main(int argc, char* argv[])
   // Create integrator
   switch (uopts.integrator)
   {
-  case (0): flag = SetupERK(ctx, udata, uopts, y, &arkode_mem); break;
+  case (0):
+    flag = SetupERK(ctx, udata, uopts, y, &arkode_mem);
+    break;
   case (1):
     flag = SetupARK(ctx, udata, uopts, y, &A, &LS, &arkode_mem);
     break;
@@ -398,21 +400,19 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
   // Select STS method
-  if (uopts.sts_method == 0)
-  {
-    flag = LSRKStepSetSTSMethod(sts_arkode_mem, ARKODE_LSRK_RKC_2);
-  }
-  else
-  {
-    flag = LSRKStepSetSTSMethod(sts_arkode_mem, ARKODE_LSRK_RKL_2);
-  }
+  ARKODE_LSRKMethodType ststype = (uopts.sts_method == 0) ? ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
+  flag = LSRKStepSetSTSMethod(sts_arkode_mem, ststype);
   if (check_flag(flag, "LSRKStepSetSTSMethod")) { return 1; }
 
-  // Set dominant eigenvalue function
+  // Set dominant eigenvalue function and frequency
   flag = LSRKStepSetDomEigFn(sts_arkode_mem, diffusion_domeig);
   if (check_flag(flag, "LSRKStepSetDomEigFn")) { return 1; }
   flag = LSRKStepSetDomEigFrequency(sts_arkode_mem, uopts.ls_setup_freq);
   if (check_flag(flag, "LSRKStepSetDomEigFrequency")) { return 1; }
+
+  // Increase the maximum number of internal STS stages allowed
+  flag = LSRKStepSetMaxNumStages(sts_arkode_mem, 10000);
+  if (check_flag(flag, "LSRKStepSetMaxNumStages")) { return 1; }
 
   // Create the inner stepper wrapper
   flag = MRIStepInnerStepper_Create(ctx, sts_mem);
@@ -1027,7 +1027,7 @@ int diffusion_domeig(sunrealtype t, N_Vector y, N_Vector fn,
   UserData* udata = (UserData*)user_data;
 
   // Fill in spectral radius value
-  *lambdaR = -SUN_RCONST(2.0) * udata->d / udata->dx / udata->dx;
+  *lambdaR = -SUN_RCONST(4.0) * udata->d / udata->dx / udata->dx;
   *lambdaI = SUN_RCONST(0.0);
 
   return 0;

@@ -55,6 +55,14 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   v->ops->nvconst        = N_VConst_Gkylzero;
   v->ops->nvscale        = N_VScale_Gkylzero;
   v->ops->nvwrmsnorm     = N_VWrmsNorm_Gkylzero;
+  v->ops->nvspace        = N_VSpace_Gkylzero;
+  v->ops->nvdiv          = N_VDiv_Gkylzero;
+  v->ops->nvabs          = N_VAbs_Gkylzero;
+  v->ops->nvinv          = N_VInv_Gkylzero;
+  v->ops->nvmaxnorm      = N_VMaxnorm_Gkylzero;
+  v->ops->nvaddconst     = N_VAddconst_Gkylzero;
+
+
 
   /* Create content */
   content = NULL;
@@ -229,4 +237,35 @@ sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
   }
   asum = SUNRsqrt(asum/N);
   return asum;
+}
+
+void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y)
+{
+  *x = 0;
+  *y = 0;
+}
+
+void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
+{
+
+}
+
+void N_VAbs_Gkylzero(N_Vector u, N_Vector v)
+{
+
+}
+
+void N_VInv_Gkylzero(N_Vector u, N_Vector v)
+{
+
+}
+
+sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
+{
+  return 0.0;
+}
+
+void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
+{
+
 }

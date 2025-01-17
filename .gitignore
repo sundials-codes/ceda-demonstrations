@@ -1,3 +1,13 @@
+# Temporary files
+*~
+*
+!*/
+!*.*
+
+# Submodule builds
+deps/sundials-install
+deps/gkyl-install
+
 # Prerequisites
 *.d
 
@@ -6,6 +16,7 @@
 *.lo
 *.o
 *.obj
+*.dSYM
 
 # Precompiled Headers
 *.gch
@@ -34,22 +45,11 @@
 # Build folder
 build
 
-# Temporary files
-*~
-*
-!*/
-!*.*
-
-# Submodule builds
-deps/sundials-install
-deps/gkyl-install
-
 # Python virtual environment
 .venv
 
 # VS Project files
-*.vscode
+.vscode
 
-# GkylZero example build and output files
+# GkylZero example output files
 *.gkyl
-*.o

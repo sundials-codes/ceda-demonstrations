@@ -342,64 +342,23 @@ static int OutputStatsExtSTS(void* arkode_mem, MRIStepInnerStepper sts_mem,
 {
   int flag;
 
-  // Get ExtSTS integrator and solver stats
-  long int nst, nst_a, netf, nfe, nfi;
-  flag = ARKodeGetNumSteps(arkode_mem, &nst);
-  if (check_flag(flag, "ARKodeGetNumSteps")) { return -1; }
-  flag = ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
-  if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
-  flag = ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
-  if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
-
+  // Print all ExtSTS integrator stats
   cout << fixed << setprecision(6);
   cout << endl << "ExtSTS Integrator:" << endl;
-  cout << "  Steps               = " << nst << endl;
-  cout << "  Advection RHS evals = " << nfe << endl;
-
-  if (udata.reaction)
-  {
-    cout << "  Reaction RHS evals  = " << nfi << endl;
-    long int nni, ncfn;
-    flag = ARKodeGetNumNonlinSolvIters(arkode_mem, &nni);
-    if (check_flag(flag, "ARKodeGetNumNonlinSolvIters")) { return -1; }
-    flag = ARKodeGetNumNonlinSolvConvFails(arkode_mem, &ncfn);
-    if (check_flag(flag, "ARKodeGetNumNonlinSolvConvFails")) { return -1; }
-
-    long int nsetups, nje;
-    flag = ARKodeGetNumLinSolvSetups(arkode_mem, &nsetups);
-    if (check_flag(flag, "ARKodeGetNumLinSolvSetups")) { return -1; }
-    flag = ARKodeGetNumJacEvals(arkode_mem, &nje);
-    if (check_flag(flag, "ARKodeGetNumJacEvals")) { return -1; }
-
-    cout << "  NLS iters           = " << nni << endl;
-    cout << "  NLS fails           = " << ncfn << endl;
-    cout << "  LS setups           = " << nsetups << endl;
-    cout << "  J evals             = " << nje << endl;
-    cout << endl;
-
-    // Compute average nls iters per step and ls iters per nls iter
-    sunrealtype avgnli = (sunrealtype)nni / (sunrealtype)nst;
-    sunrealtype avgls  = (sunrealtype)nsetups / (sunrealtype)nni;
-    cout << "  Avg NLS iters per step = " << avgnli << endl;
-    cout << "  Avg LS setups per NLS iter  = " << avgls << endl;
-  }
+  flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
   cout << endl;
 
-  // Get sts integrator stats and solver stats
+  // Print inner sts integrator stats
   void* inner_content = nullptr;
   MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
   STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
 
   // Get STS integrator and solver stats
-  flag = ARKodeGetNumSteps(content->sts_arkode_mem, &nst);
-  if (check_flag(flag, "ARKodeGetNumSteps")) { return -1; }
-  flag = ARKodeGetNumRhsEvals(content->sts_arkode_mem, 0, &nfe);
-  if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
-
   cout << fixed << setprecision(6);
-  cout << endl << "STS Integrator:" << endl;
-  cout << "  Steps               = " << nst << endl;
-  cout << "  Diffusion RHS evals = " << nfe << endl;
+  cout << endl << "Inner STS Method:" << endl;
+  flag = ARKodePrintAllStats(content->sts_arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
 
   return 0;
 }

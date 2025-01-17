@@ -56,6 +56,12 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z);
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z);
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w);
+void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y);
+void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w);
+void N_VAbs_Gkylzero(N_Vector u, N_Vector v);
+void N_VInv_Gkylzero(N_Vector u, N_Vector v);
+sunrealtype N_VMaxnorm_Gkylzero(N_Vector u);
+void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v);
 
 #ifdef __cplusplus
 }
