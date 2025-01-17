@@ -379,7 +379,7 @@ static void InputHelp()
   cout << "  --xl <real>              : domain lower boundary\n";
   cout << "  --xu <real>              : domain upper boundary\n";
   cout << "  --nx <int>               : number of mesh points\n";
-  cout << "  --integrator <int>       : integrator option\n";
+  cout << "  --integrator <int>       : integrator option (0=ERK, 1=ARK, 2=ExtSTS)\n";
   cout << "  --order <int>            : method order\n";
   cout << "  --sts_method <int>       : STS method type (0=RKC, 1=RKL)\n";
   cout << "  --rtol <real>            : relative tolerance\n";
