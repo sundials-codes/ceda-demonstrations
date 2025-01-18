@@ -128,8 +128,8 @@ struct UserOptions
   //         0 = Ralston
   //         1 = Heun-Euler
   //   * diffusion+reaction
-  //         0 = Giraldo DIRK2
-  //         1 = SSP SDIRK 2
+  //         0 = SSP SDIRK 2
+  //         1 = Giraldo DIRK2
   int sts_method    = 0;
   int extsts_method = 0;
 
@@ -151,6 +151,8 @@ struct UserOptions
   bool save_hcur  = false;
 
   sunrealtype hcur_factor = SUN_RCONST(0.7);
+
+  bool calc_error = false;
 
   int output = 1;  // 0 = none, 1 = stats, 2 = disk, 3 = disk with tstop
   int nout   = 10; // number of output times
@@ -382,6 +384,7 @@ static void InputHelp()
   cout << "  --integrator <int>       : integrator option\n";
   cout << "  --order <int>            : method order\n";
   cout << "  --sts_method <int>       : STS method type (0=RKC, 1=RKL)\n";
+  cout << "  --extsts_method <int>    : ExtSTS method type (0=ARS/Ralston/SSPSDIRK2, 1=Giraldo/HeunEuler)\n";
   cout << "  --rtol <real>            : relative tolerance\n";
   cout << "  --atol <real>            : absolute tolerance\n";
   cout << "  --fixed_h <real>         : fixed step size\n";
@@ -392,6 +395,7 @@ static void InputHelp()
   cout << "  --save_hinit             : reuse initial fast step\n";
   cout << "  --save_hcur              : reuse current fast step\n";
   cout << "  --hcur_factor            : current fast step safety factor\n";
+  cout << "  --calc_error             : use reference solution to compute solution error\n";
   cout << "  --output <int>           : output level\n";
   cout << "  --nout <int>             : number of outputs\n";
   cout << "  --help                   : print options and exit\n";
@@ -472,6 +476,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--integrator", uopts.integrator);
   find_arg(args, "--order", uopts.order);
   find_arg(args, "--sts_method", uopts.sts_method);
+  find_arg(args, "--extsts_method", uopts.extsts_method);
   find_arg(args, "--rtol", uopts.rtol);
   find_arg(args, "--atol", uopts.atol);
   find_arg(args, "--fixed_h", uopts.fixed_h);
@@ -482,6 +487,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--save_hinit", uopts.save_hinit);
   find_arg(args, "--save_hcur", uopts.save_hcur);
   find_arg(args, "--hcur_factor", uopts.hcur_factor);
+  find_arg(args, "--calc_error", uopts.calc_error);
   find_arg(args, "--output", uopts.output);
   find_arg(args, "--nout", uopts.nout);
 
@@ -490,27 +496,17 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   udata.neq = NSPECIES * udata.nx;
 
   // Create workspace
-  switch (uopts.integrator)
+  if ((uopts.integrator < 2) || uopts.calc_error)
   {
-  case (0):
-    // Create workspace vector
     udata.temp_v = N_VNew_Serial(udata.neq, ctx);
     if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
     N_VConst(ZERO, udata.temp_v);
-    break;
-  case (1):
-    // Create workspace vector
-    udata.temp_v = N_VNew_Serial(udata.neq, ctx);
-    if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
-    N_VConst(ZERO, udata.temp_v);
-    // Create workspace matrix
+  }
+  if ((uopts.integrator == 1) || uopts.calc_error)
+  {
     udata.temp_J = SUNBandMatrix(udata.neq, 3, 3, ctx);
     if (check_ptr(udata.temp_J, "SUNBandMatrix")) { return -1; }
     SUNMatZero(udata.temp_J);
-    break;
-  case (2): break;
-  case (3): break;
-  default: cerr << "Invalid integrator option" << endl; return -1;
   }
 
   // Input checks
@@ -549,29 +545,29 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
 
   if (uopts.integrator == 0)
   {
-    cout << "  integrator      = ERK" << endl;
+    cout << "  integrator       = ERK" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection       = OFF" << endl; }
+    else { cout << "  advection        = OFF" << endl; }
     if (udata.reaction) {  cout << "  reaction         = Explicit" << endl; }
-    else { cout << "  reaction        = OFF" << endl; }
+    else { cout << "  reaction         = OFF" << endl; }
     cout << "  diffusion        = Explicit" << endl;
   }
   else if (uopts.integrator == 1)
   {
     cout << "  integrator       = ARK" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection       = OFF" << endl; }
+    else { cout << "  advection        = OFF" << endl; }
     if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction        = OFF" << endl; }
+    else { cout << "  reaction         = OFF" << endl; }
     cout << "  diffusion        = Implicit" << endl;
   }
   else if (uopts.integrator == 2)
   {
     cout << "  integrator       = ExtSTS" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection       = OFF" << endl; }
+    else { cout << "  advection        = OFF" << endl; }
     if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction        = OFF" << endl; }
+    else { cout << "  reaction         = OFF" << endl; }
     cout << "  diffusion        = Explicit" << endl;
   }
   else
@@ -609,6 +605,39 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   if (uopts.integrator == 2)
   {
     cout << " --------------------------------- " << endl;
+    if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+    {
+      if (uopts.extsts_method == 0)
+      {
+        cout << "  ExtSTS method    = ARKS(2,2,2)" << endl;
+      }
+      else
+      {
+        cout << "  ExtSTS method    = Giraldo ARK2" << endl;
+      }
+    }
+    else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
+    {
+      if (uopts.extsts_method == 0)
+      {
+        cout << "  ExtSTS method    = Ralston" << endl;
+      }
+      else
+      {
+        cout << "  ExtSTS method    = Heun-Euler" << endl;
+      }
+    }
+    else if (!udata.advection && udata.reaction)  // diffusion + reaction
+    {
+      if (uopts.extsts_method == 0)
+      {
+        cout << "  ExtSTS method    = SSP SDIRK 2" << endl;
+      }
+      else
+      {
+        cout << "  ExtSTS method    = Giraldo DIRK2" << endl;
+      }
+    }
     if (uopts.sts_method == 0)
     {
       cout << "  STS method       = RKC" << endl;
@@ -619,6 +648,10 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     }
   }
   cout << " --------------------------------- " << endl;
+  if (uopts.calc_error)
+  {
+    cout << "  reference solver = ARK" << endl;
+  }
   cout << "  output           = " << uopts.output << endl;
   cout << " --------------------------------- " << endl;
   cout << endl;
@@ -635,8 +668,17 @@ static int OpenOutput(UserData& udata, UserOptions& uopts)
     cout << scientific;
     cout << setprecision(numeric_limits<sunrealtype>::digits10);
     cout << "          t           ";
-    cout << "          ||y||_rms      " << endl;
+    cout << "          ||y||_rms      ";
+    if (uopts.calc_error)
+    {
+      cout << "   ||yerr||_rms";
+    }
+    cout << endl;
     cout << " ---------------------";
+    if (uopts.calc_error)
+    {
+      cout << "---------------";
+    }
     cout << "-------------------------" << endl;
   }
 
@@ -692,6 +734,39 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
   return 0;
 }
 
+// Write output
+static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
+                       UserData& udata, UserOptions& uopts)
+{
+  if (uopts.output)
+  {
+    // Compute rms norm of the state and error
+    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx);
+    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / udata.nx);
+    cout << setw(22) << t << setw(25) << urms
+         << setprecision(2) << setw(12) << erms
+         << setprecision(numeric_limits<sunrealtype>::digits10) << endl;
+
+    // Write solution to disk
+    if (uopts.output >= 2)
+    {
+      sunrealtype* ydata = N_VGetArrayPointer(y);
+      if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
+
+      uopts.uout << t;
+      for (sunindextype i = 0; i < udata.nx; i++)
+      {
+        uopts.uout << setw(WIDTH) << ydata[UIDX(i)];
+        uopts.uout << setw(WIDTH) << ydata[VIDX(i)];
+        uopts.uout << setw(WIDTH) << ydata[WIDX(i)];
+      }
+      uopts.uout << endl;
+    }
+  }
+
+  return 0;
+}
+
 // Finalize output
 static int CloseOutput(UserOptions& uopts)
 {
@@ -699,6 +774,10 @@ static int CloseOutput(UserOptions& uopts)
   if (uopts.output)
   {
     cout << " ---------------------";
+    if (uopts.calc_error)
+    {
+      cout << "---------------";
+    }
     cout << "-------------------------" << endl;
     cout << endl;
   }
