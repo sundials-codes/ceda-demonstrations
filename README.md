@@ -146,7 +146,7 @@ The CMake-based test problems follow the standard pattern for CMake-based projec
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DCMAKE_INSTALL_PREFIX="[install-path]" -DSUNDIALS_ROOT="[sundials-path] .."
+  cmake -DCMAKE_INSTALL_PREFIX="[install-path]" -DSUNDIALS_ROOT="[sundials-path]" ..
   make -j install
 ```
 
@@ -157,7 +157,7 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install .."
+  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install ..
   make -j install
 ```
 

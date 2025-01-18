@@ -19,6 +19,13 @@
 
 #include "nvector_gkylzero.h"
 
+#include <arkode/arkode_lsrkstep.h> /* prototypes for LSRKStep fcts., consts */
+#include <math.h>
+#include <nvector/nvector_serial.h> /* serial N_Vector types, fcts., macros */
+#include <stdio.h>
+#include <sundials/sundials_math.h> /* def. of SUNRsqrt, etc. */
+#include <sundials/sundials_types.h> /* definition of type sunrealtype          */
+
 #include <rt_arg_parse.h>
 
 void test_nvector_gkylzero (bool use_gpu) {
@@ -90,20 +97,6 @@ void test_nvector_gkylzero (bool use_gpu) {
   else
   {
     printf("\n      N_VCloneEmpty_Gkylzero and N_VClone_Gkylzero PASSED the test");
-  }
-
-  N_VDestroy_Gkylzero(NV_test_clone);
-
-  failure = !(NV_test_clone == NULL);
-
-  if(failure)
-  {
-    printf("\n      FAILED in N_VDestroy_Gkylzero");
-    num_of_failures++;
-  }
-  else
-  {
-    printf("\n      N_VDestroy_Gkylzero PASSED the test");
   }
 
   N_Vector NV_test_return = N_VClone_Gkylzero(NV_test);
@@ -213,6 +206,13 @@ void test_nvector_gkylzero (bool use_gpu) {
   else {
     printf("\n\n nvector_gkylzero failed in %d test(s)!\n\n", num_of_failures);
   }
+
+  N_VDestroy_Gkylzero(NV_test);
+  N_VDestroy_Gkylzero(NV_test_clone);
+  N_VDestroy_Gkylzero(NV_test_return);
+  N_VDestroy_Gkylzero(Nv1);
+  N_VDestroy_Gkylzero(Nv2);
+  N_VDestroy_Gkylzero(Nlin_sum);
 }
 
 // Struct with context parameters.
@@ -652,6 +652,248 @@ forward_euler(struct gkyl_diffusion_app* app, double tcurr, double dt,
 
 }
 
+
+/* f routine to compute the ODE RHS function f(t,y). */
+static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
+{
+  sunrealtype* rdata = (sunrealtype*)user_data; /* cast user_data to sunrealtype */
+  sunrealtype lambda = rdata[0]; /* set shortcut for user parameter */
+
+  //fill in later
+
+  return 0; /* return with success */
+}
+
+/* dom_eig routine to estimate the dominated eigenvalue */
+static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
+                   sunrealtype* lambdaI, void* user_data, N_Vector temp1,
+                   N_Vector temp2, N_Vector temp3)
+{
+  sunrealtype* rdata = (sunrealtype*)user_data; /* cast user_data to sunrealtype */
+  sunrealtype lambda = rdata[0]; /* set shortcut for user parameter */
+  *lambdaR           = lambda;
+  *lambdaI           = SUN_RCONST(0.0);
+  return 0; /* return with success */
+}
+
+/* Check function return value...
+    opt == 0 means SUNDIALS function allocates memory so check if
+             returned NULL pointer
+    opt == 1 means SUNDIALS function returns a flag so check if
+             flag >= 0
+    opt == 2 means function allocates memory so check if returned
+             NULL pointer
+*/
+static int check_flag(void* flagvalue, const char* funcname, int opt)
+{
+  int* errflag;
+
+  /* Check if SUNDIALS function returned NULL pointer - no memory allocated */
+  if (opt == 0 && flagvalue == NULL)
+  {
+    fprintf(stderr, "\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n",
+            funcname);
+    return 1;
+  }
+
+  /* Check if flag < 0 */
+  else if (opt == 1)
+  {
+    errflag = (int*)flagvalue;
+    if (*errflag < 0)
+    {
+      fprintf(stderr, "\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n",
+              funcname, *errflag);
+      return 1;
+    }
+  }
+
+  /* Check if function returned NULL pointer - no memory allocated */
+  else if (opt == 2 && flagvalue == NULL)
+  {
+    fprintf(stderr, "\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n",
+            funcname);
+    return 1;
+  }
+
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static int LSRK_init(struct gkyl_diffusion_app* app)
+{
+  /* general problem parameters */
+  sunrealtype T0    = app->tcurr;  /* initial time */
+
+  sunrealtype reltol = SUN_RCONST(1.0e-8); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-8);
+
+  int flag;                /* reusable error-checking flag */
+  N_Vector y       = NULL; /* empty vector for storing solution */
+  void* arkode_mem = NULL; /* empty ARKode memory structure */
+
+  /* Create the SUNDIALS context object for this simulation */
+  SUNContext ctx;
+  flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
+
+  /* Initialize data structures */
+  y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
+  if (check_flag((void*)y, "N_VMake_Gkylzero", 0)) { return 1; }
+
+//TO DO: Check to make sure app->f is the actual solution
+
+  /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
+     specify the right-hand side function in y'=f(t,y), the initial time
+     T0, and the initial dependent variable vector y. */
+  arkode_mem = LSRKStepCreateSTS(f, T0, y, ctx);
+  if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
+
+  sunrealtype user_data = app->cfl;
+  /* Set routines */
+  flag = ARKodeSetUserData(arkode_mem,
+                           (void*)&user_data); /* Pass the user data */
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
+
+  /* Specify tolerances */
+  flag = ARKodeSStolerances(arkode_mem, reltol, abstol);
+  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
+
+  /* Specify user provided spectral radius */
+  flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
+  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+
+  /* Specify after how many successful steps dom_eig is recomputed
+     Note that nsteps = 0 refers to constant dominant eigenvalue */
+  flag = LSRKStepSetDomEigFrequency(arkode_mem, 0);
+  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return 1; }
+
+  /* Specify max number of stages allowed */
+  flag = LSRKStepSetMaxNumStages(arkode_mem, 200);
+  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
+
+  /* Specify max number of steps allowed */
+  flag = ARKodeSetMaxNumSteps(arkode_mem, 1000);
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+
+  /* Specify safety factor for user provided dom_eig */
+  flag = LSRKStepSetDomEigSafetyFactor(arkode_mem, SUN_RCONST(1.01));
+  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return 1; }
+
+  /* Specify the Runge--Kutta--Legendre LSRK method */
+  flag = LSRKStepSetSTSMethod(arkode_mem, ARKODE_LSRK_RKL_2);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+
+  return 0;
+}
+
+
+static struct gkyl_update_status
+sts_step(struct gkyl_diffusion_app* app, double dt0)
+{
+  // Take time-step using the STS methods. Also sets the status object
+  // which has the actual and suggested dts used. These can be different
+  // from the actual time-step.
+  const struct gkyl_array *fin;
+  struct gkyl_array *fout;
+  struct gkyl_update_status st = { .success = true };
+
+  // time-stepper state
+  enum { RK_STAGE_1, RK_STAGE_2, RK_STAGE_3, RK_COMPLETE } state = RK_STAGE_1;
+
+  double tcurr = app->tcurr, dt = dt0;
+
+
+
+  while (state != RK_COMPLETE) {
+    switch (state) {
+      case RK_STAGE_1:
+        fin = app->f;
+        fout = app->f1;
+
+        forward_euler(app, tcurr, dt, fin, fout, &st);
+        apply_bc(app, tcurr, fout);
+
+        dt = st.dt_actual;
+        state = RK_STAGE_2;
+        break;
+
+      case RK_STAGE_2:
+        fin = app->f1;
+        fout = app->fnew;
+
+        forward_euler(app, tcurr+dt, dt, fin, fout, &st);
+
+        if (st.dt_actual < dt) {
+          dt = st.dt_actual;
+          state = RK_STAGE_1; // restart from stage 1
+        }
+        else {
+          array_combine(app->f1, 3.0/4.0, app->f, 1.0/4.0, app->fnew, &app->local_ext);
+
+          fout = app->f1;
+          apply_bc(app, tcurr, fout);
+
+          state = RK_STAGE_3;
+        }
+        break;
+
+      case RK_STAGE_3:
+        fin = app->f1;
+        fout = app->fnew;
+
+        forward_euler(app, tcurr+dt/2, dt, fin, fout, &st);
+
+        if (st.dt_actual < dt) {
+          dt = st.dt_actual;
+          state = RK_STAGE_1; // restart from stage 1
+        }
+        else {
+          array_combine(app->f1, 1.0/3.0, app->f, 2.0/3.0, app->fnew, &app->local_ext);
+          gkyl_array_copy_range(app->f, app->f1, &app->local_ext);
+
+          fout = app->f;
+          apply_bc(app, tcurr, fout);
+
+          state = RK_COMPLETE;
+        }
+        break;
+
+      case RK_COMPLETE: // can't happen: suppresses warning
+        break;
+    }
+  }
+
+  return st;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static struct gkyl_update_status
 rk3(struct gkyl_diffusion_app* app, double dt0)
 {
@@ -988,6 +1230,10 @@ int main(int argc, char **argv)
   // Initialize small time-step check.
   double dt_init = -1.0, dt_failure_tol = ctx.dt_failure_tol;
   int num_failures = 0, num_failures_max = ctx.num_failures_max;
+
+  int flag;
+  LSRK_init(app);
+  if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
   long step = 1;
   while ((t_curr < t_end) && (step <= app_args.num_steps)) {
