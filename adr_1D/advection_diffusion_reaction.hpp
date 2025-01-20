@@ -116,7 +116,7 @@ struct UserOptions
   int integrator = 1;
 
   // Method order
-  int order = 3;
+  int order = 2;
 
   // ExtSTS method options
   //   sts_method = 0 (RKC) or 1 (RKL)
@@ -278,10 +278,10 @@ static int OutputStatsERK(void* arkode_mem, UserData& udata)
   flag = ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
   if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
 
-  cout << "  Steps            = " << nst << endl;
-  cout << "  Step attempts    = " << nst_a << endl;
-  cout << "  Error test fails = " << netf << endl;
-  cout << "  RHS evals        = " << nfe << endl;
+  cout << "  Steps              = " << nst << endl;
+  cout << "  Step attempts      = " << nst_a << endl;
+  cout << "  Error test fails   = " << netf << endl;
+  cout << "  RHS evals          = " << nfe << endl;
 
   return 0;
 }
