@@ -83,16 +83,32 @@ int main(int argc, char* argv[])
   flag = SetIC(y, udata);
   if (check_flag(flag, "SetIC")) { return 1; }
 
+  // Create reference and error vectors
+  N_Vector yref = nullptr;
+  N_Vector yerr = nullptr;
+  if (uopts.calc_error)
+  {
+    yref = N_VNew_Serial(udata.neq, ctx);
+    if (check_ptr(yref, "N_VNew_Serial")) { return 1; }
+    yerr = N_VNew_Serial(udata.neq, ctx);
+    if (check_ptr(yerr, "N_VNew_Serial")) { return 1; }
+    N_VScale(1.0, y, yref);
+    N_VScale(0.0, y, yerr);
+  }
+
   // --------------------
   // Setup the integrator
   // --------------------
 
-  // ARKODE memory structure
+  // ARKODE memory structures
   void* arkode_mem = nullptr;
+  void* arkref_mem = nullptr;
 
   // Matrix and linear solver for IMEX or ExtSTS integrators
-  SUNMatrix A        = nullptr;
-  SUNLinearSolver LS = nullptr;
+  SUNMatrix A           = nullptr;
+  SUNLinearSolver LS    = nullptr;
+  SUNMatrix Aref        = nullptr;
+  SUNLinearSolver LSref = nullptr;
 
   // STS integrator for ExtSTS method
   MRIStepInnerStepper sts_mem = nullptr;
@@ -113,6 +129,18 @@ int main(int argc, char* argv[])
   }
   if (check_flag(flag, "Integrator setup")) { return 1; }
 
+  // Create reference solver (4th-order ARK with tighter relative tolerance)
+  if (uopts.calc_error)
+  {
+    flag = SetupARK(ctx, udata, uopts, yref, &Aref, &LSref, &arkref_mem);
+    if (check_flag(flag, "Reference solver setup")) { return 1; }
+    flag = ARKodeSStolerances(arkref_mem, 1e-2 * uopts.rtol, uopts.atol);
+    if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
+    flag = ARKodeSetOrder(arkref_mem, 4);
+    if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
+  }
+
+
   // ----------------------
   // Evolve problem in time
   // ----------------------
@@ -122,11 +150,16 @@ int main(int argc, char* argv[])
   sunrealtype dTout = udata.tf / uopts.nout;
   sunrealtype tout  = dTout;
 
+  // Accumulated error
+  sunrealtype total_error = ZERO;
+
   // Initial output
   flag = OpenOutput(udata, uopts);
   if (check_flag(flag, "OpenOutput")) { return 1; }
 
-  flag = WriteOutput(t, y, udata, uopts);
+  flag = (uopts.calc_error) ?
+    WriteOutput(t, y, yerr, udata, uopts) :
+    WriteOutput(t, y, udata, uopts);
   if (check_flag(flag, "WriteOutput")) { return 1; }
 
   // Loop over output times
@@ -144,8 +177,21 @@ int main(int argc, char* argv[])
     flag = ARKodeEvolve(arkode_mem, tout, y, &t, ARK_NORMAL);
     if (check_flag(flag, "ARKodeEvolve")) { break; }
 
+    // Advance reference solution and compute error
+    if (uopts.calc_error)
+    {
+      flag = ARKodeSetStopTime(arkref_mem, tout);
+      if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
+      flag = ARKodeEvolve(arkref_mem, tout, yref, &t, ARK_NORMAL);
+      if (check_flag(flag, "ARKodeEvolve")) { break; }
+      N_VLinearSum(1.0, y, -1.0, yref, yerr);
+      total_error += N_VDotProd(yerr, yerr);
+    }
+
     // Output solution
-    flag = WriteOutput(t, y, udata, uopts);
+    flag = (uopts.calc_error) ?
+      WriteOutput(t, y, yerr, udata, uopts) :
+      WriteOutput(t, y, udata, uopts);
     if (check_flag(flag, "WriteOutput")) { return 1; }
 
     // Update output time
@@ -164,6 +210,11 @@ int main(int argc, char* argv[])
   if (uopts.output)
   {
     cout << "Final integrator statistics:" << endl;
+    if (uopts.calc_error)
+    {
+      cout << "  Solution error     = " << setprecision(2)
+           << sqrt(total_error / uopts.nout / udata.nx) << endl;
+    }
     switch (uopts.integrator)
     {
     case (0): flag = OutputStatsERK(arkode_mem, udata); break;
@@ -193,6 +244,14 @@ int main(int argc, char* argv[])
     ARKodeFree(&arkode_mem);
     break;
   }
+  }
+  if (uopts.calc_error)
+  {
+    ARKodeFree(&arkref_mem);
+    N_VDestroy(yref);
+    N_VDestroy(yerr);
+    SUNMatDestroy(Aref);
+    SUNLinSolFree(LSref);
   }
 
   N_VDestroy(y);
@@ -598,7 +657,34 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
   else if (!udata.advection && udata.reaction)  // diffusion + reaction
   {
-    if (uopts.extsts_method == 0)  // Giraldo DIRK2
+    if (uopts.extsts_method == 0)  // SSP SDIRK 2
+    {
+      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+      const sunrealtype one = SUN_RCONST(1.0);
+      const sunrealtype two = SUN_RCONST(2.0);
+      const sunrealtype five = SUN_RCONST(5.0);
+      const sunrealtype seven = SUN_RCONST(7.0);
+      const sunrealtype twelve = SUN_RCONST(12.0);
+      const sunrealtype gamma = one - one / SUNRsqrt(two);
+      C->q = 2;
+      C->p = 1;
+      C->c[1] = gamma;
+      C->c[2] = gamma;
+      C->c[3] = one - gamma;
+      C->c[4] = one - gamma;
+      C->c[5] = one;
+      C->G[0][1][0] = gamma;
+      C->G[0][2][0] = -gamma;
+      C->G[0][2][2] = gamma;
+      C->G[0][3][2] = one - two * gamma;
+      C->G[0][4][2] = -gamma;
+      C->G[0][4][4] = gamma;
+      C->G[0][5][2] = two * gamma - one / two;
+      C->G[0][5][4] = one / two - gamma;
+      C->G[0][6][2] = two*gamma - seven / twelve;
+      C->G[0][6][4] = seven / twelve - gamma;
+    }
+    else                           // Giraldo DIRK2
     {
       C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
@@ -626,33 +712,6 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->G[0][6][0] = (four - sqrt2) / eight - one / (two * sqrt2);
       C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
       C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
-    }
-    else                           // SSP SDIRK 2
-    {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
-      const sunrealtype five = SUN_RCONST(5.0);
-      const sunrealtype seven = SUN_RCONST(7.0);
-      const sunrealtype twelve = SUN_RCONST(12.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one - gamma;
-      C->c[4] = one - gamma;
-      C->c[5] = one;
-      C->G[0][1][0] = gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] = gamma;
-      C->G[0][3][2] = one - two * gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] = gamma;
-      C->G[0][5][2] = two * gamma - one / two;
-      C->G[0][5][4] = one / two - gamma;
-      C->G[0][6][2] = two*gamma - seven / twelve;
-      C->G[0][6][4] = seven / twelve - gamma;
     }
   }
   else   // illegal configuration
