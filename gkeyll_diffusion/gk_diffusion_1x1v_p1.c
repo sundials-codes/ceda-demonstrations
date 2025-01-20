@@ -667,8 +667,6 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
 
-  gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
-
   ((N_VectorContent_Gkylzero)(ydot->content))->dataptr = fout;
 
   return 0; /* return with success */
@@ -681,7 +679,15 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
 {
   struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
 
-  *lambdaR           = -1000.0;
+  gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
+
+  double omega_cfl_ho[1];
+  if (app->use_gpu)
+    gkyl_cu_memcpy(omega_cfl_ho, app->omega_cfl, sizeof(double), GKYL_CU_MEMCPY_D2H);
+  else
+    omega_cfl_ho[0] = app->omega_cfl[0];
+
+  *lambdaR           = -omega_cfl_ho[0];
   *lambdaI           = SUN_RCONST(0.0);
   return 0; /* return with success */
 }
@@ -796,29 +802,15 @@ void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
 
 
 static struct gkyl_update_status
-sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double dt, N_Vector y, sunrealtype* tcurr)
+sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Take time-step using the STS methods. Also sets the status object
   // which has the actual and suggested dts used. These can be different
   // from the actual time-step.
   struct gkyl_update_status st = { .success = true };
 
-  flag = ARKodeGetCurrentTime(arkode_mem, tcurr);
-  if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) {st.success = false; return st; }
-
-  if(*tcurr > 0.0000001)
-  {
-    flag = ARKodeGetCurrentState(arkode_mem, &y);
-    if (check_flag(&flag, "ARKodeGetCurrentState", 1)) {st.success = false; return st; }
-  }
-
-  flag = ARKodeEvolve(arkode_mem, dt, y, tcurr, ARK_NORMAL); /* call integrator */
+  flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
-
-  flag = ARKodeGetCurrentTime(arkode_mem, &(st.dt_actual));
-  if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) {st.success = false; return st; }
-
-  st.dt_actual -= *tcurr;
 
   return st;
 }
@@ -926,13 +918,13 @@ gkyl_diffusion_update(struct gkyl_diffusion_app* app, double dt)
 }
 
 struct gkyl_update_status
-gkyl_diffusion_update_STS(struct gkyl_diffusion_app* app, void* arkode_mem,  double dt, N_Vector y, sunrealtype* tcurr)
+gkyl_diffusion_update_STS(struct gkyl_diffusion_app* app, void* arkode_mem,  double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Update the state of the system by taking a single time step.
 
   // struct gkyl_update_status status = rk3(app, dt);
 
-  struct gkyl_update_status status = sts_step(app, arkode_mem, dt, y, tcurr);
+  struct gkyl_update_status status = sts_step(app, arkode_mem, tout, y, tcurr);
 
   app->tcurr += status.dt_actual;
 
@@ -1197,29 +1189,37 @@ int main(int argc, char **argv)
   if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
   bool is_STS = true;
+  double tout = 0;
 
   long step = 1;
-  while ((t_curr < t_end) && (step <= app_args.num_steps)) {
+  while ((t_end - t_curr > 0.00001) && (step <= app_args.num_steps)) {
     fprintf(stdout, "Taking time-step %ld at t = %g ...", step, t_curr);
 
     struct gkyl_update_status status;
 
     if(is_STS) {
-      status = gkyl_diffusion_update_STS(app, arkode_mem, dt, y, &t_curr);
+      if(step == 1) {
+        dt = 0.171347;
+      }
+      tout += dt;
+
+      status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
+      fprintf(stdout, " dt = %g\n", dt);
     }
     else {
       status = gkyl_diffusion_update(app, dt);
+      fprintf(stdout, " dt = %g\n", status.dt_actual);
     }
-
-    fprintf(stdout, " dt = %g\n", status.dt_actual);
 
     if (!status.success) {
       fprintf(stdout, "** Update method failed! Aborting simulation ....\n");
       break;
     }
 
-    t_curr += status.dt_actual;
-    dt = status.dt_suggested;
+    if(!is_STS){
+      t_curr += status.dt_actual;
+      dt = status.dt_suggested;
+    }
 
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
@@ -1244,6 +1244,10 @@ int main(int argc, char **argv)
     }
 
     step += 1;
+  }
+
+  if(is_STS) {
+    ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
   }
 
   // Free the app.
