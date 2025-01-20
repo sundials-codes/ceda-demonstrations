@@ -1,8 +1,5 @@
 # Temporary files
 *~
-*
-!*/
-!*.*
 
 # Submodule builds
 deps/sundials-install
