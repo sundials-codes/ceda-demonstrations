@@ -262,7 +262,7 @@ create_diffusion_ctx(void)
     .vpar_min = -6.0, // Minimum vpar of the grid.
     .vpar_max =  6.0, // Maximum vpar of the grid.
     .poly_order = 1, // Polynomial order of the DG basis.
-    .cells = {12, 2}, // Number of cells in each direction.
+    .cells = {1200, 200}, // Number of cells in each direction.
 
     .t_end = 1.0, // Final simulation time.
     .num_frames = 10, // Number of output frames.
@@ -800,7 +800,6 @@ void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
   return (void*)arkode_mem;
 }
 
-
 static struct gkyl_update_status
 sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
 {
@@ -812,21 +811,10 @@ sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector
   flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
 
+  apply_bc(app, *tcurr, app->f);
+
   return st;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 static struct gkyl_update_status
 rk3(struct gkyl_diffusion_app* app, double dt0)
@@ -921,8 +909,6 @@ struct gkyl_update_status
 gkyl_diffusion_update_STS(struct gkyl_diffusion_app* app, void* arkode_mem,  double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Update the state of the system by taking a single time step.
-
-  // struct gkyl_update_status status = rk3(app, dt);
 
   struct gkyl_update_status status = sts_step(app, arkode_mem, tout, y, tcurr);
 
@@ -1125,7 +1111,9 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  test_nvector_gkylzero(false);
+  bool test_nvector = false;
+  if(test_nvector)
+    test_nvector_gkylzero(false);
 
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
@@ -1199,7 +1187,7 @@ int main(int argc, char **argv)
 
     if(is_STS) {
       if(step == 1) {
-        dt = 0.171347;
+        dt = 0.1;
       }
       tout += dt;
 
