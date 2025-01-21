@@ -196,7 +196,7 @@ int f_adv_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_adv_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 
-int f_react_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
+int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 
 // Jacobian of RHS functions
 int J_advection(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,

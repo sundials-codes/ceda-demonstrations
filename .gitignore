@@ -50,3 +50,6 @@ build
 
 # GkylZero example output files
 *.gkyl
+
+# Installed test folder
+bin/

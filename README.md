@@ -146,18 +146,18 @@ The CMake-based test problems follow the standard pattern for CMake-based projec
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DCMAKE_INSTALL_PREFIX="[install-path]" -DSUNDIALS_ROOT="[sundials-path]" ..
+  cmake -DSUNDIALS_ROOT="[sundials-path]" ..
   make -j install
 ```
 
-where `[install-path]` is the path to where the binary and test input files should be installed and `[sundials-path]` is the path to the top-level folder containing the SUNDIALS installation.
+where `[sundials-path]` is the path to the top-level folder containing the SUNDIALS installation.  Upon completion of these commands, the executables for each test problem are saved in the `ceda-demonstrations/bin` directory.
 
-If both SUNDIALS and Gkeyll were installed using the submodule-based instructions above, then the following commands should be sufficient to install into a new `ceda-demonstrations/install` directory:
+If both SUNDIALS and Gkeyll were installed using the submodule-based instructions above, then the following commands should be sufficient:
 
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DCMAKE_INSTALL_PREFIX=../install -DSUNDIALS_ROOT=../deps/sundials-install ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install ..
   make -j install
 ```
 

@@ -16,3 +16,6 @@ if(USE_HYPRE)
   target_compile_definitions(${target} PRIVATE USE_HYPRE)
   target_link_libraries(${target} PRIVATE SUNDIALS::HYPRE)
 endif()
+
+# request installation of the target into the overall "bin" folder
+install(TARGETS ${target} DESTINATION ${demonstration_bin})
