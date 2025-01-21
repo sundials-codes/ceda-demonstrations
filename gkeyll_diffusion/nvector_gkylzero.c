@@ -157,6 +157,7 @@ N_Vector N_VClone_Gkylzero(N_Vector w)
   vdptr = mkarr(NV_CONTENT_GKZ(w)->use_gpu, wdptr->ncomp, wdptr->size);
 
   NV_CONTENT_GKZ(v)->dataptr = vdptr;
+  NV_CONTENT_GKZ(v)->use_gpu = NV_CONTENT_GKZ(w)->use_gpu;
   NV_CONTENT_GKZ(v)->own_vector = SUNTRUE;
   return (v);
 }

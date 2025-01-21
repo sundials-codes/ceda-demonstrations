@@ -656,10 +656,18 @@ forward_euler(struct gkyl_diffusion_app* app, double tcurr, double dt,
 /* f routine to compute the ODE RHS function f(t,y). */
 static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
-  sunrealtype* rdata = (sunrealtype*)user_data; /* cast user_data to sunrealtype */
-  sunrealtype lambda = rdata[0]; /* set shortcut for user parameter */
+  struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
 
-  //fill in later
+  const struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
+  struct gkyl_array *fout  = N_VGetVector_Gkylzero(ydot);
+
+  gkyl_array_clear(app->cflrate, 0.0);
+  gkyl_array_clear(fout, 0.0);
+
+  gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
+    app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
+
+  ((N_VectorContent_Gkylzero)(ydot->content))->dataptr = fout;
 
   return 0; /* return with success */
 }
@@ -669,9 +677,17 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
                    sunrealtype* lambdaI, void* user_data, N_Vector temp1,
                    N_Vector temp2, N_Vector temp3)
 {
-  sunrealtype* rdata = (sunrealtype*)user_data; /* cast user_data to sunrealtype */
-  sunrealtype lambda = rdata[0]; /* set shortcut for user parameter */
-  *lambdaR           = lambda;
+  struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
+
+  gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
+
+  double omega_cfl_ho[1];
+  if (app->use_gpu)
+    gkyl_cu_memcpy(omega_cfl_ho, app->omega_cfl, sizeof(double), GKYL_CU_MEMCPY_D2H);
+  else
+    omega_cfl_ho[0] = app->omega_cfl[0];
+
+  *lambdaR           = -omega_cfl_ho[0];
   *lambdaI           = SUN_RCONST(0.0);
   return 0; /* return with success */
 }
@@ -719,164 +735,82 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
   return 0;
 }
 
+int flag;                /* reusable error-checking flag */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static int LSRK_init(struct gkyl_diffusion_app* app)
+void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
 {
+  void* arkode_mem = NULL;
   /* general problem parameters */
-  sunrealtype T0    = app->tcurr;  /* initial time */
+  sunrealtype T0    = 0.0;  /* initial time */
 
   sunrealtype reltol = SUN_RCONST(1.0e-8); /* tolerances */
   sunrealtype abstol = SUN_RCONST(1.0e-8);
 
-  int flag;                /* reusable error-checking flag */
-  N_Vector y       = NULL; /* empty vector for storing solution */
-  void* arkode_mem = NULL; /* empty ARKode memory structure */
-
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
   flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
-  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return NULL; }
 
   /* Initialize data structures */
-  y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
-  if (check_flag((void*)y, "N_VMake_Gkylzero", 0)) { return 1; }
+  *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
+  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return NULL; }
 
 //TO DO: Check to make sure app->f is the actual solution
 
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
-  arkode_mem = LSRKStepCreateSTS(f, T0, y, ctx);
-  if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
+  arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
+  if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return NULL; }
 
-  sunrealtype user_data = app->cfl;
   /* Set routines */
   flag = ARKodeSetUserData(arkode_mem,
-                           (void*)&user_data); /* Pass the user data */
-  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
+                           (void*)app); /* Pass the user data */
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return NULL; }
 
   /* Specify tolerances */
   flag = ARKodeSStolerances(arkode_mem, reltol, abstol);
-  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
+  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return NULL; }
 
   /* Specify user provided spectral radius */
   flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
-  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return NULL; }
 
   /* Specify after how many successful steps dom_eig is recomputed
      Note that nsteps = 0 refers to constant dominant eigenvalue */
   flag = LSRKStepSetDomEigFrequency(arkode_mem, 0);
-  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return 1; }
+  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return NULL; }
 
   /* Specify max number of stages allowed */
   flag = LSRKStepSetMaxNumStages(arkode_mem, 200);
-  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
+  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return NULL; }
 
   /* Specify max number of steps allowed */
   flag = ARKodeSetMaxNumSteps(arkode_mem, 1000);
-  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return NULL; }
 
   /* Specify safety factor for user provided dom_eig */
   flag = LSRKStepSetDomEigSafetyFactor(arkode_mem, SUN_RCONST(1.01));
-  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return 1; }
+  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return NULL; }
 
   /* Specify the Runge--Kutta--Legendre LSRK method */
   flag = LSRKStepSetSTSMethod(arkode_mem, ARKODE_LSRK_RKL_2);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return NULL; }
 
-  return 0;
+  return (void*)arkode_mem;
 }
 
 
 static struct gkyl_update_status
-sts_step(struct gkyl_diffusion_app* app, double dt0)
+sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Take time-step using the STS methods. Also sets the status object
   // which has the actual and suggested dts used. These can be different
   // from the actual time-step.
-  const struct gkyl_array *fin;
-  struct gkyl_array *fout;
   struct gkyl_update_status st = { .success = true };
 
-  // time-stepper state
-  enum { RK_STAGE_1, RK_STAGE_2, RK_STAGE_3, RK_COMPLETE } state = RK_STAGE_1;
-
-  double tcurr = app->tcurr, dt = dt0;
-
-
-
-  while (state != RK_COMPLETE) {
-    switch (state) {
-      case RK_STAGE_1:
-        fin = app->f;
-        fout = app->f1;
-
-        forward_euler(app, tcurr, dt, fin, fout, &st);
-        apply_bc(app, tcurr, fout);
-
-        dt = st.dt_actual;
-        state = RK_STAGE_2;
-        break;
-
-      case RK_STAGE_2:
-        fin = app->f1;
-        fout = app->fnew;
-
-        forward_euler(app, tcurr+dt, dt, fin, fout, &st);
-
-        if (st.dt_actual < dt) {
-          dt = st.dt_actual;
-          state = RK_STAGE_1; // restart from stage 1
-        }
-        else {
-          array_combine(app->f1, 3.0/4.0, app->f, 1.0/4.0, app->fnew, &app->local_ext);
-
-          fout = app->f1;
-          apply_bc(app, tcurr, fout);
-
-          state = RK_STAGE_3;
-        }
-        break;
-
-      case RK_STAGE_3:
-        fin = app->f1;
-        fout = app->fnew;
-
-        forward_euler(app, tcurr+dt/2, dt, fin, fout, &st);
-
-        if (st.dt_actual < dt) {
-          dt = st.dt_actual;
-          state = RK_STAGE_1; // restart from stage 1
-        }
-        else {
-          array_combine(app->f1, 1.0/3.0, app->f, 2.0/3.0, app->fnew, &app->local_ext);
-          gkyl_array_copy_range(app->f, app->f1, &app->local_ext);
-
-          fout = app->f;
-          apply_bc(app, tcurr, fout);
-
-          state = RK_COMPLETE;
-        }
-        break;
-
-      case RK_COMPLETE: // can't happen: suppresses warning
-        break;
-    }
-  }
+  flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
+  if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
 
   return st;
 }
@@ -975,6 +909,23 @@ gkyl_diffusion_update(struct gkyl_diffusion_app* app, double dt)
 {
   // Update the state of the system by taking a single time step.
   struct gkyl_update_status status = rk3(app, dt);
+  app->tcurr += status.dt_actual;
+
+  // Check for any CUDA errors during time step
+  if (app->use_gpu)
+    checkCuda(cudaGetLastError());
+  return status;
+}
+
+struct gkyl_update_status
+gkyl_diffusion_update_STS(struct gkyl_diffusion_app* app, void* arkode_mem,  double tout, N_Vector y, sunrealtype* tcurr)
+{
+  // Update the state of the system by taking a single time step.
+
+  // struct gkyl_update_status status = rk3(app, dt);
+
+  struct gkyl_update_status status = sts_step(app, arkode_mem, tout, y, tcurr);
+
   app->tcurr += status.dt_actual;
 
   // Check for any CUDA errors during time step
@@ -1232,22 +1183,43 @@ int main(int argc, char **argv)
   int num_failures = 0, num_failures_max = ctx.num_failures_max;
 
   int flag;
-  LSRK_init(app);
+  void* arkode_mem = NULL; /* empty ARKode memory structure */
+  N_Vector y       = NULL; /* empty vector for storing solution */
+  arkode_mem = LSRK_init(app, &y);
   if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
+  bool is_STS = true;
+  double tout = 0;
+
   long step = 1;
-  while ((t_curr < t_end) && (step <= app_args.num_steps)) {
+  while ((t_end - t_curr > 0.00001) && (step <= app_args.num_steps)) {
     fprintf(stdout, "Taking time-step %ld at t = %g ...", step, t_curr);
-    struct gkyl_update_status status = gkyl_diffusion_update(app, dt);
-    fprintf(stdout, " dt = %g\n", status.dt_actual);
+
+    struct gkyl_update_status status;
+
+    if(is_STS) {
+      if(step == 1) {
+        dt = 0.171347;
+      }
+      tout += dt;
+
+      status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
+      fprintf(stdout, " dt = %g\n", dt);
+    }
+    else {
+      status = gkyl_diffusion_update(app, dt);
+      fprintf(stdout, " dt = %g\n", status.dt_actual);
+    }
 
     if (!status.success) {
       fprintf(stdout, "** Update method failed! Aborting simulation ....\n");
       break;
     }
 
-    t_curr += status.dt_actual;
-    dt = status.dt_suggested;
+    if(!is_STS){
+      t_curr += status.dt_actual;
+      dt = status.dt_suggested;
+    }
 
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
@@ -1272,6 +1244,10 @@ int main(int argc, char **argv)
     }
 
     step += 1;
+  }
+
+  if(is_STS) {
+    ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
   }
 
   // Free the app.
