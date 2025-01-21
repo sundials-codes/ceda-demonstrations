@@ -11,3 +11,6 @@ target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 target_link_libraries(${target} PRIVATE
   SUNDIALS::arkode SUNDIALS::nvecserial)
+
+#   request installation of the target into the overall "bin" folder
+install(TARGETS ${target} DESTINATION ${demonstration_bin})

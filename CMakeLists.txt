@@ -46,6 +46,9 @@ set(CMAKE_CXX_STANDARD "17" CACHE STRING "C++ standard to use")
 option(CMAKE_INSTALL_RPATH_USE_LINK_PATH "Set rpath" ON)
 mark_as_advanced(FORCE CMAKE_INSTALL_RPATH_USE_LINK_PATH)
 
+# set installation folders
+set(demonstration_bin "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+
 # -------------
 # Build options
 # -------------

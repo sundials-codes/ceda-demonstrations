@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
   {
     flag = SetupARK(ctx, udata, uopts, yref, &Aref, &LSref, &arkref_mem);
     if (check_flag(flag, "Reference solver setup")) { return 1; }
-    flag = ARKodeSStolerances(arkref_mem, 1e-2 * uopts.rtol, uopts.atol);
+    flag = ARKodeSStolerances(arkref_mem, 1e-10, uopts.atol);
     if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
     flag = ARKodeSetOrder(arkref_mem, 4);
     if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
@@ -147,6 +147,7 @@ int main(int argc, char* argv[])
 
   // Initial time, time between outputs, output time
   sunrealtype t     = ZERO;
+  sunrealtype t2    = ZERO;
   sunrealtype dTout = udata.tf / uopts.nout;
   sunrealtype tout  = dTout;
 
@@ -166,7 +167,7 @@ int main(int argc, char* argv[])
   for (int iout = 0; iout < uopts.nout; iout++)
   {
     // Evolve
-    if (uopts.output == 3)
+    if ((uopts.output == 3) || (uopts.calc_error))
     {
       // Stop at output time (do not interpolate output)
       flag = ARKodeSetStopTime(arkode_mem, tout);
@@ -182,7 +183,7 @@ int main(int argc, char* argv[])
     {
       flag = ARKodeSetStopTime(arkref_mem, tout);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
-      flag = ARKodeEvolve(arkref_mem, tout, yref, &t, ARK_NORMAL);
+      flag = ARKodeEvolve(arkref_mem, tout, yref, &t2, ARK_NORMAL);
       if (check_flag(flag, "ARKodeEvolve")) { break; }
       N_VLinearSum(1.0, y, -1.0, yref, yerr);
       total_error += N_VDotProd(yerr, yerr);
@@ -396,6 +397,16 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   flag = ARKodeSetJacFn(*arkode_mem, Ji_RHS);
   if (check_flag(flag, "ARKodeSetJacFn")) { return 1; }
 
+  // Tighten implicit solver tolerances
+  flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-1);
+  if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
+  flag = ARKodeSetEpsLin(*arkode_mem, 1.e-1);
+  if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
+
+  // Use "deduce implicit RHS" option
+  flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
+  if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
+
   // Set the predictor method
   flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
   if (check_flag(flag, "ARKodeSetPredictorMethod")) { return 1; }
@@ -451,7 +462,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // -------------------------------
 
   // Create LSRKStep memory
-  void* sts_arkode_mem = LSRKStepCreateSTS(f_diffusion, ZERO, y, ctx);
+  void* sts_arkode_mem = LSRKStepCreateSTS(f_diffusion_forcing, ZERO, y, ctx);
   if (check_ptr(arkode_mem, "LSRKStepCreateSTS")) { return 1; }
 
   // Attach user data
@@ -472,6 +483,10 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Increase the maximum number of internal STS stages allowed
   flag = LSRKStepSetMaxNumStages(sts_arkode_mem, 10000);
   if (check_flag(flag, "LSRKStepSetMaxNumStages")) { return 1; }
+
+  // Disable temporal interpolation for inner STS method
+  flag = ARKodeSetInterpolantType(sts_arkode_mem, ARK_INTERP_NONE);
+  if (check_flag(flag, "ARKodeSetInterpolantType")) { return 1; }
 
   // Create the inner stepper wrapper
   flag = MRIStepInnerStepper_Create(ctx, sts_mem);
@@ -524,7 +539,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (udata.reaction)
   {
     // Create banded matrix
-    *A = SUNBandMatrix(udata.neq, 3, 3, ctx);
+    *A = SUNBandMatrix(udata.neq, 2, 2, ctx);
     if (check_ptr(*A, "SUNBandMatrix")) { return 1; }
 
     // Create linear solver
@@ -542,6 +557,16 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     // Set linear solver setup frequency
     flag = ARKodeSetLSetupFrequency(*arkode_mem, uopts.ls_setup_freq);
     if (check_flag(flag, "ARKodeSetLSetupFrequency")) { return 1; }
+
+    // Tighten implicit solver tolerances
+    flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-1);
+    if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
+    flag = ARKodeSetEpsLin(*arkode_mem, 1.e-1);
+    if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
+
+    // Use "deduce implicit RHS" option
+    flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
+    if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
 
     // Set the predictor method
     flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
@@ -748,11 +773,19 @@ int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
 
   STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
 
+  // Reset STS integrator to current state
+  flag = ARKodeReset(content->sts_arkode_mem, t0, y);
+  if (check_flag(flag, "ARKodeReset")) { return 1; }
+
   // Set step size to get to tout in a single step
   flag = ARKodeSetFixedStep(content->sts_arkode_mem, tout - t0);
   if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
 
-  // Evolve in time
+  // Set stop time
+  flag = ARKodeSetStopTime(content->sts_arkode_mem, tout);
+  if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+
+  // Evolve a single time step
   sunrealtype tret;
   flag = ARKodeEvolve(content->sts_arkode_mem, tout, y, &tret, ARK_ONE_STEP);
   if (check_flag(flag, "ARKodeEvolve")) { return flag; }
@@ -1072,6 +1105,23 @@ int f_adv_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   // Combine advection and reaction
   N_VLinearSum(ONE, f, ONE, udata->temp_v, f);
+
+  return 0;
+}
+
+// Diffusion RHS function with MRI forcing
+int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
+{
+  // Access problem data
+  UserData* udata = (UserData*)user_data;
+
+  // Compute diffusion RHS
+  int flag = f_diffusion(t, y, f, user_data);
+  if (flag) { return flag; }
+
+  // Apply inner forcing for MRI + LSRKStep
+  flag = MRIStepInnerStepper_AddForcing(udata->sts_mem, t, f);
+  if (check_flag(flag, "MRIStepInnerStepper_AddForcing")) { return -1; }
 
   return 0;
 }

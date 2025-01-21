@@ -25,3 +25,6 @@ else()
   target_compile_definitions(${target} PRIVATE USE_HIP)
   target_link_libraries(${target} PRIVATE SUNDIALS::nvechip hip::device)
 endif()
+
+# request installation of the target into the overall "bin" folder
+install(TARGETS ${target} DESTINATION ${demonstration_bin})
