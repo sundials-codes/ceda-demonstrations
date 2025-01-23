@@ -249,24 +249,87 @@ void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y)
 void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
 {
 
+  struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
+  struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *u_data = udptr->data;
+  sunrealtype *v_data = vdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  sunindextype N = (udptr->size*udptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    w_data[i] = u_data[i] / v_data[i];
+  }
+
+  return;
 }
 
 void N_VAbs_Gkylzero(N_Vector u, N_Vector v)
 {
+  struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
+  struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
+  sunrealtype *u_data = udptr->data;
+  sunrealtype *v_data = vdptr->data;
+
+  sunindextype N = (udptr->size*udptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    v_data[i] = SUNRabs(u_data[i]);
+  }
+
+  return;
 }
 
 void N_VInv_Gkylzero(N_Vector u, N_Vector v)
 {
+  struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
+  struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
+  sunrealtype *u_data = udptr->data;
+  sunrealtype *v_data = vdptr->data;
+
+  sunindextype N = (udptr->size*udptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    v_data[i] = 1.0 / u_data[i];
+  }
+
+  return;
 }
 
 sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 {
-  return 0.0;
+  struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
+
+  sunrealtype *u_data = udptr->data;
+
+  sunindextype N = (udptr->size*udptr->ncomp);
+
+  sunrealtype max = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    if (SUNRabs(u_data[i]) > max) { max = SUNRabs(u_data[i]); }
+  }
+
+  return (max);
 }
 
 void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
 {
+  struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
+  struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
+  sunrealtype *u_data = udptr->data;
+  sunrealtype *v_data = vdptr->data;
+
+  sunindextype N = (udptr->size*udptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    v_data[i] = u_data[i] + x;
+  }
+
+  return;
 }

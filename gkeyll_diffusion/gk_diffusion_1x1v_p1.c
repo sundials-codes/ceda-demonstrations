@@ -77,6 +77,10 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VMake_Gkylzero and N_VGetVector_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VCloneEmpty_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_Vector NV_test_clone = N_VClone_Gkylzero(NV_test);
 
   struct gkyl_array *testarrayclone;
@@ -98,6 +102,10 @@ void test_nvector_gkylzero (bool use_gpu) {
   {
     printf("\n      N_VCloneEmpty_Gkylzero and N_VClone_Gkylzero PASSED the test");
   }
+
+  /* ----------------------------------------------------------------------
+  * N_VScale_Gkylzero Test
+  * --------------------------------------------------------------------*/
 
   N_Vector NV_test_return = N_VClone_Gkylzero(NV_test);
 
@@ -124,6 +132,10 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VScale_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VConst_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_VConst_Gkylzero(173.0, NV_test_return);
 
   testarrayreturn = N_VGetVector_Gkylzero(NV_test_return);
@@ -144,6 +156,10 @@ void test_nvector_gkylzero (bool use_gpu) {
   {
     printf("\n      N_VConst_Gkylzero PASSED the test");
   }
+
+  /* ----------------------------------------------------------------------
+  * N_VLinearSum_Gkylzero Test
+  * --------------------------------------------------------------------*/
 
   double a = 2.0;
   double b = 3.0;
@@ -182,6 +198,10 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VLinearSum_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VWrmsNorm_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_VConst_Gkylzero(-0.5, Nv1);
   N_VConst_Gkylzero( 0.5, Nv2);
 
@@ -198,6 +218,152 @@ void test_nvector_gkylzero (bool use_gpu) {
   else
   {
     printf("\n      N_VWrmsNorm_Gkylzero PASSED the test");
+  }
+
+
+  /* ----------------------------------------------------------------------
+  * N_VDiv_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvdiv = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+  N_VConst_Gkylzero(d, Nv2);
+
+  N_VDiv_Gkylzero(Nv1, Nv2, Nvdiv);
+
+  nvdiv = N_VGetVector_Gkylzero(Nvdiv);
+
+  double *nvdiv_data = nvdiv->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VDiv_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VDiv_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VAbs_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvabs = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, ctx);
+
+  N_VConst_Gkylzero(-1.0, Nv1);
+
+  N_VAbs_Gkylzero(Nv1, Nvabs);
+
+  nvabs = N_VGetVector_Gkylzero(Nvabs);
+
+  double *nvabs_data = nvabs->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VAbs_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VAbs_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VInv_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvinv = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+
+  N_VInv_Gkylzero(Nv1, Nvinv);
+
+  nvinv = N_VGetVector_Gkylzero(Nvinv);
+
+  double *nvinv_data = nvinv->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VInv_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VInv_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VMaxnorm_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  N_VConst_Gkylzero(0.0, Nv1);
+
+  sunrealtype nvmaxnorm = N_VMaxnorm_Gkylzero(Nv1);
+
+  if (nvmaxnorm < 0.0 || nvmaxnorm >= eq_check_tol) { failure = 1; }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VMaxnorm_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VMaxnorm_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VAddconst_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvadd = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+
+  N_VAddconst_Gkylzero(Nv1, d, Nvadd);
+
+  nvadd = N_VGetVector_Gkylzero(Nvadd);
+
+  double *nvadd_data = nvadd->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VAddconst_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VAddconst_Gkylzero PASSED the test");
   }
 
   if(num_of_failures == 0) {
@@ -262,7 +428,7 @@ create_diffusion_ctx(void)
     .vpar_min = -6.0, // Minimum vpar of the grid.
     .vpar_max =  6.0, // Maximum vpar of the grid.
     .poly_order = 1, // Polynomial order of the DG basis.
-    .cells = {1200, 200}, // Number of cells in each direction.
+    .cells = {120, 20}, // Number of cells in each direction.
 
     .t_end = 1.0, // Final simulation time.
     .num_frames = 10, // Number of output frames.
