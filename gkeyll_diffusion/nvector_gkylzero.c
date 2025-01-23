@@ -240,6 +240,7 @@ sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
   return asum;
 }
 
+//Will be removed soon. No need to create a new function.
 void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y)
 {
   *x = 0;
@@ -310,6 +311,8 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 
   sunrealtype max = 0.0;
 
+  // use gkyl_array_reduce
+
   for (sunindextype i=0; i<N; ++i) {
     if (SUNRabs(u_data[i]) > max) { max = SUNRabs(u_data[i]); }
   }
@@ -322,13 +325,12 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
+  gkyl_array_copy(vdptr, udptr);
 
-  sunindextype N = (udptr->size*udptr->ncomp);
+  sunindextype N = udptr->ncomp;
 
   for (sunindextype i=0; i<N; ++i) {
-    v_data[i] = u_data[i] + x;
+    gkyl_array_shiftc(vdptr, x, i);
   }
 
   return;

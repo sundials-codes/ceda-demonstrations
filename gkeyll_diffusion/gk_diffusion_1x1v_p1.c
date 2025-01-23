@@ -833,8 +833,6 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
 
-  ((N_VectorContent_Gkylzero)(ydot->content))->dataptr = fout;
-
   return 0; /* return with success */
 }
 
@@ -1342,7 +1340,7 @@ int main(int argc, char **argv)
   arkode_mem = LSRK_init(app, &y);
   if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
-  bool is_STS = true;
+  bool is_STS = false;
   double tout = 0;
 
   long step = 1;

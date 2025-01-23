@@ -14,7 +14,7 @@ To compile and run this program:
 4. Run `make`.
 5. Run the executable `./gk_diffusion_1x1v_p1`.
 
-To plot the result of this simulation one can use [postgkyl](https://gkeyll.readthedocs.io/en/latest/postgkyl/main.html) (see sections on installing postgkyl and the postgkyl reference) in command line or in script mode. An example of a Python script can be found in this directory (`post_gk_diffusion.py`). Some examples of command line usage include: 
+To plot the result of this simulation one can use [postgkyl](https://gkeyll.readthedocs.io/en/latest/postgkyl/main.html) (see sections on installing postgkyl and the postgkyl reference) in command line or in script mode. An example of a Python script can be found in this directory (`post_gk_diffusion.py`). Some examples of command line usage include:
 
 - Plot solution at vpar=0, overlaying each slice in time.
 ```
@@ -29,4 +29,14 @@ pgkyl "gk_diffusion_1x1v_p1-f_[0-9]*.gkyl" interp sel --z1 0. anim -x 'x' -y '$f
 - Plot the L2 norm of the solution in time.
 ```
 pgkyl gk_diffusion_1x1v_p1-f_L2.gkyl pl -x 'Time' -y '$\int dx\,|f|^2$'
+```
+
+How to plot side by side solutions:
+```
+pgkyl ../../error_check/gk_diffusion_1x1v_p1-f_10.gkyl gk_diffusion_1x1v_p1-f_10.gkyl interpolate plot -b
+```
+
+How to plot the difference of two solutions:
+```
+pgkyl ../../error_check/gk_diffusion_1x1v_p1-f_10.gkyl gk_diffusion_1x1v_p1-f_10.gkyl interpolate ev 'f[0] f[1] -' plot
 ```
