@@ -901,9 +901,8 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 
 int flag;                /* reusable error-checking flag */
 
-void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
+int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
-  void* arkode_mem = NULL;
   /* general problem parameters */
   sunrealtype T0    = 0.0;  /* initial time */
 
@@ -913,55 +912,55 @@ void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
   flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
-  if (check_flag(&flag, "SUNContext_Create", 1)) { return NULL; }
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
   /* Initialize data structures */
   *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
-  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return NULL; }
+  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
 
 //TO DO: Check to make sure app->f is the actual solution
 
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
-  arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
-  if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return NULL; }
+  *arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
+  if (check_flag((void*)*arkode_mem, "ARKStepCreate", 0)) { return 1; }
 
   /* Set routines */
-  flag = ARKodeSetUserData(arkode_mem,
+  flag = ARKodeSetUserData(*arkode_mem,
                            (void*)app); /* Pass the user data */
-  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return NULL; }
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
 
   /* Specify tolerances */
-  flag = ARKodeSStolerances(arkode_mem, reltol, abstol);
-  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return NULL; }
+  flag = ARKodeSStolerances(*arkode_mem, reltol, abstol);
+  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
 
   /* Specify user provided spectral radius */
-  flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
-  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigFn(*arkode_mem, dom_eig);
+  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
 
   /* Specify after how many successful steps dom_eig is recomputed
      Note that nsteps = 0 refers to constant dominant eigenvalue */
-  flag = LSRKStepSetDomEigFrequency(arkode_mem, 0);
-  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigFrequency(*arkode_mem, 1);
+  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return 1; }
 
   /* Specify max number of stages allowed */
-  flag = LSRKStepSetMaxNumStages(arkode_mem, 200);
-  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return NULL; }
+  flag = LSRKStepSetMaxNumStages(*arkode_mem, 200);
+  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
 
   /* Specify max number of steps allowed */
-  flag = ARKodeSetMaxNumSteps(arkode_mem, 1000);
-  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return NULL; }
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 1000);
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   /* Specify safety factor for user provided dom_eig */
-  flag = LSRKStepSetDomEigSafetyFactor(arkode_mem, SUN_RCONST(1.01));
-  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigSafetyFactor(*arkode_mem, SUN_RCONST(1.01));
+  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return 1; }
 
   /* Specify the Runge--Kutta--Legendre LSRK method */
-  flag = LSRKStepSetSTSMethod(arkode_mem, ARKODE_LSRK_RKL_2);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return NULL; }
+  flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  return (void*)arkode_mem;
+  return 0;
 }
 
 static struct gkyl_update_status
@@ -972,8 +971,11 @@ sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector
   // from the actual time-step.
   struct gkyl_update_status st = { .success = true };
 
+  printf("\ntcurr = %f before evolve\n", *tcurr);
   flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
+
+  printf("tcurr = %f before apply_bc\n", *tcurr);
 
   apply_bc(app, *tcurr, app->f);
 
@@ -1337,10 +1339,10 @@ int main(int argc, char **argv)
   int flag;
   void* arkode_mem = NULL; /* empty ARKode memory structure */
   N_Vector y       = NULL; /* empty vector for storing solution */
-  arkode_mem = LSRK_init(app, &y);
+  flag = LSRK_init(app, &y, &arkode_mem);
   if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
-  bool is_STS = false;
+  bool is_STS = true;
   double tout = 0;
 
   long step = 1;
@@ -1352,11 +1354,14 @@ int main(int argc, char **argv)
     if(is_STS) {
       if(step == 1) {
         dt = 0.1;
+        flag = ARKodeGetCurrentTime(arkode_mem, &t_curr);
+        if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
+        printf("\nt_curr = %f\n", t_curr);
       }
       tout += dt;
 
       status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
-      fprintf(stdout, " dt = %g\n", dt);
+      // fprintf(stdout, " dt = %g\n", dt);
     }
     else {
       status = gkyl_diffusion_update(app, dt);
@@ -1376,24 +1381,25 @@ int main(int argc, char **argv)
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
 
-    if (dt_init < 0.0) {
-      dt_init = status.dt_actual;
-    }
-    else if (status.dt_actual < dt_failure_tol * dt_init) {
-      num_failures += 1;
-
-      fprintf(stdout, "WARNING: Time-step dt = %g", status.dt_actual);
-      fprintf(stdout, " is below %g*dt_init ...", dt_failure_tol);
-      fprintf(stdout, " num_failures = %d\n", num_failures);
-      if (num_failures >= num_failures_max) {
-        fprintf(stdout, "ERROR: Time-step was below %g*dt_init ", dt_failure_tol);
-        fprintf(stdout, "%d consecutive times. Aborting simulation ....\n", num_failures_max);
-        break;
+    if(!is_STS)
+      if (dt_init < 0.0) {
+        dt_init = status.dt_actual;
       }
-    }
-    else {
-      num_failures = 0;
-    }
+      else if (status.dt_actual < dt_failure_tol * dt_init) {
+        num_failures += 1;
+
+        fprintf(stdout, "WARNING: Time-step dt = %g", status.dt_actual);
+        fprintf(stdout, " is below %g*dt_init ...", dt_failure_tol);
+        fprintf(stdout, " num_failures = %d\n", num_failures);
+        if (num_failures >= num_failures_max) {
+          fprintf(stdout, "ERROR: Time-step was below %g*dt_init ", dt_failure_tol);
+          fprintf(stdout, "%d consecutive times. Aborting simulation ....\n", num_failures_max);
+          break;
+        }
+      }
+      else {
+        num_failures = 0;
+      }
 
     step += 1;
   }

@@ -139,6 +139,12 @@ N_Vector N_VCloneEmpty_Gkylzero(N_Vector w)
 
   /* Initialize content */
   content->own_vector = SUNFALSE;
+  /* N_VCloneEmpty_Gkylzero must be called only in
+     N_VClone_Gkylzero to ensure use_gpu has the correct flag.
+     Otherwise, use_gpu flag will be false even if it must be true*/
+
+  //TO DO: Check to verify if this function is called separately
+  content->use_gpu    = SUNFALSE;
   content->dataptr    = NULL;
 
   return (v);
@@ -200,15 +206,33 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_set(zdptr, a, xdptr);
-  gkyl_array_accumulate(zdptr, b, ydptr);
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *y_data = ydptr->data;
+  sunrealtype *z_data = zdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    z_data[i] = (a * x_data[i]) + (b * y_data[i]);
+  }
+
+  // gkyl_array_set(zdptr, a, xdptr);
+  // gkyl_array_accumulate(zdptr, b, ydptr);
 }
 
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z)
 {
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_clear(zdptr, c);
+  sunrealtype *z_data = zdptr->data;
+
+  sunindextype N = (zdptr->size*zdptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    z_data[i] = c;
+  }
+
+  // gkyl_array_clear(zdptr, c);
 }
 
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
@@ -216,7 +240,16 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_set(zdptr, c, xdptr);
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *z_data = zdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+
+  for (sunindextype i=0; i<N; ++i) {
+    z_data[i] = c * x_data[i];
+  }
+
+  // gkyl_array_set(zdptr, c, xdptr);
 }
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
@@ -325,13 +358,22 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
-  gkyl_array_copy(vdptr, udptr);
+  sunrealtype *u_data = udptr->data;
+  sunrealtype *v_data = vdptr->data;
 
-  sunindextype N = udptr->ncomp;
+  sunindextype N = (udptr->size*udptr->ncomp);
 
   for (sunindextype i=0; i<N; ++i) {
-    gkyl_array_shiftc(vdptr, x, i);
+    v_data[i] = u_data[i] + x;
   }
+
+  // gkyl_array_copy(vdptr, udptr);
+
+  // sunindextype N = udptr->ncomp;
+
+  // for (sunindextype i=0; i<N; ++i) {
+  //   gkyl_array_shiftc(vdptr, x, i);
+  // }
 
   return;
 }

@@ -501,7 +501,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "MRIStepInnerStepper_SetContent")) { return 1; }
 
   flag = MRIStepInnerStepper_SetEvolveFn(*sts_mem, STSInnerStepper_Evolve);
-  if (check_flag(flag, "MRIStepInnerStepper_SetEvolve")) { return 1; }
+  if (check_flag(flag, "MRIStepInnerStepper_SetEvolveFn")) { return 1; }
 
   flag = MRIStepInnerStepper_SetFullRhsFn(*sts_mem, STSInnerStepper_FullRhs);
   if (check_flag(flag, "MRIStepInnerStepper_SetFullRhsFn")) { return 1; }
@@ -783,7 +783,7 @@ int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
 
   // Set stop time
   flag = ARKodeSetStopTime(content->sts_arkode_mem, tout);
-  if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+  if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
 
   // Evolve a single time step
   sunrealtype tret;
