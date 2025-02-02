@@ -971,11 +971,8 @@ sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector
   // from the actual time-step.
   struct gkyl_update_status st = { .success = true };
 
-  printf("\ntcurr = %f before evolve\n", *tcurr);
   flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
-
-  printf("tcurr = %f before apply_bc\n", *tcurr);
 
   apply_bc(app, *tcurr, app->f);
 
@@ -1347,7 +1344,7 @@ int main(int argc, char **argv)
 
   long step = 1;
   while ((t_end - t_curr > 0.00001) && (step <= app_args.num_steps)) {
-    fprintf(stdout, "Taking time-step %ld at t = %g ...", step, t_curr);
+    fprintf(stdout, "Taking time-step %ld at t = %g ...\n", step, t_curr);
 
     struct gkyl_update_status status;
 
@@ -1356,12 +1353,10 @@ int main(int argc, char **argv)
         dt = 0.1;
         flag = ARKodeGetCurrentTime(arkode_mem, &t_curr);
         if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
-        printf("\nt_curr = %f\n", t_curr);
       }
       tout += dt;
 
       status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
-      // fprintf(stdout, " dt = %g\n", dt);
     }
     else {
       status = gkyl_diffusion_update(app, dt);
