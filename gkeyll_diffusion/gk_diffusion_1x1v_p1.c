@@ -199,6 +199,68 @@ void test_nvector_gkylzero (bool use_gpu) {
   }
 
   /* ----------------------------------------------------------------------
+  * N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z) Test
+  * --------------------------------------------------------------------*/
+
+  a = 2.0;
+  b = 3.0;
+  c = -1.75;
+  d = -2.89;
+  sunrealtype e = 1.21;
+  sunrealtype f = 3.43;
+  sunrealtype g = 12.12;
+  sunrealtype h = -0.23;
+
+  struct gkyl_array* v3 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* v4 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array *lin_comb = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nv3      = N_VMake_Gkylzero(v3, use_gpu, ctx);
+  N_Vector Nv4      = N_VMake_Gkylzero(v4, use_gpu, ctx);
+  N_Vector Nlin_comb = N_VMake_Gkylzero(lin_comb, use_gpu, ctx);
+
+  N_VConst_Gkylzero(e, Nv1);
+  N_VConst_Gkylzero(f, Nv2);
+  N_VConst_Gkylzero(g, Nv3);
+  N_VConst_Gkylzero(h, Nv4);
+
+  sunrealtype* cvals;
+  N_Vector* Xvecs;
+
+  cvals = (sunrealtype*)calloc(4, sizeof(sunrealtype));
+  Xvecs = (N_Vector*)calloc(4, sizeof(N_Vector));
+
+  cvals[0] = a;
+  Xvecs[0] = Nv1;
+  cvals[1] = b;
+  Xvecs[1] = Nv2;
+  cvals[2] = c;
+  Xvecs[2] = Nv3;
+  cvals[3] = d;
+  Xvecs[3] = Nv4;
+
+  N_VLinearCombination_Gkylzero(4, cvals, Xvecs, Nlin_comb);
+
+  lin_comb = N_VGetVector_Gkylzero(Nlin_comb);
+
+  double *lin_comb_data = lin_comb->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
+    failure = (abs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VLinearCombination_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VLinearCombination_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
   * N_VWrmsNorm_Gkylzero Test
   * --------------------------------------------------------------------*/
 
@@ -367,7 +429,7 @@ void test_nvector_gkylzero (bool use_gpu) {
   }
 
   if(num_of_failures == 0) {
-    printf("\n\n nvector_gkylzero PASSED all tests!\n");
+    printf("\n\n nvector_gkylzero PASSED all tests!\n\n");
   }
   else {
     printf("\n\n nvector_gkylzero failed in %d test(s)!\n\n", num_of_failures);
@@ -856,6 +918,17 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
   return 0; /* return with success */
 }
 
+
+static int apply_bc_in_LSRK(sunrealtype t, N_Vector y, void* user_data) {
+
+  struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
+  struct gkyl_array* f = N_VGetVector_Gkylzero(y);
+
+  apply_bc(app, t, f);
+
+  return 0; /* return with success */
+}
+
 /* Check function return value...
     opt == 0 means SUNDIALS function allocates memory so check if
              returned NULL pointer
@@ -960,6 +1033,10 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
+  /* User provided apply boundary conditions function */
+  flag = ARKodeSetPostprocessStepFn(*arkode_mem, apply_bc_in_LSRK);//should be stage instead
+  if (check_flag(&flag, "ARKodeSetPostprocessStepFn", 1)) { return 1; }
+
   return 0;
 }
 
@@ -973,8 +1050,6 @@ sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector
 
   flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
-
-  apply_bc(app, *tcurr, app->f);
 
   return st;
 }
@@ -1274,7 +1349,7 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool test_nvector = false;
+  bool test_nvector = true;
   if(test_nvector)
     test_nvector_gkylzero(false);
 

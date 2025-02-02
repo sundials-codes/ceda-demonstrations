@@ -53,6 +53,7 @@ void N_VDestroy_Gkylzero(N_Vector v);
 
 /* vector operations -- DELETE ALL THAT WILL BE UNUSED BY LSRKSTEP */
 void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y, N_Vector z);
+SUNErrCode N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z);
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z);
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z);
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w);

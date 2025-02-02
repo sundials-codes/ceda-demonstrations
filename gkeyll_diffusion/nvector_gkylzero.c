@@ -46,21 +46,22 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   /* Attach operations -- DELETE ANY THAT WERE DELETED FROM nvector_gkylzero.h */
 
   /* constructors, destructors, and utility operations */
-  v->ops->nvclone           = N_VClone_Gkylzero;
-  v->ops->nvcloneempty      = N_VCloneEmpty_Gkylzero;
-  v->ops->nvdestroy         = N_VDestroy_Gkylzero;
+  v->ops->nvclone             = N_VClone_Gkylzero;
+  v->ops->nvcloneempty        = N_VCloneEmpty_Gkylzero;
+  v->ops->nvdestroy           = N_VDestroy_Gkylzero;
 
   /* vector operations */
-  v->ops->nvlinearsum    = N_VLinearSum_Gkylzero;
-  v->ops->nvconst        = N_VConst_Gkylzero;
-  v->ops->nvscale        = N_VScale_Gkylzero;
-  v->ops->nvwrmsnorm     = N_VWrmsNorm_Gkylzero;
-  v->ops->nvspace        = N_VSpace_Gkylzero;
-  v->ops->nvdiv          = N_VDiv_Gkylzero;
-  v->ops->nvabs          = N_VAbs_Gkylzero;
-  v->ops->nvinv          = N_VInv_Gkylzero;
-  v->ops->nvmaxnorm      = N_VMaxnorm_Gkylzero;
-  v->ops->nvaddconst     = N_VAddconst_Gkylzero;
+  v->ops->nvlinearsum         = N_VLinearSum_Gkylzero;
+  v->ops->nvlinearcombination = N_VLinearCombination_Gkylzero;
+  v->ops->nvconst             = N_VConst_Gkylzero;
+  v->ops->nvscale             = N_VScale_Gkylzero;
+  v->ops->nvwrmsnorm          = N_VWrmsNorm_Gkylzero;
+  v->ops->nvspace             = N_VSpace_Gkylzero;
+  v->ops->nvdiv               = N_VDiv_Gkylzero;
+  v->ops->nvabs               = N_VAbs_Gkylzero;
+  v->ops->nvinv               = N_VInv_Gkylzero;
+  v->ops->nvmaxnorm           = N_VMaxnorm_Gkylzero;
+  v->ops->nvaddconst          = N_VAddconst_Gkylzero;
 
 
 
@@ -206,33 +207,28 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  sunrealtype *x_data = xdptr->data;
-  sunrealtype *y_data = ydptr->data;
-  sunrealtype *z_data = zdptr->data;
+  gkyl_array_set(zdptr, a, xdptr);
+  gkyl_array_accumulate(zdptr, b, ydptr);
+}
 
-  sunindextype N = (xdptr->size*xdptr->ncomp);
+/* fused vector operation */
+SUNErrCode N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z)
+{
+  N_VScale_Gkylzero(c[0], X[0], z);
 
-  for (sunindextype i=0; i<N; ++i) {
-    z_data[i] = (a * x_data[i]) + (b * y_data[i]);
+  for (int i = 1; i < nvec; i++)
+  {
+    N_VLinearSum_Gkylzero(SUN_RCONST(1.0), z, c[i], X[i], z);
   }
 
-  // gkyl_array_set(zdptr, a, xdptr);
-  // gkyl_array_accumulate(zdptr, b, ydptr);
+  return SUN_SUCCESS;
 }
 
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z)
 {
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  sunrealtype *z_data = zdptr->data;
-
-  sunindextype N = (zdptr->size*zdptr->ncomp);
-
-  for (sunindextype i=0; i<N; ++i) {
-    z_data[i] = c;
-  }
-
-  // gkyl_array_clear(zdptr, c);
+  gkyl_array_clear(zdptr, c);
 }
 
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
@@ -240,16 +236,7 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  sunrealtype *x_data = xdptr->data;
-  sunrealtype *z_data = zdptr->data;
-
-  sunindextype N = (xdptr->size*xdptr->ncomp);
-
-  for (sunindextype i=0; i<N; ++i) {
-    z_data[i] = c * x_data[i];
-  }
-
-  // gkyl_array_set(zdptr, c, xdptr);
+  gkyl_array_set(zdptr, c, xdptr);
 }
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
@@ -358,22 +345,13 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
+  gkyl_array_copy(vdptr, udptr);
 
-  sunindextype N = (udptr->size*udptr->ncomp);
+  sunindextype N = udptr->ncomp;
 
   for (sunindextype i=0; i<N; ++i) {
-    v_data[i] = u_data[i] + x;
+    gkyl_array_shiftc(vdptr, x, i);
   }
-
-  // gkyl_array_copy(vdptr, udptr);
-
-  // sunindextype N = udptr->ncomp;
-
-  // for (sunindextype i=0; i<N; ++i) {
-  //   gkyl_array_shiftc(vdptr, x, i);
-  // }
 
   return;
 }
