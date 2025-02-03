@@ -256,6 +256,10 @@ int PSolve(sunrealtype t, N_Vector u, N_Vector f, N_Vector r, N_Vector z,
 // Utility functions
 // -----------------------------------------------------------------------------
 
+// Diffusion coefficients
+sunrealtype Diffusion_Coeff_X(sunrealtype x, UserData* udata);
+sunrealtype Diffusion_Coeff_Y(sunrealtype y, UserData* udata);
+
 // Compute the initial condition
 int Initial(sunrealtype t, N_Vector u, UserData* udata);
 

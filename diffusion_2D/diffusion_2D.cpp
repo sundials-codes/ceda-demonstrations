@@ -858,6 +858,16 @@ int UserOutput::close(UserData* udata)
 // Output and utility functions
 // -----------------------------------------------------------------------------
 
+sunrealtype Diffusion_Coeff_X(sunrealtype x, UserData* udata)
+{
+  return (udata->kx * (1.0 + 0.99*sin(x)));
+}
+
+sunrealtype Diffusion_Coeff_Y(sunrealtype y, UserData* udata)
+{
+  return (udata->ky * (1.0 + 0.99*sin(y)));
+}
+
 // Check function return value
 int check_flag(const void* flagvalue, const string funcname, int opt)
 {
