@@ -77,6 +77,10 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VMake_Gkylzero and N_VGetVector_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VCloneEmpty_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_Vector NV_test_clone = N_VClone_Gkylzero(NV_test);
 
   struct gkyl_array *testarrayclone;
@@ -98,6 +102,10 @@ void test_nvector_gkylzero (bool use_gpu) {
   {
     printf("\n      N_VCloneEmpty_Gkylzero and N_VClone_Gkylzero PASSED the test");
   }
+
+  /* ----------------------------------------------------------------------
+  * N_VScale_Gkylzero Test
+  * --------------------------------------------------------------------*/
 
   N_Vector NV_test_return = N_VClone_Gkylzero(NV_test);
 
@@ -124,6 +132,10 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VScale_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VConst_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_VConst_Gkylzero(173.0, NV_test_return);
 
   testarrayreturn = N_VGetVector_Gkylzero(NV_test_return);
@@ -144,6 +156,10 @@ void test_nvector_gkylzero (bool use_gpu) {
   {
     printf("\n      N_VConst_Gkylzero PASSED the test");
   }
+
+  /* ----------------------------------------------------------------------
+  * N_VLinearSum_Gkylzero Test
+  * --------------------------------------------------------------------*/
 
   double a = 2.0;
   double b = 3.0;
@@ -182,6 +198,72 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VLinearSum_Gkylzero PASSED the test");
   }
 
+  /* ----------------------------------------------------------------------
+  * N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z) Test
+  * --------------------------------------------------------------------*/
+
+  a = 2.0;
+  b = 3.0;
+  c = -1.75;
+  d = -2.89;
+  sunrealtype e = 1.21;
+  sunrealtype f = 3.43;
+  sunrealtype g = 12.12;
+  sunrealtype h = -0.23;
+
+  struct gkyl_array* v3 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* v4 = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array *lin_comb = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nv3      = N_VMake_Gkylzero(v3, use_gpu, ctx);
+  N_Vector Nv4      = N_VMake_Gkylzero(v4, use_gpu, ctx);
+  N_Vector Nlin_comb = N_VMake_Gkylzero(lin_comb, use_gpu, ctx);
+
+  N_VConst_Gkylzero(e, Nv1);
+  N_VConst_Gkylzero(f, Nv2);
+  N_VConst_Gkylzero(g, Nv3);
+  N_VConst_Gkylzero(h, Nv4);
+
+  sunrealtype* cvals;
+  N_Vector* Xvecs;
+
+  cvals = (sunrealtype*)calloc(4, sizeof(sunrealtype));
+  Xvecs = (N_Vector*)calloc(4, sizeof(N_Vector));
+
+  cvals[0] = a;
+  Xvecs[0] = Nv1;
+  cvals[1] = b;
+  Xvecs[1] = Nv2;
+  cvals[2] = c;
+  Xvecs[2] = Nv3;
+  cvals[3] = d;
+  Xvecs[3] = Nv4;
+
+  N_VLinearCombination_Gkylzero(4, cvals, Xvecs, Nlin_comb);
+
+  lin_comb = N_VGetVector_Gkylzero(Nlin_comb);
+
+  double *lin_comb_data = lin_comb->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
+    failure = (abs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VLinearCombination_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VLinearCombination_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VWrmsNorm_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
   N_VConst_Gkylzero(-0.5, Nv1);
   N_VConst_Gkylzero( 0.5, Nv2);
 
@@ -200,8 +282,154 @@ void test_nvector_gkylzero (bool use_gpu) {
     printf("\n      N_VWrmsNorm_Gkylzero PASSED the test");
   }
 
+
+  /* ----------------------------------------------------------------------
+  * N_VDiv_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvdiv = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+  N_VConst_Gkylzero(d, Nv2);
+
+  N_VDiv_Gkylzero(Nv1, Nv2, Nvdiv);
+
+  nvdiv = N_VGetVector_Gkylzero(Nvdiv);
+
+  double *nvdiv_data = nvdiv->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VDiv_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VDiv_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VAbs_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvabs = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, ctx);
+
+  N_VConst_Gkylzero(-1.0, Nv1);
+
+  N_VAbs_Gkylzero(Nv1, Nvabs);
+
+  nvabs = N_VGetVector_Gkylzero(Nvabs);
+
+  double *nvabs_data = nvabs->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VAbs_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VAbs_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VInv_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvinv = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+
+  N_VInv_Gkylzero(Nv1, Nvinv);
+
+  nvinv = N_VGetVector_Gkylzero(Nvinv);
+
+  double *nvinv_data = nvinv->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VInv_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VInv_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VMaxnorm_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  N_VConst_Gkylzero(0.0, Nv1);
+
+  sunrealtype nvmaxnorm = N_VMaxnorm_Gkylzero(Nv1);
+
+  if (nvmaxnorm < 0.0 || nvmaxnorm >= eq_check_tol) { failure = 1; }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VMaxnorm_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VMaxnorm_Gkylzero PASSED the test");
+  }
+
+  /* ----------------------------------------------------------------------
+  * N_VAddconst_Gkylzero Test
+  * --------------------------------------------------------------------*/
+
+  struct gkyl_array *nvadd = mkarr(use_gpu, num_basis, size);
+
+  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, ctx);
+
+  N_VConst_Gkylzero(c, Nv1);
+
+  N_VAddconst_Gkylzero(Nv1, d, Nvadd);
+
+  nvadd = N_VGetVector_Gkylzero(Nvadd);
+
+  double *nvadd_data = nvadd->data;
+
+  failure = false;
+  for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
+    failure = (abs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
+  }
+
+  if(failure)
+  {
+    printf("\n      FAILED in N_VAddconst_Gkylzero");
+    num_of_failures++;
+  }
+  else
+  {
+    printf("\n      N_VAddconst_Gkylzero PASSED the test");
+  }
+
   if(num_of_failures == 0) {
-    printf("\n\n nvector_gkylzero PASSED all tests!\n");
+    printf("\n\n nvector_gkylzero PASSED all tests!\n\n");
   }
   else {
     printf("\n\n nvector_gkylzero failed in %d test(s)!\n\n", num_of_failures);
@@ -262,7 +490,7 @@ create_diffusion_ctx(void)
     .vpar_min = -6.0, // Minimum vpar of the grid.
     .vpar_max =  6.0, // Maximum vpar of the grid.
     .poly_order = 1, // Polynomial order of the DG basis.
-    .cells = {1200, 200}, // Number of cells in each direction.
+    .cells = {120, 20}, // Number of cells in each direction.
 
     .t_end = 1.0, // Final simulation time.
     .num_frames = 10, // Number of output frames.
@@ -344,7 +572,7 @@ init_distf_1x1v(double t, const double *xn, double* restrict fout, void *ctx)
   int vdim = dctx->vdim;
   double Lx = dctx->x_max - dctx->x_min;
 
-  double den = n0*(1.0+0.3*sin(2*(2.0*M_PI/Lx)*x));
+  double den = n0*(1.0+0.3*sin(2*(2.0*M_PI/Lx)*x)); //change the initial condition to see if the error localizes somewhere else
 
   fout[0] = (den/pow(2.0*M_PI*vtsq,vdim/2.0)) * exp(-(pow(vpar-upar,2))/(2.0*vtsq));
 }
@@ -553,8 +781,8 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   // For now assume 2nd order diffusion in x only.
   int diffusion_order = 2;
   bool diff_dir[GKYL_MAX_CDIM] = {false};
-  int num_diff_dir = 1;
-  diff_dir[0] = true;
+  int num_diff_dir = 1; //number of diffusion directions
+  diff_dir[0] = true; //direction of the diffusion
   bool is_zero_flux[2*GKYL_MAX_DIM] = {false}; // Whether to use zero-flux BCs.
 
   int szD = cdim * app->basis_conf.num_basis;
@@ -571,7 +799,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
 
   // Diffusion solver.
   app->diff_slvr = gkyl_dg_updater_diffusion_gyrokinetic_new(&app->grid,
-      &app->basis, &app->basis_conf, false, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
+      &app->basis, &app->basis_conf, true, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
 
   // Assume only periodic dir is x.
   app->num_periodic_dir = 1;
@@ -658,16 +886,16 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
   struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
 
-  const struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
+  struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
   struct gkyl_array *fout  = N_VGetVector_Gkylzero(ydot);
 
   gkyl_array_clear(app->cflrate, 0.0);
   gkyl_array_clear(fout, 0.0);
 
+  apply_bc(app, t, fin);
+
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
-
-  ((N_VectorContent_Gkylzero)(ydot->content))->dataptr = fout;
 
   return 0; /* return with success */
 }
@@ -689,6 +917,17 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
 
   *lambdaR           = -omega_cfl_ho[0];
   *lambdaI           = SUN_RCONST(0.0);
+  return 0; /* return with success */
+}
+
+
+static int apply_bc_in_LSRK(sunrealtype t, N_Vector y, void* user_data) {
+
+  struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
+  struct gkyl_array* f = N_VGetVector_Gkylzero(y);
+
+  apply_bc(app, t, f);
+
   return 0; /* return with success */
 }
 
@@ -737,67 +976,70 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 
 int flag;                /* reusable error-checking flag */
 
-void* LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y)
+int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
-  void* arkode_mem = NULL;
   /* general problem parameters */
   sunrealtype T0    = 0.0;  /* initial time */
 
-  sunrealtype reltol = SUN_RCONST(1.0e-8); /* tolerances */
-  sunrealtype abstol = SUN_RCONST(1.0e-8);
+  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-10);
 
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
   flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
-  if (check_flag(&flag, "SUNContext_Create", 1)) { return NULL; }
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
   /* Initialize data structures */
   *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
-  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return NULL; }
+  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
 
 //TO DO: Check to make sure app->f is the actual solution
 
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
-  arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
-  if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return NULL; }
+  *arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
+  if (check_flag((void*)*arkode_mem, "ARKStepCreate", 0)) { return 1; }
 
   /* Set routines */
-  flag = ARKodeSetUserData(arkode_mem,
+  flag = ARKodeSetUserData(*arkode_mem,
                            (void*)app); /* Pass the user data */
-  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return NULL; }
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
 
   /* Specify tolerances */
-  flag = ARKodeSStolerances(arkode_mem, reltol, abstol);
-  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return NULL; }
+  flag = ARKodeSStolerances(*arkode_mem, reltol, abstol);
+  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
 
   /* Specify user provided spectral radius */
-  flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
-  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigFn(*arkode_mem, dom_eig);
+  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
 
   /* Specify after how many successful steps dom_eig is recomputed
      Note that nsteps = 0 refers to constant dominant eigenvalue */
-  flag = LSRKStepSetDomEigFrequency(arkode_mem, 0);
-  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigFrequency(*arkode_mem, 1);
+  if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return 1; }
 
   /* Specify max number of stages allowed */
-  flag = LSRKStepSetMaxNumStages(arkode_mem, 200);
-  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return NULL; }
+  flag = LSRKStepSetMaxNumStages(*arkode_mem, 200);
+  if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
 
   /* Specify max number of steps allowed */
-  flag = ARKodeSetMaxNumSteps(arkode_mem, 1000);
-  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return NULL; }
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   /* Specify safety factor for user provided dom_eig */
-  flag = LSRKStepSetDomEigSafetyFactor(arkode_mem, SUN_RCONST(1.01));
-  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return NULL; }
+  flag = LSRKStepSetDomEigSafetyFactor(*arkode_mem, SUN_RCONST(1.01));
+  if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return 1; }
 
   /* Specify the Runge--Kutta--Legendre LSRK method */
-  flag = LSRKStepSetSTSMethod(arkode_mem, ARKODE_LSRK_RKL_2);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return NULL; }
+  flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  return (void*)arkode_mem;
+  // /* User provided apply boundary conditions function */
+  // flag = ARKodeSetPostprocessStepFn(*arkode_mem, apply_bc_in_LSRK);//should be stage instead
+  // if (check_flag(&flag, "ARKodeSetPostprocessStepFn", 1)) { return 1; }
+
+  return 0;
 }
 
 static struct gkyl_update_status
@@ -810,8 +1052,6 @@ sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector
 
   flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
   if (check_flag(&flag, "ARKodeEvolve", 1)) {st.success = false; return st; }
-
-  apply_bc(app, *tcurr, app->f);
 
   return st;
 }
@@ -1111,7 +1351,7 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool test_nvector = false;
+  bool test_nvector = true;
   if(test_nvector)
     test_nvector_gkylzero(false);
 
@@ -1173,7 +1413,7 @@ int main(int argc, char **argv)
   int flag;
   void* arkode_mem = NULL; /* empty ARKode memory structure */
   N_Vector y       = NULL; /* empty vector for storing solution */
-  arkode_mem = LSRK_init(app, &y);
+  flag = LSRK_init(app, &y, &arkode_mem);
   if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
   bool is_STS = true;
@@ -1181,18 +1421,19 @@ int main(int argc, char **argv)
 
   long step = 1;
   while ((t_end - t_curr > 0.00001) && (step <= app_args.num_steps)) {
-    fprintf(stdout, "Taking time-step %ld at t = %g ...", step, t_curr);
+    fprintf(stdout, "Taking time-step %ld at t = %g ...\n", step, t_curr);
 
     struct gkyl_update_status status;
 
     if(is_STS) {
       if(step == 1) {
         dt = 0.1;
+        flag = ARKodeGetCurrentTime(arkode_mem, &t_curr);
+        if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
       }
       tout += dt;
 
       status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
-      fprintf(stdout, " dt = %g\n", dt);
     }
     else {
       status = gkyl_diffusion_update(app, dt);
@@ -1212,24 +1453,25 @@ int main(int argc, char **argv)
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
 
-    if (dt_init < 0.0) {
-      dt_init = status.dt_actual;
-    }
-    else if (status.dt_actual < dt_failure_tol * dt_init) {
-      num_failures += 1;
-
-      fprintf(stdout, "WARNING: Time-step dt = %g", status.dt_actual);
-      fprintf(stdout, " is below %g*dt_init ...", dt_failure_tol);
-      fprintf(stdout, " num_failures = %d\n", num_failures);
-      if (num_failures >= num_failures_max) {
-        fprintf(stdout, "ERROR: Time-step was below %g*dt_init ", dt_failure_tol);
-        fprintf(stdout, "%d consecutive times. Aborting simulation ....\n", num_failures_max);
-        break;
+    if(!is_STS)
+      if (dt_init < 0.0) {
+        dt_init = status.dt_actual;
       }
-    }
-    else {
-      num_failures = 0;
-    }
+      else if (status.dt_actual < dt_failure_tol * dt_init) {
+        num_failures += 1;
+
+        fprintf(stdout, "WARNING: Time-step dt = %g", status.dt_actual);
+        fprintf(stdout, " is below %g*dt_init ...", dt_failure_tol);
+        fprintf(stdout, " num_failures = %d\n", num_failures);
+        if (num_failures >= num_failures_max) {
+          fprintf(stdout, "ERROR: Time-step was below %g*dt_init ", dt_failure_tol);
+          fprintf(stdout, "%d consecutive times. Aborting simulation ....\n", num_failures_max);
+          break;
+        }
+      }
+      else {
+        num_failures = 0;
+      }
 
     step += 1;
   }
