@@ -1,3 +1,5 @@
+# THIS README IS ONLY A PLACEHOLDER -- IGNORE ITS CURRENT CONTENTS
+
 # Benchmark: 2D Diffusion
 
 This benchmark problem implements a 2D diffusion equation using either MPI,

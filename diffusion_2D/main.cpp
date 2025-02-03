@@ -183,15 +183,8 @@ int main(int argc, char* argv[])
 #endif
 
     // Set initial condition
-    flag = Solution(ZERO, u, &udata);
-    if (check_flag(&flag, "Solution", 1)) { return 1; }
-
-    // Create vector for error
-    if (udata.forcing)
-    {
-      uout.error = N_VClone(u);
-      if (check_flag((void*)(uout.error), "N_VClone", 0)) { return 1; }
-    }
+    flag = Initial(ZERO, u, &udata);
+    if (check_flag(&flag, "Initial", 1)) { return 1; }
 
     // Set up implicit solver, if applicable
     SUNLinearSolver LS = nullptr;
@@ -364,7 +357,7 @@ int main(int argc, char* argv[])
 
       SUNDIALS_MARK_END(prof, "Evolve");
 
-      // Output solution and error
+      // Output solution
       flag = uout.write(t, u, &udata);
       if (check_flag(&flag, "UserOutput::write", 1)) { return 1; }
 

@@ -1,5 +1,5 @@
 set(sources ${shared_sources}
-  buffers.cpp diffusion.cpp solution.cpp utils.cpp)
+  buffers.cpp diffusion.cpp initial.cpp utils.cpp)
 
 if(USE_CUDA)
   foreach(file ${sources})

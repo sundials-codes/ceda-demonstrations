@@ -34,21 +34,6 @@ int diffusion(sunrealtype t, N_Vector u, N_Vector f, void* user_data)
   return 0;
 }
 
-int diffusion_jac(sunrealtype t, N_Vector u, N_Vector f, SUNMatrix Jac,
-                  void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  // Access problem data
-  UserData* udata = (UserData*)user_data;
-
-  SUNDIALS_CXX_MARK_FUNCTION(udata->prof);
-
-  // Compute the Laplacian matrix
-  std::cerr << "ERROR: Diffusion Jacobian not implemented!\n";
-  return -1;
-
-  return 0;
-}
-
 
 // -----------------------------------------------------------------------------
 // UserData public functions
@@ -129,12 +114,6 @@ int UserData::parse_args(vector<string>& args, bool outproc)
     args.erase(it, it + 2);
   }
 
-  it = find(args.begin(), args.end(), "--noforcing");
-  if (it != args.end())
-  {
-    forcing = false;
-    args.erase(it);
-  }
 
 #ifdef USE_HYPRE
   it = find(args.begin(), args.end(), "--pfmg_relax");
@@ -176,7 +155,6 @@ void UserData::help()
   cout << "  --kx <kx>    : x-direction diffusion coefficient" << endl;
   cout << "  --ky <kx>    : y-direction diffusion coefficient" << endl;
   cout << "  --tf <time>  : final time" << endl;
-  cout << "  --noforcing  : disable forcing term" << endl;
 #ifdef USE_HYPRE
   cout << endl;
   cout << "Hypre preconditioner command line options:" << endl;
@@ -196,7 +174,6 @@ void UserData::print()
   cout << " --------------------------------- " << endl;
   cout << "  kx             = " << kx << endl;
   cout << "  ky             = " << ky << endl;
-  cout << "  forcing        = " << forcing << endl;
   cout << "  tf             = " << tf << endl;
   cout << "  xu             = " << xu << endl;
   cout << "  yu             = " << yu << endl;
@@ -239,7 +216,7 @@ int UserData::setup()
   dims[1] = (npy > 0) ? npy : 0;
 
   int periods[2];
-  periods[0] = 0;
+  periods[0] = 0;  // UPDATE THESE FOR PERIODIC DOMAIN
   periods[1] = 0;
 
   flag = MPI_Dims_create(np, 2, dims);
@@ -314,7 +291,7 @@ int UserData::setup()
   nodes     = nx * ny;
   nodes_loc = nx_loc * ny_loc;
 
-  // Determine if this proc has neighbors
+  // Determine if this proc has neighbors -- UPDATE THESE FOR PERIODIC DOMAIN
   HaveNbrW = (is != 0);
   HaveNbrE = (ie != nx - 1);
   HaveNbrS = (js != 0);
@@ -801,15 +778,6 @@ int UserOutput::write(sunrealtype t, N_Vector u, UserData* udata)
 
   if (output > 0)
   {
-    if (error)
-    {
-      // Compute the error
-      flag = SolutionError(t, u, error, udata);
-      if (check_flag(&flag, "SolutionError", 1)) { return 1; }
-
-      // Compute max error
-      max = N_VMaxNorm(error);
-    }
 
     // Compute rms norm of the state
     sunrealtype urms = sqrt(N_VDotProd(u, u) / udata->nx / udata->ny);
@@ -905,20 +873,6 @@ int UserOutput::close(UserData* udata)
 // -----------------------------------------------------------------------------
 // Output and utility functions
 // -----------------------------------------------------------------------------
-
-// Compute the solution error
-int SolutionError(sunrealtype t, N_Vector u, N_Vector e, UserData* udata)
-{
-  // Compute true solution
-  int flag = Solution(t, e, udata);
-  if (flag != 0) { return -1; }
-
-  // Compute absolute error
-  N_VLinearSum(ONE, u, -ONE, e, e);
-  N_VAbs(e, e);
-
-  return 0;
-}
 
 // Check function return value
 int check_flag(const void* flagvalue, const string funcname, int opt)

@@ -46,7 +46,6 @@
 #include "sunlinsol/sunlinsol_spgmr.h"
 
 // Macros for problem constants
-#define PI    SUN_RCONST(3.141592653589793238462643383279502884197169)
 #define ZERO  SUN_RCONST(0.0)
 #define ONE   SUN_RCONST(1.0)
 #define TWO   SUN_RCONST(2.0)
@@ -72,21 +71,18 @@ struct UserData
   sunrealtype kx = ONE;
   sunrealtype ky = ONE;
 
-  // Enable/disable forcing
-  bool forcing = true;
-
   // Final time
   sunrealtype tf = ONE;
 
   // Lower and Upper bounds in x and y directions
-  sunrealtype xl = ZERO;
-  sunrealtype yl = ZERO;
-  sunrealtype xu = ONE;
-  sunrealtype yu = ONE;
+  sunrealtype xl = -M_PI;
+  sunrealtype yl = -M_PI;
+  sunrealtype xu = M_PI;
+  sunrealtype yu = M_PI;
 
   // Global number of nodes in the x and y directions
-  sunindextype nx = 32;
-  sunindextype ny = 32;
+  sunindextype nx = 64;
+  sunindextype ny = 64;
 
   // Global total number of nodes
   sunindextype nodes = nx * ny;
@@ -249,9 +245,6 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata);
 // ODE right hand side function
 int diffusion(sunrealtype t, N_Vector u, N_Vector f, void* user_data);
 
-int diffusion_jac(sunrealtype t, N_Vector u, N_Vector f, SUNMatrix Jac,
-                  void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-
 // Preconditioner setup and solve functions
 int PSetup(sunrealtype t, N_Vector u, N_Vector f, sunbooleantype jok,
            sunbooleantype* jcurPtr, sunrealtype gamma, void* user_data);
@@ -269,12 +262,8 @@ int DeviceSynchronize();
 // Copy data from devices
 int CopyDataFromDevice(N_Vector y);
 
-// Compute the true solution and its derivative
-int Solution(sunrealtype t, N_Vector u, UserData* udata);
-int SolutionDerivative(sunrealtype t, N_Vector up, UserData* udata);
-
-// Compute the solution error
-int SolutionError(sunrealtype t, N_Vector u, N_Vector e, UserData* udata);
+// Compute the initial condition
+int Initial(sunrealtype t, N_Vector u, UserData* udata);
 
 // Check function return values
 int check_flag(const void* flagvalue, const string funcname, int opt);

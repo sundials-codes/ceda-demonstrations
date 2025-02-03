@@ -53,40 +53,6 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   // Initialize rhs vector to zero (handles boundary conditions)
   N_VConst(ZERO, f);
 
-  // Iterate over subdomain and compute rhs forcing term
-  if (udata->forcing)
-  {
-    sunrealtype x, y;
-    sunrealtype sin_sqr_x, sin_sqr_y;
-    sunrealtype cos_sqr_x, cos_sqr_y;
-
-    sunrealtype bx = (udata->kx) * TWO * PI * PI;
-    sunrealtype by = (udata->ky) * TWO * PI * PI;
-
-    sunrealtype sin_t_cos_t = sin(PI * t) * cos(PI * t);
-    sunrealtype cos_sqr_t   = cos(PI * t) * cos(PI * t);
-
-    for (j = jstart; j < jend; j++)
-    {
-      for (i = istart; i < iend; i++)
-      {
-        x = (udata->is + i) * udata->dx;
-        y = (udata->js + j) * udata->dy;
-
-        sin_sqr_x = sin(PI * x) * sin(PI * x);
-        sin_sqr_y = sin(PI * y) * sin(PI * y);
-
-        cos_sqr_x = cos(PI * x) * cos(PI * x);
-        cos_sqr_y = cos(PI * y) * cos(PI * y);
-
-        farray[IDX(i, j, nx_loc)] =
-          -TWO * PI * sin_sqr_x * sin_sqr_y * sin_t_cos_t -
-          bx * (cos_sqr_x - sin_sqr_x) * sin_sqr_y * cos_sqr_t -
-          by * (cos_sqr_y - sin_sqr_y) * sin_sqr_x * cos_sqr_t;
-      }
-    }
-  }
-
   // Iterate over subdomain interior and add rhs diffusion term
   for (j = 1; j < ny_loc - 1; j++)
   {

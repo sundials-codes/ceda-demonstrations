@@ -30,35 +30,12 @@
 #error Define USE_CUDA or USE_HIP
 #endif
 
-// Forcing device function
-__device__ void add_forcing(const sunrealtype t, const sunrealtype x,
-                            const sunrealtype y, const sunrealtype kx,
-                            const sunrealtype ky, const sunindextype c,
-                            sunrealtype* udot)
-{
-  sunrealtype sin_sqr_x = sin(PI * x) * sin(PI * x);
-  sunrealtype sin_sqr_y = sin(PI * y) * sin(PI * y);
-
-  sunrealtype cos_sqr_x = cos(PI * x) * cos(PI * x);
-  sunrealtype cos_sqr_y = cos(PI * y) * cos(PI * y);
-
-  sunrealtype sin_t_cos_t = sin(PI * t) * cos(PI * t);
-  sunrealtype cos_sqr_t   = cos(PI * t) * cos(PI * t);
-
-  sunrealtype bx = kx * TWO * PI * PI;
-  sunrealtype by = ky * TWO * PI * PI;
-
-  udot[c] += -TWO * PI * sin_sqr_x * sin_sqr_y * sin_t_cos_t -
-             bx * (cos_sqr_x - sin_sqr_x) * sin_sqr_y * cos_sqr_t -
-             by * (cos_sqr_y - sin_sqr_y) * sin_sqr_x * cos_sqr_t;
-}
-
 // Interior diffusion kernel
 __global__ void diffusion_interior_kernel(
   const sunrealtype t, const sunrealtype* u, sunrealtype* udot,
   const sunindextype is, const sunindextype js, const sunindextype nx_loc,
   const sunindextype ny_loc, const sunrealtype dx, const sunrealtype dy,
-  const sunrealtype kx, const sunrealtype ky, const bool forcing)
+  const sunrealtype kx, const sunrealtype ky)
 {
   // Thread location in the local grid
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -82,13 +59,6 @@ __global__ void diffusion_interior_kernel(
 
     udot[c] = cc * u[c] + cx * (u[w] + u[e]) + cy * (u[s] + u[n]);
 
-    if (forcing)
-    {
-      sunrealtype x = (is + i) * dx;
-      sunrealtype y = (js + j) * dy;
-
-      add_forcing(t, x, y, kx, ky, c, udot);
-    }
   }
 }
 
@@ -97,9 +67,8 @@ __global__ void diffusion_boundary_kernel(
   const sunrealtype t, const sunrealtype* u, sunrealtype* udot,
   const sunindextype is, const sunindextype js, const sunindextype nx_loc,
   const sunindextype ny_loc, const sunrealtype dx, const sunrealtype dy,
-  const sunrealtype kx, const sunrealtype ky, const bool forcing,
-  const sunrealtype* wbuf, const sunrealtype* ebuf, const sunrealtype* sbuf,
-  const sunrealtype* nbuf)
+  const sunrealtype kx, const sunrealtype ky, const sunrealtype* wbuf,
+  const sunrealtype* ebuf, const sunrealtype* sbuf, const sunrealtype* nbuf)
 {
   // Thread ID
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -123,18 +92,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // West processor boundary
       udot[c] = cc * u[c] + cx * (wbuf[w] + u[e]) + cy * (u[s] + u[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = is * dx;
-        sunrealtype y = (js + i) * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // West physical boundary
+      // West physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
 
@@ -149,18 +110,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // East processor boundary
       udot[c] = cc * u[c] + cx * (u[w] + ebuf[e]) + cy * (u[s] + u[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = (is + nx_loc - 1) * dx;
-        sunrealtype y = (js + i) * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // East physical boundary
+      // East physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
   }
@@ -181,18 +134,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // South processor boundary
       udot[c] = cc * u[c] + cx * (u[w] + u[e]) + cy * (sbuf[s] + u[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = (is + i) * dx;
-        sunrealtype y = js * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // South physical boundary
+      // South physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
 
@@ -207,18 +152,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // North processor boundary
       udot[c] = cc * u[c] + cx * (u[w] + u[e]) + cy * (u[s] + nbuf[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = (is + i) * dx;
-        sunrealtype y = (js + ny_loc - 1) * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // North physical boundary
+      // North physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
   }
@@ -239,18 +176,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // South-West processor boundary
       udot[c] = cc * u[c] + cx * (wbuf[w] + u[e]) + cy * (sbuf[s] + u[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = is * dx;
-        sunrealtype y = js * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // South-West physical boundary
+      // South-West physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
 
@@ -265,18 +194,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // South-East processor boundary
       udot[c] = cc * u[c] + cx * (u[w] + ebuf[e]) + cy * (sbuf[s] + u[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = (is + nx_loc - 1) * dx;
-        sunrealtype y = js * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // South-East physical boundary
+      // South-East physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
 
@@ -291,18 +212,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // North-West processor boundary
       udot[c] = cc * u[c] + cx * (wbuf[w] + u[e]) + cy * (u[s] + nbuf[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = is * dx;
-        sunrealtype y = (js + ny_loc - 1) * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // North-West physical boundary
+      // North-West physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
 
@@ -317,18 +230,10 @@ __global__ void diffusion_boundary_kernel(
     {
       // North-East processor boundary
       udot[c] = cc * u[c] + cx * (u[w] + ebuf[e]) + cy * (u[s] + nbuf[n]);
-
-      if (forcing)
-      {
-        sunrealtype x = (is + nx_loc - 1) * dx;
-        sunrealtype y = (js + ny_loc - 1) * dy;
-
-        add_forcing(t, x, y, kx, ky, c, udot);
-      }
     }
     else
     {
-      // North-East physical boundary
+      // North-East physical boundary -- UPDATE FOR PERIODIC BOUNDARY
       udot[c] = ZERO;
     }
   }
@@ -354,7 +259,6 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   const sunrealtype dy      = udata->dy;
   const sunrealtype kx      = udata->kx;
   const sunrealtype ky      = udata->ky;
-  const bool forcing        = udata->forcing;
 
   // Access data arrays
   const sunrealtype* uarray =
@@ -369,7 +273,7 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   dim3 igrid(ICEIL(nx_loc, BLOCK_SIZE_X), ICEIL(ny_loc, BLOCK_SIZE_Y));
 
   diffusion_interior_kernel<<<igrid, iblock>>>(t, uarray, farray, is, js, nx_loc,
-                                               ny_loc, dx, dy, kx, ky, forcing);
+                                               ny_loc, dx, dy, kx, ky);
 
   // Wait for exchange receives
   flag = udata->end_exchange();
@@ -386,7 +290,7 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   dim3 bgrid(ICEIL(maxdim, BLOCK_SIZE));
 
   diffusion_boundary_kernel<<<bgrid, bblock>>>(t, uarray, farray, is, js, nx_loc,
-                                               ny_loc, dx, dy, kx, ky, forcing,
+                                               ny_loc, dx, dy, kx, ky,
                                                Warray, Earray, Sarray, Narray);
 
   // Return success
