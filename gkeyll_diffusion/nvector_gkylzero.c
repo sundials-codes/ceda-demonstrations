@@ -321,6 +321,7 @@ void N_VInv_Gkylzero(N_Vector u, N_Vector v)
   return;
 }
 
+//use gkyl_array_comp_op!
 sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 {
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
@@ -331,7 +332,7 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 
   sunrealtype max = 0.0;
 
-  // use gkyl_array_reduce
+  // gkyl_array_reduce(&max, udptr, GKYL_MAX);
 
   for (sunindextype i=0; i<N; ++i) {
     if (SUNRabs(u_data[i]) > max) { max = SUNRabs(u_data[i]); }

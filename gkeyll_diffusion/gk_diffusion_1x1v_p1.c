@@ -572,7 +572,7 @@ init_distf_1x1v(double t, const double *xn, double* restrict fout, void *ctx)
   int vdim = dctx->vdim;
   double Lx = dctx->x_max - dctx->x_min;
 
-  double den = n0*(1.0+0.3*sin(2*(2.0*M_PI/Lx)*x));
+  double den = n0*(1.0+0.3*sin(2*(2.0*M_PI/Lx)*x)); //change the initial condition to see if the error localizes somewhere else
 
   fout[0] = (den/pow(2.0*M_PI*vtsq,vdim/2.0)) * exp(-(pow(vpar-upar,2))/(2.0*vtsq));
 }
@@ -781,8 +781,8 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   // For now assume 2nd order diffusion in x only.
   int diffusion_order = 2;
   bool diff_dir[GKYL_MAX_CDIM] = {false};
-  int num_diff_dir = 1;
-  diff_dir[0] = true;
+  int num_diff_dir = 1; //number of diffusion directions
+  diff_dir[0] = true; //direction of the diffusion
   bool is_zero_flux[2*GKYL_MAX_DIM] = {false}; // Whether to use zero-flux BCs.
 
   int szD = cdim * app->basis_conf.num_basis;
@@ -799,7 +799,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
 
   // Diffusion solver.
   app->diff_slvr = gkyl_dg_updater_diffusion_gyrokinetic_new(&app->grid,
-      &app->basis, &app->basis_conf, false, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
+      &app->basis, &app->basis_conf, true, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
 
   // Assume only periodic dir is x.
   app->num_periodic_dir = 1;
@@ -886,11 +886,13 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
   struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
 
-  const struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
+  struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
   struct gkyl_array *fout  = N_VGetVector_Gkylzero(ydot);
 
   gkyl_array_clear(app->cflrate, 0.0);
   gkyl_array_clear(fout, 0.0);
+
+  apply_bc(app, t, fin);
 
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
@@ -979,8 +981,8 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   /* general problem parameters */
   sunrealtype T0    = 0.0;  /* initial time */
 
-  sunrealtype reltol = SUN_RCONST(1.0e-8); /* tolerances */
-  sunrealtype abstol = SUN_RCONST(1.0e-8);
+  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-10);
 
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
@@ -1022,7 +1024,7 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
 
   /* Specify max number of steps allowed */
-  flag = ARKodeSetMaxNumSteps(*arkode_mem, 1000);
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   /* Specify safety factor for user provided dom_eig */
@@ -1033,9 +1035,9 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  /* User provided apply boundary conditions function */
-  flag = ARKodeSetPostprocessStepFn(*arkode_mem, apply_bc_in_LSRK);//should be stage instead
-  if (check_flag(&flag, "ARKodeSetPostprocessStepFn", 1)) { return 1; }
+  // /* User provided apply boundary conditions function */
+  // flag = ARKodeSetPostprocessStepFn(*arkode_mem, apply_bc_in_LSRK);//should be stage instead
+  // if (check_flag(&flag, "ARKodeSetPostprocessStepFn", 1)) { return 1; }
 
   return 0;
 }
