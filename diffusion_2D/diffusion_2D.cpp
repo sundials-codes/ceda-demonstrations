@@ -437,14 +437,6 @@ int UserData::start_exchange(const N_Vector u)
   // Send data
   // ----------
 
-  // ensure packing has finished
-  flag = DeviceSynchronize();
-  if (flag != 0)
-  {
-    cerr << "Error in DeviceSynchronize" << endl;
-    return -1;
-  }
-
   if (HaveNbrW)
   {
     flag = MPI_Isend(Wsend, (int)ny_loc, MPI_SUNREALTYPE, ipW, 0, comm_c, &reqSW);
@@ -795,10 +787,6 @@ int UserOutput::write(sunrealtype t, N_Vector u, UserData* udata)
     // Write solution and error to disk
     if (output == 2)
     {
-      // Sync host and device memory
-      flag = CopyDataFromDevice(u);
-      if (check_flag(&flag, "CopyDataFromDevice", 1)) { return -1; }
-
       sunrealtype* uarray = N_VGetArrayPointer(u);
       if (check_flag((void*)uarray, "N_VGetArrayPointer", 0)) { return -1; }
 
@@ -811,10 +799,6 @@ int UserOutput::write(sunrealtype t, N_Vector u, UserData* udata)
 
       if (error)
       {
-        // Sync host and device memory
-        flag = CopyDataFromDevice(error);
-        if (check_flag(&flag, "CopyDataFromDevice", 1)) { return -1; }
-
         // Output error to disk
         sunrealtype* earray = N_VGetArrayPointer(error);
         if (check_flag((void*)earray, "N_VGetArrayPointer", 0)) { return -1; }

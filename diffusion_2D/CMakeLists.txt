@@ -1,5 +1,5 @@
 set(sources ${shared_sources}
-  buffers.cpp diffusion.cpp initial.cpp utils.cpp main.cpp diffusion_2D.hpp diffusion_2D.cpp)
+  buffers.cpp diffusion.cpp initial.cpp main.cpp diffusion_2D.hpp diffusion_2D.cpp)
 
 if (USE_HYPRE)
   list(APPEND sources preconditioner_hypre.cpp)

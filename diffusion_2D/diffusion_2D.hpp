@@ -256,12 +256,6 @@ int PSolve(sunrealtype t, N_Vector u, N_Vector f, N_Vector r, N_Vector z,
 // Utility functions
 // -----------------------------------------------------------------------------
 
-// Synchronize devices
-int DeviceSynchronize();
-
-// Copy data from devices
-int CopyDataFromDevice(N_Vector y);
-
 // Compute the initial condition
 int Initial(sunrealtype t, N_Vector u, UserData* udata);
 
