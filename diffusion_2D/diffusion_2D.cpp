@@ -216,8 +216,8 @@ int UserData::setup()
   dims[1] = (npy > 0) ? npy : 0;
 
   int periods[2];
-  periods[0] = 0;  // UPDATE THESE FOR PERIODIC DOMAIN
-  periods[1] = 0;
+  periods[0] = 1;
+  periods[1] = 1;
 
   flag = MPI_Dims_create(np, 2, dims);
   if (flag != MPI_SUCCESS)
@@ -291,11 +291,11 @@ int UserData::setup()
   nodes     = nx * ny;
   nodes_loc = nx_loc * ny_loc;
 
-  // Determine if this proc has neighbors -- UPDATE THESE FOR PERIODIC DOMAIN
-  HaveNbrW = (is != 0);
-  HaveNbrE = (ie != nx - 1);
-  HaveNbrS = (js != 0);
-  HaveNbrN = (je != ny - 1);
+  // Determine if this proc has neighbors
+  HaveNbrW = true;
+  HaveNbrE = true;
+  HaveNbrS = true;
+  HaveNbrN = true;
 
   // Allocate exchange buffers if necessary
   flag = allocate_buffers();

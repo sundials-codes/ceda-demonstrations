@@ -1,19 +1,27 @@
-# Shared sources
-set(shared_sources main.cpp diffusion_2D.hpp diffusion_2D.cpp)
+set(sources ${shared_sources}
+  buffers.cpp diffusion.cpp initial.cpp utils.cpp main.cpp diffusion_2D.hpp diffusion_2D.cpp)
 
 if (USE_HYPRE)
-  list(APPEND shared_sources preconditioner_hypre.cpp)
+  list(APPEND sources preconditioner_hypre.cpp)
 else()
-  list(APPEND shared_sources preconditioner_jacobi.cpp)
+  list(APPEND sources preconditioner_jacobi.cpp)
 endif()
 
-set(demonstration_prefix "${CMAKE_CURRENT_SOURCE_DIR}/")
-add_prefix(shared_sources ${demonstration_prefix})
+# set the target name
+set(target diffusion_2D_mpi)
 
-# MPI + Serial
-add_subdirectory(mpi_serial)
+# create executable
+add_executable(${target} ${sources})
 
-# MPI + CUDA/HIP
-if(USE_CUDA OR USE_HIP)
-  add_subdirectory(mpi_gpu)
+#target_include_directories(${target} PRIVATE ${demonstration_prefix})
+
+target_link_libraries(${target} PRIVATE
+  SUNDIALS::arkode SUNDIALS::nvecparallel MPI::MPI_CXX)
+
+if(USE_HYPRE)
+  target_compile_definitions(${target} PRIVATE USE_HYPRE)
+  target_link_libraries(${target} PRIVATE SUNDIALS::HYPRE)
 endif()
+
+# request installation of the target into the overall "bin" folder
+install(TARGETS ${target} DESTINATION ${demonstration_bin})
