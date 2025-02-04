@@ -799,7 +799,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
 
   // Diffusion solver.
   app->diff_slvr = gkyl_dg_updater_diffusion_gyrokinetic_new(&app->grid,
-      &app->basis, &app->basis_conf, true, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
+      &app->basis, &app->basis_conf, false, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
 
   // Assume only periodic dir is x.
   app->num_periodic_dir = 1;
@@ -892,7 +892,7 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   gkyl_array_clear(app->cflrate, 0.0);
   gkyl_array_clear(fout, 0.0);
 
-  apply_bc(app, t, fin);
+  apply_bc(app, t, fin); //apply_bc before computing the RHS
 
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
@@ -1351,7 +1351,8 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool test_nvector = true;
+  bool is_STS = true;
+  bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
 
@@ -1410,13 +1411,15 @@ int main(int argc, char **argv)
   double dt_init = -1.0, dt_failure_tol = ctx.dt_failure_tol;
   int num_failures = 0, num_failures_max = ctx.num_failures_max;
 
-  int flag;
   void* arkode_mem = NULL; /* empty ARKode memory structure */
   N_Vector y       = NULL; /* empty vector for storing solution */
-  flag = LSRK_init(app, &y, &arkode_mem);
-  if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
-  bool is_STS = true;
+  if(is_STS) {
+    int flag;
+    flag = LSRK_init(app, &y, &arkode_mem);
+    if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
+  }
+
   double tout = 0;
 
   long step = 1;
