@@ -1216,12 +1216,12 @@ struct diffusion_output_meta {
   char basis_type_nm[64]; // used during read
 };
 
-static struct gkyl_array_meta*
+static struct gkyl_msgpack_data*
 diffusion_array_meta_new(struct diffusion_output_meta meta)
 {
   // Allocate new metadata to include in file.
-  // Returned gkyl_array_meta must be freed using duffusion_array_meta_release.
-  struct gkyl_array_meta *mt = gkyl_malloc(sizeof(*mt));
+  // Returned gkyl_msgpack_data must be freed using duffusion_array_meta_release.
+  struct gkyl_msgpack_data *mt = gkyl_malloc(sizeof(*mt));
 
   mt->meta_sz = 0;
   mpack_writer_t writer;
@@ -1259,7 +1259,7 @@ diffusion_array_meta_new(struct diffusion_output_meta meta)
 }
 
 static void
-diffusion_array_meta_release(struct gkyl_array_meta *mt)
+diffusion_array_meta_release(struct gkyl_msgpack_data *mt)
 {
   // Release array meta data.
   if (!mt) return;
@@ -1271,7 +1271,7 @@ void
 gkyl_diffusion_app_write(struct gkyl_diffusion_app* app, double tm, int frame)
 {
   // Write grid diagnostics for this app.
-  struct gkyl_array_meta *mt = diffusion_array_meta_new( (struct diffusion_output_meta) {
+  struct gkyl_msgpack_data *mt = diffusion_array_meta_new( (struct diffusion_output_meta) {
       .frame = frame,
       .stime = tm,
       .poly_order = app->basis.poly_order,
