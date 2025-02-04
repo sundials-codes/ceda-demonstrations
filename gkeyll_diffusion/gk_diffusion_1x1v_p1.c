@@ -511,6 +511,8 @@ struct gkyl_diffusion_app_inp {
   int poly_order; // Polynomial order of the basis.
   bool use_gpu; // Whether to run on GPU.
 
+  double cfl_frac; // Factor on RHS of the CFL constraint.
+
   // Mapping from computational to physical space.
   void (*mapc2p_func)(double t, const double *xn, double *fout, void *ctx);
   void *mapc2p_ctx; // Context.
@@ -756,9 +758,6 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   gkyl_proj_on_basis_release(proj_distf);
   gkyl_array_copy(app->f, app->f_ho);
 
-  // Apply BC to the IC.
-  apply_bc(app, 0.0, app->f);
-
   // Things needed in ARKODE vector:
   //   1. cloning = mkarr & gkyl_array_copy
   //   2. g = a*f + b*f1 + c*fnew = wrap gkyl_array_accumulate(g, a, f)
@@ -767,7 +766,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   //   5. weighted MRS norm
   //   6. set f = 1 (const) = gkyl_array_set(f, 1.0);
 
-  app->cfl = 1.0; // CFL factor.
+  app->cfl = inp->cfl_frac == 0? 1.0 : inp->cfl_frac; // CFL factor.
 
   // CFL frequency in phase-space.
   app->cflrate = mkarr(use_gpu, 1, app->local_ext.volume);
@@ -812,6 +811,10 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   }
   app->integ_L2_f = gkyl_dynvec_new(GKYL_DOUBLE, 1); // Dynamic vector to store L2 norm in time.
   app->is_first_integ_L2_write_call = true;
+
+  // Apply BC to the IC.
+  apply_bc(app, 0.0, app->f);
+
   return app;
 }
 
@@ -1285,9 +1288,7 @@ gkyl_diffusion_app_write(struct gkyl_diffusion_app* app, double tm, int frame)
   snprintf(fileNm, sizeof fileNm, fmt, app->name, frame);
 
   // copy data from device to host before writing it out
-  if (app->use_gpu) {
-    gkyl_array_copy(app->f_ho, app->f);
-  }
+  gkyl_array_copy(app->f_ho, app->f);
 
   gkyl_comm_array_write(app->comm, &app->grid, &app->local, mt, app->f_ho, fileNm);
 
@@ -1351,7 +1352,7 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool is_STS = true;
+  bool is_STS = false;
   bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
@@ -1368,6 +1369,8 @@ int main(int argc, char **argv)
     .upper = {ctx.x_max, ctx.vpar_max}, // Upper grid extents.
     .cells = {ctx.cells[0], ctx.cells[1]}, // Number of cells.
     .poly_order = ctx.poly_order, // Polynomial order of DG basis.
+
+    .cfl_frac = 1.0, // CFL factor.
 
     // Mapping from computational to physical space.
     .mapc2p_func = mapc2p,
@@ -1414,7 +1417,7 @@ int main(int argc, char **argv)
   void* arkode_mem = NULL; /* empty ARKode memory structure */
   N_Vector y       = NULL; /* empty vector for storing solution */
 
-  if(is_STS) {
+  if (is_STS) {
     int flag;
     flag = LSRK_init(app, &y, &arkode_mem);
     if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
