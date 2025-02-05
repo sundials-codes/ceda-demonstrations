@@ -64,7 +64,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
 
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(tar_data[i] - ta_data[i]) > eq_check_tol) || failure;
+    failure = (fabs(tar_data[i] - ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -119,7 +119,7 @@ void test_nvector_gkylzero (bool use_gpu) {
                   (testarray->ncomp != testarrayreturn->ncomp));
 
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = (abs(tas_data[i] - 2.0*ta_data[i]) > eq_check_tol) || failure;
+    failure = (fabs(tas_data[i] - 2.0*ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -144,7 +144,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = (abs(tacon_data[i] - 173.0) > eq_check_tol) || failure;
+    failure = (fabs(tacon_data[i] - 173.0) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -185,7 +185,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(lin_sum_data[i] - (a*c + b*d)) > eq_check_tol) || failure;
+    failure = (fabs(lin_sum_data[i] - (a*c + b*d)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -247,7 +247,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
+    failure = (fabs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -270,7 +270,7 @@ void test_nvector_gkylzero (bool use_gpu) {
   double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
 
   /* ans should equal 1/4 */
-  failure = (wrmsnorm < 0.0) ? 1 : (abs(wrmsnorm - 1.0/4.0) > eq_check_tol);
+  failure = (wrmsnorm < 0.0) ? 1 : (fabs(wrmsnorm - 1.0/4.0) > eq_check_tol);
 
   if(failure)
   {
@@ -302,7 +302,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
+    failure = (fabs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -333,7 +333,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
+    failure = (fabs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -364,7 +364,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
+    failure = (fabs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -415,7 +415,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
+    failure = (fabs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -1459,7 +1459,7 @@ int main(int argc, char **argv)
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
 
-    if(!is_STS)
+    if (!is_STS) {
       if (dt_init < 0.0) {
         dt_init = status.dt_actual;
       }
@@ -1478,6 +1478,7 @@ int main(int argc, char **argv)
       else {
         num_failures = 0;
       }
+    }
 
     step += 1;
   }
