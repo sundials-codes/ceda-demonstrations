@@ -64,7 +64,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
 
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(tar_data[i] - ta_data[i]) > eq_check_tol) || failure;
+    failure = (fabs(tar_data[i] - ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -119,7 +119,7 @@ void test_nvector_gkylzero (bool use_gpu) {
                   (testarray->ncomp != testarrayreturn->ncomp));
 
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = (abs(tas_data[i] - 2.0*ta_data[i]) > eq_check_tol) || failure;
+    failure = (fabs(tas_data[i] - 2.0*ta_data[i]) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -144,7 +144,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarray->size*testarray->ncomp); ++i) {
-    failure = (abs(tacon_data[i] - 173.0) > eq_check_tol) || failure;
+    failure = (fabs(tacon_data[i] - 173.0) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -185,7 +185,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(lin_sum_data[i] - (a*c + b*d)) > eq_check_tol) || failure;
+    failure = (fabs(lin_sum_data[i] - (a*c + b*d)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -247,7 +247,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (abs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
+    failure = (fabs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -270,7 +270,7 @@ void test_nvector_gkylzero (bool use_gpu) {
   double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
 
   /* ans should equal 1/4 */
-  failure = (wrmsnorm < 0.0) ? 1 : (abs(wrmsnorm - 1.0/4.0) > eq_check_tol);
+  failure = (wrmsnorm < 0.0) ? 1 : (fabs(wrmsnorm - 1.0/4.0) > eq_check_tol);
 
   if(failure)
   {
@@ -302,7 +302,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
+    failure = (fabs(nvdiv_data[i] - c/d) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -333,7 +333,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
+    failure = (fabs(nvabs_data[i] - 1.0) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -364,7 +364,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
+    failure = (fabs(nvinv_data[i] - 1.0/c) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -415,7 +415,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   failure = false;
   for (unsigned int i=0; i<(nvdiv->size*nvdiv->ncomp); ++i) {
-    failure = (abs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
+    failure = (fabs(nvadd_data[i] - (c + d)) > eq_check_tol) || failure;
   }
 
   if(failure)
@@ -510,6 +510,8 @@ struct gkyl_diffusion_app_inp {
   int cells[GKYL_MAX_DIM]; // Number of cells.
   int poly_order; // Polynomial order of the basis.
   bool use_gpu; // Whether to run on GPU.
+
+  double cfl_frac; // Factor on RHS of the CFL constraint.
 
   // Mapping from computational to physical space.
   void (*mapc2p_func)(double t, const double *xn, double *fout, void *ctx);
@@ -756,9 +758,6 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   gkyl_proj_on_basis_release(proj_distf);
   gkyl_array_copy(app->f, app->f_ho);
 
-  // Apply BC to the IC.
-  apply_bc(app, 0.0, app->f);
-
   // Things needed in ARKODE vector:
   //   1. cloning = mkarr & gkyl_array_copy
   //   2. g = a*f + b*f1 + c*fnew = wrap gkyl_array_accumulate(g, a, f)
@@ -767,7 +766,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   //   5. weighted MRS norm
   //   6. set f = 1 (const) = gkyl_array_set(f, 1.0);
 
-  app->cfl = 1.0; // CFL factor.
+  app->cfl = inp->cfl_frac == 0? 1.0 : inp->cfl_frac; // CFL factor.
 
   // CFL frequency in phase-space.
   app->cflrate = mkarr(use_gpu, 1, app->local_ext.volume);
@@ -799,7 +798,7 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
 
   // Diffusion solver.
   app->diff_slvr = gkyl_dg_updater_diffusion_gyrokinetic_new(&app->grid,
-      &app->basis, &app->basis_conf, true, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
+      &app->basis, &app->basis_conf, false, diff_dir, diffusion_order, &app->local_conf, is_zero_flux, use_gpu);
 
   // Assume only periodic dir is x.
   app->num_periodic_dir = 1;
@@ -812,6 +811,10 @@ gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp *inp)
   }
   app->integ_L2_f = gkyl_dynvec_new(GKYL_DOUBLE, 1); // Dynamic vector to store L2 norm in time.
   app->is_first_integ_L2_write_call = true;
+
+  // Apply BC to the IC.
+  apply_bc(app, 0.0, app->f);
+
   return app;
 }
 
@@ -892,7 +895,7 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   gkyl_array_clear(app->cflrate, 0.0);
   gkyl_array_clear(fout, 0.0);
 
-  apply_bc(app, t, fin);
+  apply_bc(app, t, fin); //apply_bc before computing the RHS
 
   gkyl_dg_updater_diffusion_gyrokinetic_advance(app->diff_slvr, &app->local,
     app->diffD, app->gk_geom->jacobgeo_inv, fin, app->cflrate, fout);
@@ -1216,12 +1219,12 @@ struct diffusion_output_meta {
   char basis_type_nm[64]; // used during read
 };
 
-static struct gkyl_array_meta*
+static struct gkyl_msgpack_data*
 diffusion_array_meta_new(struct diffusion_output_meta meta)
 {
   // Allocate new metadata to include in file.
-  // Returned gkyl_array_meta must be freed using duffusion_array_meta_release.
-  struct gkyl_array_meta *mt = gkyl_malloc(sizeof(*mt));
+  // Returned gkyl_msgpack_data must be freed using duffusion_array_meta_release.
+  struct gkyl_msgpack_data *mt = gkyl_malloc(sizeof(*mt));
 
   mt->meta_sz = 0;
   mpack_writer_t writer;
@@ -1259,7 +1262,7 @@ diffusion_array_meta_new(struct diffusion_output_meta meta)
 }
 
 static void
-diffusion_array_meta_release(struct gkyl_array_meta *mt)
+diffusion_array_meta_release(struct gkyl_msgpack_data *mt)
 {
   // Release array meta data.
   if (!mt) return;
@@ -1271,7 +1274,7 @@ void
 gkyl_diffusion_app_write(struct gkyl_diffusion_app* app, double tm, int frame)
 {
   // Write grid diagnostics for this app.
-  struct gkyl_array_meta *mt = diffusion_array_meta_new( (struct diffusion_output_meta) {
+  struct gkyl_msgpack_data *mt = diffusion_array_meta_new( (struct diffusion_output_meta) {
       .frame = frame,
       .stime = tm,
       .poly_order = app->basis.poly_order,
@@ -1285,9 +1288,7 @@ gkyl_diffusion_app_write(struct gkyl_diffusion_app* app, double tm, int frame)
   snprintf(fileNm, sizeof fileNm, fmt, app->name, frame);
 
   // copy data from device to host before writing it out
-  if (app->use_gpu) {
-    gkyl_array_copy(app->f_ho, app->f);
-  }
+  gkyl_array_copy(app->f_ho, app->f);
 
   gkyl_comm_array_write(app->comm, &app->grid, &app->local, mt, app->f_ho, fileNm);
 
@@ -1351,7 +1352,8 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool test_nvector = true;
+  bool is_STS = false;
+  bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
 
@@ -1367,6 +1369,8 @@ int main(int argc, char **argv)
     .upper = {ctx.x_max, ctx.vpar_max}, // Upper grid extents.
     .cells = {ctx.cells[0], ctx.cells[1]}, // Number of cells.
     .poly_order = ctx.poly_order, // Polynomial order of DG basis.
+
+    .cfl_frac = 1.0, // CFL factor.
 
     // Mapping from computational to physical space.
     .mapc2p_func = mapc2p,
@@ -1410,13 +1414,15 @@ int main(int argc, char **argv)
   double dt_init = -1.0, dt_failure_tol = ctx.dt_failure_tol;
   int num_failures = 0, num_failures_max = ctx.num_failures_max;
 
-  int flag;
   void* arkode_mem = NULL; /* empty ARKode memory structure */
   N_Vector y       = NULL; /* empty vector for storing solution */
-  flag = LSRK_init(app, &y, &arkode_mem);
-  if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
 
-  bool is_STS = true;
+  if (is_STS) {
+    int flag;
+    flag = LSRK_init(app, &y, &arkode_mem);
+    if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
+  }
+
   double tout = 0;
 
   long step = 1;
@@ -1453,7 +1459,7 @@ int main(int argc, char **argv)
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
 
-    if(!is_STS)
+    if (!is_STS) {
       if (dt_init < 0.0) {
         dt_init = status.dt_actual;
       }
@@ -1472,6 +1478,7 @@ int main(int argc, char **argv)
       else {
         num_failures = 0;
       }
+    }
 
     step += 1;
   }
