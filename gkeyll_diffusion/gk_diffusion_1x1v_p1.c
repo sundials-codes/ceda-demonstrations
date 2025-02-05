@@ -558,7 +558,7 @@ diffusion_coeff_1x(double t, const double *xn, double* restrict fout, void *ctx)
   struct diffusion_ctx *dctx = ctx;
   double diffD0 = dctx->diffD0;
 
-  fout[0] = diffD0;
+  fout[0] = diffD0 * (1.0 + 0.99 * sin(x));
 }
 
 void
