@@ -70,15 +70,16 @@ struct UserData
   // Diffusion coefficients in the x and y directions
   sunrealtype kx = ONE;
   sunrealtype ky = ONE;
+  bool inhomogeneous = false;
 
   // Final time
   sunrealtype tf = ONE;
 
   // Lower and Upper bounds in x and y directions
   sunrealtype xl = -M_PI;
-  sunrealtype yl = -M_PI;
+  sunrealtype yl = -6.0;
   sunrealtype xu = M_PI;
-  sunrealtype yu = M_PI;
+  sunrealtype yu = 6.0;
 
   // Global number of nodes in the x and y directions
   sunindextype nx = 64;
@@ -88,8 +89,8 @@ struct UserData
   sunindextype nodes = nx * ny;
 
   // Mesh spacing in the x and y directions
-  sunrealtype dx = xu / (nx - 1);
-  sunrealtype dy = yu / (ny - 1);
+  sunrealtype dx = (xu - xl) / (nx - 1);
+  sunrealtype dy = (yu - xl) / (ny - 1);
 
   // Minimum number of local nodes in the x and y directions
   sunindextype qx = 0;
@@ -174,12 +175,15 @@ struct UserData
   HYPRE_Int ilower[2];
   HYPRE_Int iupper[2];
 
+  // hypre grid periodicity
+  HYPRE_Int periodic[2];
+
   // hypre workspace
   HYPRE_Int nwork;
   HYPRE_Real* work;
 
   // hypre counters
-  HYPRE_Int pfmg_its;
+  HYPRE_Int pfmg_its = 0;
 
   // hypre PFMG settings (hypre defaults)
   HYPRE_Int pfmg_relax = 2;  // type of relaxation:

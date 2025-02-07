@@ -31,7 +31,7 @@ struct UserOptions
   int maxsteps       = 0;                   // max steps between outputs
   int onestep        = 0;                   // one step mode, number of steps
   bool linear        = true;                // linearly implicit RHS
-  bool implicit      = true; // implicit (ARKStep) vs explicit STS (LSRKStep)
+  bool implicit      = true;                // implicit (ARKStep) vs explicit STS (LSRKStep)
   ARKODE_LSRKMethodType lsrkmethod = ARKODE_LSRK_RKC_2; // LSRK method type
 
   // Linear solver and preconditioner settings
@@ -380,6 +380,13 @@ int main(int argc, char* argv[])
       cout << "Final integrator statistics:" << endl;
       flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
       if (check_flag(&flag, "ARKodePrintAllStats", 1)) { return 1; }
+
+#if HYPRE_RELEASE_NUMBER >= 22000
+      if (uopts.preconditioning)
+      {
+        cout << "Total PFMG iterations        = " << udata.pfmg_its << endl;
+      }
+#endif
     }
 
     // ---------
@@ -584,7 +591,7 @@ void UserOptions::help()
   cout << "Implicit (ARKStep) solver command line options:" << endl;
   cout << "  --nonlinear             : disable linearly implicit flag" << endl;
   cout << "  --order <ord>           : method order" << endl;
-  cout << "  --ls <cg|gmres|sludist> : linear solver" << endl;
+  cout << "  --ls <cg|gmres>         : linear solver" << endl;
   cout << "  --lsinfo                : output residual history" << endl;
   cout << "  --liniters <iters>      : max number of iterations" << endl;
   cout << "  --epslin <factor>       : linear tolerance factor" << endl;
@@ -613,7 +620,10 @@ void UserOptions::print()
     cout << " --------------------------------- " << endl;
     cout << " order       = " << order << endl;
     cout << " max steps   = " << maxsteps << endl;
-    cout << " linear RHS  = " << linear << endl;
+    if (linear)
+      cout << " linear RHS" << endl;
+    else
+      cout << " nonlinear RHS" << endl;
     cout << " --------------------------------- " << endl;
     cout << endl;
     cout << " Linear solver options:" << endl;

@@ -1,8 +1,5 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): Daniel R. Reynolds @ SMU
- * -----------------------------------------------------------------------------
- *
- * HYPRE-PFMG preconditiner for 2D diffusion benchmark problem
  * ---------------------------------------------------------------------------*/
 
 #include "diffusion_2D.hpp"
@@ -134,9 +131,31 @@ int PSolve(sunrealtype t, N_Vector u, N_Vector f, N_Vector r, N_Vector z,
   flag = HYPRE_StructVectorAssemble(udata->xvec);
   if (flag != 0) { return -1; }
 
+
+  // // Print matrix and RHS to disk
+  // cout << "Printing HYPRE matrix, RHS, and solution to disk (gamma = " << gamma << ")" << endl;
+  // flag = HYPRE_StructMatrixPrint("hypre_matrix", udata->Amatrix, 0);
+  // if (flag != 0) { return -1; }
+  // flag = HYPRE_StructVectorPrint("hypre_rhs", udata->bvec, 0);
+  // if (flag != 0) { return -1; }
+
+
+
+
+  // Update the preconditioner solver tolerance
+  flag = HYPRE_StructPFMGSetTol(udata->precond, delta);
+  if (flag != 0) { return -1; }
+
   // Solve the linear system
   flag = HYPRE_StructPFMGSolve(udata->precond, udata->Amatrix, udata->bvec,
                                udata->xvec);
+
+
+  // // Print solution to disk
+  // flag = HYPRE_StructVectorPrint("hypre_sol", udata->xvec, 0);
+  // if (flag != 0) { return -1; }
+
+
 
   // If a convergence error occurred, clear the error and continue. For any
   // other error return with a recoverable error.
@@ -213,6 +232,17 @@ int SetupHypre(UserData& udata)
   if (flag != 0)
   {
     cerr << "Error in HYPRE_StructGridSetExtents = " << flag << endl;
+    return -1;
+  }
+
+  // Set periodicity
+  udata.periodic[0] = udata.nx;
+  udata.periodic[1] = udata.ny;
+
+  flag = HYPRE_StructGridSetPeriodic(udata.grid, udata.periodic);
+  if (flag != 0)
+  {
+    cerr << "Error in HYPRE_StructGridSetPeriodic = " << flag << endl;
     return -1;
   }
 
@@ -390,11 +420,6 @@ static int Jac(UserData& udata)
   // Only do work if the box is non-zero in size
   if ((ilower[0] <= iupper[0]) && (ilower[1] <= iupper[1]))
   {
-    // Jacobian values
-    sunrealtype cx = udata.kx / (udata.dx * udata.dx);
-    sunrealtype cy = udata.ky / (udata.dy * udata.dy);
-    sunrealtype cc = -TWO * (cx + cy);
-
     // --------------------------------
     // Set matrix values for all nodes
     // --------------------------------
@@ -403,20 +428,27 @@ static int Jac(UserData& udata)
     idx = 0;
     for (iy = 0; iy < ny_loc; iy++)
     {
+      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata.js+iy) * udata.dy, &udata)
+                             / (udata.dy * udata.dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata.js+iy+1) * udata.dy, &udata)
+                             / (udata.dy * udata.dy);
       for (ix = 0; ix < nx_loc; ix++)
       {
-        work[idx]     = cc;
-        work[idx + 1] = cx;
-        work[idx + 2] = cx;
-        work[idx + 3] = cy;
-        work[idx + 4] = cy;
+        const sunrealtype Dx_w = Diffusion_Coeff_X((udata.is+ix) * udata.dx, &udata)
+                               / (udata.dx * udata.dx);
+        const sunrealtype Dx_e = Diffusion_Coeff_X((udata.is+ix+1) * udata.dx, &udata)
+                               / (udata.dx * udata.dx);
+        work[idx]     = -((Dx_w + Dx_e) + (Dy_s + Dy_n));
+        work[idx + 1] = Dx_w;
+        work[idx + 2] = Dx_e;
+        work[idx + 3] = Dy_s;
+        work[idx + 4] = Dy_n;
         idx += 5;
       }
     }
 
-    // Modify the matrix
-    flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, ilower, iupper, 5, entries,
-                                          work);
+    // Insert entries into the matrix
+    flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, ilower, iupper, 5, entries, work);
     if (flag != 0)
     {
       cerr << "Error in HYPRE_StructMatrixSetBoxValues (interior) = " << flag
@@ -424,259 +456,6 @@ static int Jac(UserData& udata)
       return -1;
     }
 
-    // ----------------------------------------
-    // Correct matrix values at boundary nodes
-    // ----------------------------------------
-
-    // Set the matrix boundary entries (center, left, right, bottom, top)
-    if (ilower[1] == 0 || iupper[1] == (udata.ny - 1) || ilower[0] == 0 ||
-        iupper[0] == (udata.nx - 1))
-    {
-      idx = 0;
-      for (iy = 0; iy < ny_loc; iy++)
-      {
-        for (ix = 0; ix < nx_loc; ix++)
-        {
-          work[idx]     = ONE;
-          work[idx + 1] = ZERO;
-          work[idx + 2] = ZERO;
-          work[idx + 3] = ZERO;
-          work[idx + 4] = ZERO;
-          idx += 5;
-        }
-      }
-    }
-
-    // Set cells on western boundary
-    if (ilower[0] == 0)
-    {
-      // Grid cell on south-west corner
-      bc_ilower[0] = ilower[0];
-      bc_ilower[1] = ilower[1];
-
-      // Grid cell on north-west corner
-      bc_iupper[0] = ilower[0];
-      bc_iupper[1] = iupper[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 5,
-                                              entries, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (west bdry) = " << flag
-               << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Set cells on eastern boundary
-    if (iupper[0] == (udata.nx - 1))
-    {
-      // Grid cell on south-east corner
-      bc_ilower[0] = iupper[0];
-      bc_ilower[1] = ilower[1];
-
-      // Grid cell on north-east corner
-      bc_iupper[0] = iupper[0];
-      bc_iupper[1] = iupper[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 5,
-                                              entries, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (east bdry) = " << flag
-               << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Correct cells on southern boundary
-    if (ilower[1] == 0)
-    {
-      // Grid cell on south-west corner
-      bc_ilower[0] = ilower[0];
-      bc_ilower[1] = ilower[1];
-
-      // Grid cell on south-east corner
-      bc_iupper[0] = iupper[0];
-      bc_iupper[1] = ilower[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 5,
-                                              entries, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (south bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Set cells on northern boundary
-    if (iupper[1] == (udata.ny - 1))
-    {
-      // Grid cell on north-west corner
-      bc_ilower[0] = ilower[0];
-      bc_ilower[1] = iupper[1];
-
-      // Grid cell on north-east corner
-      bc_iupper[0] = iupper[0];
-      bc_iupper[1] = iupper[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 5,
-                                              entries, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (north bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
-
-    // -----------------------------------------------------------
-    // Remove connections between the interior and boundary nodes
-    // -----------------------------------------------------------
-
-    // Zero out work array
-    for (ix = 0; ix < nwork; ix++) { work[ix] = ZERO; }
-
-    // Second column of nodes (depends on western boundary)
-    if ((ilower[0] <= 1) && (iupper[0] >= 1))
-    {
-      // Remove western dependency
-      entry[0] = 1;
-
-      // Grid cell on south-west corner
-      bc_ilower[0] = 1;
-      bc_ilower[1] = ilower[1];
-
-      // Grid cell on north-west corner
-      bc_iupper[0] = 1;
-      bc_iupper[1] = iupper[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 1,
-                                              entry, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (disconnect west "
-                  "bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Next to last column (depends on eastern boundary)
-    if ((ilower[0] <= (udata.nx - 2)) && (iupper[0] >= (udata.nx - 2)))
-    {
-      // Remove eastern dependency
-      entry[0] = 2;
-
-      // Grid cell on south-east corner
-      bc_ilower[0] = udata.nx - 2;
-      bc_ilower[1] = ilower[1];
-
-      // Grid cell on north-east corner
-      bc_iupper[0] = udata.nx - 2;
-      bc_iupper[1] = iupper[1];
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 1,
-                                              entry, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (disconnect east "
-                  "bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Second row of nodes (depends on southern boundary)
-    if ((ilower[1] <= 1) && (iupper[1] >= 1))
-    {
-      // Remove southern dependency
-      entry[0] = 3;
-
-      // Grid cell on south-west corner
-      bc_ilower[0] = ilower[0];
-      bc_ilower[1] = 1;
-
-      // Grid cell on south-east corner
-      bc_iupper[0] = iupper[0];
-      bc_iupper[1] = 1;
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 1,
-                                              entry, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (disconnect south "
-                  "bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
-
-    // Next to last row of nodes (depends on northern boundary)
-    if ((ilower[1] <= (udata.ny - 2)) && (iupper[1] >= (udata.ny - 2)))
-    {
-      // Remove northern dependency
-      entry[0] = 4;
-
-      // Grid cell on north-west corner
-      bc_ilower[0] = ilower[0];
-      bc_ilower[1] = udata.ny - 2;
-
-      // Grid cell on north-east corner
-      bc_iupper[0] = iupper[0];
-      bc_iupper[1] = udata.ny - 2;
-
-      // Only do work if the box is non-zero in size
-      if ((bc_ilower[0] <= bc_iupper[0]) && (bc_ilower[1] <= bc_iupper[1]))
-      {
-        // Modify the matrix
-        flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, bc_ilower, bc_iupper, 1,
-                                              entry, work);
-        if (flag != 0)
-        {
-          cerr << "Error in HYPRE_StructMatrixSetBoxValues (disconnect north "
-                  "bdry) = "
-               << flag << endl;
-          return -1;
-        }
-      }
-    }
   }
 
   // The matrix is assembled matrix in hypre setup
@@ -715,7 +494,7 @@ static int ScaleAddI(UserData& udata, sunrealtype gamma)
     return (flag);
   }
 
-  // Scale work array by c
+  // Scale work array by -gamma
   for (HYPRE_Int i = 0; i < nwork; i++) { work[i] *= -gamma; }
 
   // Insert scaled values into A
@@ -727,7 +506,7 @@ static int ScaleAddI(UserData& udata, sunrealtype gamma)
     return (flag);
   }
 
-  // Set first 1/5 of work array to 1
+  // Set first 1/5 of work array to 1.0
   for (HYPRE_Int i = 0; i < nwork / 5; i++) { work[i] = ONE; }
 
   // Add values to the diagonal of A

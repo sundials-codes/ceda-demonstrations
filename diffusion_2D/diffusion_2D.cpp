@@ -79,10 +79,24 @@ int UserData::parse_args(vector<string>& args, bool outproc)
     args.erase(it, it + 2);
   }
 
+  it = find(args.begin(), args.end(), "--xl");
+  if (it != args.end())
+  {
+    xl = stod(*(it + 1));
+    args.erase(it, it + 2);
+  }
+
   it = find(args.begin(), args.end(), "--xu");
   if (it != args.end())
   {
     xu = stod(*(it + 1));
+    args.erase(it, it + 2);
+  }
+
+  it = find(args.begin(), args.end(), "--yl");
+  if (it != args.end())
+  {
+    yu = stod(*(it + 1));
     args.erase(it, it + 2);
   }
 
@@ -104,6 +118,13 @@ int UserData::parse_args(vector<string>& args, bool outproc)
   if (it != args.end())
   {
     ky = stod(*(it + 1));
+    args.erase(it, it + 2);
+  }
+
+  it = find(args.begin(), args.end(), "--inhomogeneous");
+  if (it != args.end())
+  {
+    inhomogeneous = true;
     args.erase(it, it + 2);
   }
 
@@ -137,8 +158,8 @@ int UserData::parse_args(vector<string>& args, bool outproc)
   nodes = nx * ny;
 
   // Recompute x and y mesh spacing
-  dx = xu / (nx - 1);
-  dy = yu / (ny - 1);
+  dx = (xu-xl) / (nx - 1);
+  dy = (yu-yl) / (ny - 1);
 
   return 0;
 }
@@ -148,17 +169,20 @@ void UserData::help()
 {
   cout << endl;
   cout << "Problem setup command line options:" << endl;
-  cout << "  --nx <nx>    : x-direction mesh points" << endl;
-  cout << "  --ny <ny>    : y-direction mesh points" << endl;
-  cout << "  --xu <xu>    : x-direction upper bound" << endl;
-  cout << "  --yu <yu>    : y-direction upper bound" << endl;
-  cout << "  --kx <kx>    : x-direction diffusion coefficient" << endl;
-  cout << "  --ky <kx>    : y-direction diffusion coefficient" << endl;
-  cout << "  --tf <time>  : final time" << endl;
+  cout << "  --nx <nx>       : x-direction mesh points" << endl;
+  cout << "  --ny <ny>       : y-direction mesh points" << endl;
+  cout << "  --xl <xl>       : x-direction lower bound" << endl;
+  cout << "  --xu <xu>       : x-direction upper bound" << endl;
+  cout << "  --yl <yl>       : y-direction lower bound" << endl;
+  cout << "  --yu <yu>       : y-direction upper bound" << endl;
+  cout << "  --kx <kx>       : x-direction diffusion coefficient" << endl;
+  cout << "  --ky <kx>       : y-direction diffusion coefficient" << endl;
+  cout << "  --inhomogeneous : use spatially-varying diffusion coefficients" << endl;
+  cout << "  --tf <time>     : final time" << endl;
 #ifdef USE_HYPRE
   cout << endl;
   cout << "Hypre preconditioner command line options:" << endl;
-  cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacogi, 2=symmGS, 3=nonsymmGS)" << endl;
+  cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacobi, 2=symmGS, 3=nonsymmGS)" << endl;
   cout << "  --pfmg_nrelax <num> : num pre/post relaxation sweeps" << endl;
 #endif
 }
@@ -174,8 +198,14 @@ void UserData::print()
   cout << " --------------------------------- " << endl;
   cout << "  kx             = " << kx << endl;
   cout << "  ky             = " << ky << endl;
+  if (inhomogeneous)
+    cout << "  spatially-varying diffusion" << endl;
+  else
+    cout << "  homogeneous diffusion" << endl;
   cout << "  tf             = " << tf << endl;
+  cout << "  xl             = " << xl << endl;
   cout << "  xu             = " << xu << endl;
+  cout << "  yl             = " << yl << endl;
   cout << "  yu             = " << yu << endl;
   cout << "  nx             = " << nx << endl;
   cout << "  ny             = " << ny << endl;
@@ -391,8 +421,7 @@ int UserData::start_exchange(const N_Vector u)
 
   if (HaveNbrW)
   {
-    flag = MPI_Irecv(Wrecv, (int)ny_loc, MPI_SUNREALTYPE, ipW, MPI_ANY_TAG,
-                     comm_c, &reqRW);
+    flag = MPI_Irecv(Wrecv, (int)ny_loc, MPI_SUNREALTYPE, ipW, 1, comm_c, &reqRW);
     if (flag != MPI_SUCCESS)
     {
       cerr << "Error in MPI_Irecv = " << flag << endl;
@@ -402,8 +431,7 @@ int UserData::start_exchange(const N_Vector u)
 
   if (HaveNbrE)
   {
-    flag = MPI_Irecv(Erecv, (int)ny_loc, MPI_SUNREALTYPE, ipE, MPI_ANY_TAG,
-                     comm_c, &reqRE);
+    flag = MPI_Irecv(Erecv, (int)ny_loc, MPI_SUNREALTYPE, ipE, 0, comm_c, &reqRE);
     if (flag != MPI_SUCCESS)
     {
       cerr << "Error in MPI_Irecv = " << flag << endl;
@@ -413,8 +441,7 @@ int UserData::start_exchange(const N_Vector u)
 
   if (HaveNbrS)
   {
-    flag = MPI_Irecv(Srecv, (int)nx_loc, MPI_SUNREALTYPE, ipS, MPI_ANY_TAG,
-                     comm_c, &reqRS);
+    flag = MPI_Irecv(Srecv, (int)nx_loc, MPI_SUNREALTYPE, ipS, 3, comm_c, &reqRS);
     if (flag != MPI_SUCCESS)
     {
       cerr << "Error in MPI_Irecv = " << flag << endl;
@@ -424,8 +451,7 @@ int UserData::start_exchange(const N_Vector u)
 
   if (HaveNbrN)
   {
-    flag = MPI_Irecv(Nrecv, (int)nx_loc, MPI_SUNREALTYPE, ipN, MPI_ANY_TAG,
-                     comm_c, &reqRN);
+    flag = MPI_Irecv(Nrecv, (int)nx_loc, MPI_SUNREALTYPE, ipN, 2, comm_c, &reqRN);
     if (flag != MPI_SUCCESS)
     {
       cerr << "Error in MPI_Irecv = " << flag << endl;
@@ -656,7 +682,7 @@ void UserOutput::help()
 {
   cout << endl;
   cout << "Output command line options:" << endl;
-  cout << "  --output <level>  : output level" << endl;
+  cout << "  --output <level>  : output level (0 = none, 1 = stats, 2 = solution)" << endl;
   cout << "  --nout <nout>     : number of outputs" << endl;
 }
 
@@ -860,12 +886,18 @@ int UserOutput::close(UserData* udata)
 
 sunrealtype Diffusion_Coeff_X(sunrealtype x, UserData* udata)
 {
-  return (udata->kx * (1.0 + 0.99*sin(x)));
+  if (udata->inhomogeneous)
+    return (udata->kx * (1.0 + 0.99*sin(x)));
+  else
+    return (udata->kx);
 }
 
 sunrealtype Diffusion_Coeff_Y(sunrealtype y, UserData* udata)
 {
-  return (udata->ky * (1.0 + 0.99*sin(y)));
+  if (udata->inhomogeneous)
+    return (udata->ky * (1.0 + 0.99*sin(y)));
+  else
+    return (udata->ky);
 }
 
 // Check function return value

@@ -36,10 +36,10 @@ int Initial(sunrealtype t, N_Vector u, UserData* udata)
   {
     for (sunindextype i = istart; i < iend; i++)
     {
-      const sunrealtype x = (udata->is + i) * udata->dx;
-      const sunrealtype y = (udata->js + j) * udata->dy;
+      const sunrealtype x = udata->xl + (udata->is + i) * udata->dx;
+      const sunrealtype y = udata->yl + (udata->js + j) * udata->dy;
 
-      uarray[IDX(i, j, udata->nx_loc)] = (1.0 + 0.3*sin(2.0*x))/sqrt(5.5*M_PI)*exp(-y*y/5.5);
+      uarray[IDX(i, j, udata->nx_loc)] = (1.0 + 0.3*sin(2.0*x))/sqrt(5.5*M_PI)*exp(-(y*y)/5.5);
     }
   }
 

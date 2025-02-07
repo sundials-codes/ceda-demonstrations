@@ -1,17 +1,6 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): David J. Gardner @ LLNL
- * -----------------------------------------------------------------------------
- * SUNDIALS Copyright Start
- * Copyright (c) 2002-2024, Lawrence Livermore National Security
- * and Southern Methodist University.
- * All rights reserved.
- *
- * See the top-level LICENSE and NOTICE files for details.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- * SUNDIALS Copyright End
- * -----------------------------------------------------------------------------
- * Serial diffusion functions
+ *                Major revisions by Daniel R. Reynolds @ SMU
  * ---------------------------------------------------------------------------*/
 
 #include "diffusion_2D.hpp"
@@ -25,20 +14,11 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   int flag = udata->start_exchange(u);
   if (check_flag(&flag, "SendData", 1)) { return -1; }
 
-  // Shortcuts to local number of nodes
+  // Shortcuts variables
   const sunindextype nx_loc = udata->nx_loc;
   const sunindextype ny_loc = udata->ny_loc;
-
-  // Determine iteration range excluding the overall domain boundary
-  const sunindextype istart = (udata->HaveNbrW) ? 0 : 1;
-  const sunindextype iend   = (udata->HaveNbrE) ? nx_loc : nx_loc - 1;
-  const sunindextype jstart = (udata->HaveNbrS) ? 0 : 1;
-  const sunindextype jend   = (udata->HaveNbrN) ? ny_loc : ny_loc - 1;
-
-  // Constants for computing diffusion term
-  const sunrealtype cx = udata->kx / (udata->dx * udata->dx);
-  const sunrealtype cy = udata->ky / (udata->dy * udata->dy);
-  const sunrealtype cc = -TWO * (cx + cy);
+  const sunrealtype dx = udata->dx;
+  const sunrealtype dy = udata->dy;
 
   // Access data arrays
   sunrealtype* uarray = N_VGetArrayPointer(u);
@@ -53,17 +33,17 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   // Iterate over subdomain interior and add rhs diffusion term
   for (sunindextype j = 1; j < ny_loc - 1; j++)
   {
-    const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
-    const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
+    const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+    const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+    const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+    const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
 
     for (sunindextype i = 1; i < nx_loc - 1; i++)
     {
-      const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
-      const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
+      const sunrealtype xlo = udata->xl + (udata->is + i - 0.5)*dx;
+      const sunrealtype xhi = udata->xl + (udata->is + i + 0.5)*dx;
+      const sunrealtype Dx_w = Diffusion_Coeff_X(xlo, udata) / (dx * dx);
+      const sunrealtype Dx_e = Diffusion_Coeff_X(xhi, udata) / (dx * dx);
 
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
@@ -88,17 +68,17 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   if (udata->HaveNbrW)
   {
     sunindextype i = 0;
-    const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                             / (udata->dx * udata->dx);
-    const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                             / (udata->dx * udata->dx);
+    const sunrealtype xlo = udata->xl + (udata->is + i - 0.5)*dx;
+    const sunrealtype xhi = udata->xl + (udata->is + i + 0.5)*dx;
+    const sunrealtype Dx_w = Diffusion_Coeff_X(xlo, udata) / (dx * dx);
+    const sunrealtype Dx_e = Diffusion_Coeff_X(xhi, udata) / (dx * dx);
     if (udata->HaveNbrS) // South-West corner
     {
       sunindextype j = 0;
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * Warray[j] +
@@ -109,10 +89,10 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
 
     for (sunindextype j = 1; j < ny_loc - 1; j++)
     {
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * Warray[j] +
@@ -124,10 +104,10 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
     if (udata->HaveNbrN) // North-West corner
     {
       sunindextype j = ny_loc - 1;
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * Warray[j] +
@@ -141,17 +121,17 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   if (udata->HaveNbrE)
   {
     sunindextype i = nx_loc - 1;
-    const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                             / (udata->dx * udata->dx);
-    const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                             / (udata->dx * udata->dx);
+    const sunrealtype xlo = udata->xl + (udata->is + i - 0.5)*dx;
+    const sunrealtype xhi = udata->xl + (udata->is + i + 0.5)*dx;
+    const sunrealtype Dx_w = Diffusion_Coeff_X(xlo, udata) / (dx * dx);
+    const sunrealtype Dx_e = Diffusion_Coeff_X(xhi, udata) / (dx * dx);
     if (udata->HaveNbrS) // South-East corner
     {
       sunindextype j = 0;
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * uarray[IDX(i - 1, j, nx_loc)] +
@@ -162,10 +142,10 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
 
     for (sunindextype j = 1; j < ny_loc - 1; j++)
     {
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * uarray[IDX(i - 1, j, nx_loc)] +
@@ -177,10 +157,10 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
     if (udata->HaveNbrN) // North-East corner
     {
       sunindextype j = ny_loc - 1;
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                               / (udata->dy * udata->dy);
+      const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+      const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+      const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * uarray[IDX(i - 1, j, nx_loc)] +
@@ -194,16 +174,16 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   if (udata->HaveNbrS)
   {
     sunindextype j = 0;
-    const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
-    const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
+    const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+    const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+    const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+    const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
     for (sunindextype i = 1; i < nx_loc - 1; i++)
     {
-      const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
-      const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
+      const sunrealtype xlo = udata->xl + (udata->is + i - 0.5)*dx;
+      const sunrealtype xhi = udata->xl + (udata->is + i + 0.5)*dx;
+      const sunrealtype Dx_w = Diffusion_Coeff_X(xlo, udata) / (dx * dx);
+      const sunrealtype Dx_e = Diffusion_Coeff_X(xhi, udata) / (dx * dx);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * uarray[IDX(i - 1, j, nx_loc)] +
@@ -217,16 +197,16 @@ int laplacian(sunrealtype t, N_Vector u, N_Vector f, UserData* udata)
   if (udata->HaveNbrN)
   {
     sunindextype j = udata->ny_loc - 1;
-    const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
-    const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
+    const sunrealtype ylo = udata->yl + (udata->js + j - 0.5)*dy;
+    const sunrealtype yhi = udata->yl + (udata->js + j + 0.5)*dy;
+    const sunrealtype Dy_s = Diffusion_Coeff_Y(ylo, udata) / (dy * dy);
+    const sunrealtype Dy_n = Diffusion_Coeff_Y(yhi, udata) / (dy * dy);
     for (sunindextype i = 1; i < nx_loc - 1; i++)
     {
-      const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
-      const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
+      const sunrealtype xlo = udata->xl + (udata->is + i - 0.5)*dx;
+      const sunrealtype xhi = udata->xl + (udata->is + i + 0.5)*dx;
+      const sunrealtype Dx_w = Diffusion_Coeff_X(xlo, udata) / (dx * dx);
+      const sunrealtype Dx_e = Diffusion_Coeff_X(xhi, udata) / (dx * dx);
       farray[IDX(i, j, nx_loc)] +=
         -((Dx_w + Dx_e) + (Dy_s + Dy_n)) * uarray[IDX(i, j, nx_loc)] +
         Dx_w * uarray[IDX(i - 1, j, nx_loc)] +
