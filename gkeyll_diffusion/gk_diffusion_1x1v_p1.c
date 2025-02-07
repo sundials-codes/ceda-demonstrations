@@ -20,6 +20,7 @@
 #include "nvector_gkylzero.h"
 
 #include <arkode/arkode_lsrkstep.h> /* prototypes for LSRKStep fcts., consts */
+#include <arkode/arkode_erkstep.h>  /* prototypes for ERKStep fcts., consts */
 #include <math.h>
 #include <nvector/nvector_serial.h> /* serial N_Vector types, fcts., macros */
 #include <stdio.h>
@@ -996,8 +997,6 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
   if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
 
-//TO DO: Check to make sure app->f is the actual solution
-
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
@@ -1038,9 +1037,52 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  // /* User provided apply boundary conditions function */
-  // flag = ARKodeSetPostprocessStepFn(*arkode_mem, apply_bc_in_LSRK);//should be stage instead
-  // if (check_flag(&flag, "ARKodeSetPostprocessStepFn", 1)) { return 1; }
+  /* Specify the fixed step size */
+  flag = ARKodeSetFixedStep(*arkode_mem, 0.005);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+
+  return 0;
+}
+
+int ERK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
+{
+  /* general problem parameters */
+  sunrealtype T0    = 0.0;  /* initial time */
+
+  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-10);
+
+  /* Create the SUNDIALS context object for this simulation */
+  SUNContext ctx;
+  flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
+
+  /* Initialize data structures */
+  *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
+  if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
+
+  /* Call ERKStepCreate to initialize the ARK timestepper module and
+     specify the right-hand side function in y'=f(t,y), the initial time
+     T0, and the initial dependent variable vector y. */
+  *arkode_mem = ERKStepCreate(f, T0, *y, ctx);
+  if (check_flag((void*)*arkode_mem, "ARKStepCreate", 0)) { return 1; }
+
+  /* Set routines */
+  flag = ARKodeSetUserData(*arkode_mem,
+                           (void*)app); /* Pass the user data */
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
+
+  /* Specify tolerances */
+  flag = ARKodeSStolerances(*arkode_mem, reltol, abstol);
+  if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
+
+  /* Specify max number of steps allowed */
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+
+  /* Specify the fixed step size */
+  flag = ARKodeSetFixedStep(*arkode_mem, 0.005);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
   return 0;
 }
@@ -1353,6 +1395,7 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 int main(int argc, char **argv)
 {
   bool is_STS = false;
+  bool is_ERKSTEP = true;
   bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
@@ -1422,16 +1465,22 @@ int main(int argc, char **argv)
     flag = LSRK_init(app, &y, &arkode_mem);
     if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
   }
+  else if (is_ERKSTEP)
+  {
+    int flag;
+    flag = ERK_init(app, &y, &arkode_mem);
+    if (check_flag(&flag, "LSRK_init", 1)) { return 1; }
+  }
 
   double tout = 0;
 
   long step = 1;
-  while ((t_end - t_curr > 0.00001) && (step <= app_args.num_steps)) {
+  while ((t_end - t_curr > 1.0e-10) && (step <= app_args.num_steps)) {
     fprintf(stdout, "Taking time-step %ld at t = %g ...\n", step, t_curr);
 
     struct gkyl_update_status status;
 
-    if(is_STS) {
+    if(is_STS || is_ERKSTEP) {
       if(step == 1) {
         dt = 0.1;
         flag = ARKodeGetCurrentTime(arkode_mem, &t_curr);
@@ -1451,7 +1500,7 @@ int main(int argc, char **argv)
       break;
     }
 
-    if(!is_STS){
+    if(!(is_STS || is_ERKSTEP)){
       t_curr += status.dt_actual;
       dt = status.dt_suggested;
     }
@@ -1459,7 +1508,7 @@ int main(int argc, char **argv)
     calc_integrated_diagnostics(&trig_calc_intdiag, app, t_curr, t_curr > t_end);
     write_data(&trig_write, app, t_curr, t_curr > t_end);
 
-    if (!is_STS) {
+    if(!(is_STS || is_ERKSTEP)) {
       if (dt_init < 0.0) {
         dt_init = status.dt_actual;
       }
@@ -1483,7 +1532,7 @@ int main(int argc, char **argv)
     step += 1;
   }
 
-  if(is_STS) {
+  if(is_STS || is_ERKSTEP) {
     ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
   }
 
