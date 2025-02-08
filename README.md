@@ -161,6 +161,15 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
   make -j install
 ```
 
+If SUNDIALS was installed with *hypre* support, then the configuration above should be changed slightly:
+
+```bash
+  mkdir ceda-demonstrations/build
+  cd ceda-demonstrations/build
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DUSE_HYPRE=ON ..
+  make -j install
+```
+
 
 ### Building the Makefile-based tests (`gkeyll_diffusion`)
 

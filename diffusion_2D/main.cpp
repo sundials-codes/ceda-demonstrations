@@ -599,7 +599,8 @@ void UserOptions::help()
   cout << "  --msbp <steps>          : max steps between prec setups" << endl;
   cout << endl;
   cout << "Explicit STS (LSRKStep) solver command line options:" << endl;
-  cout << "  --lsrkmethod            : LSRK method choice" << endl;
+  cout << "  --lsrkmethod            : LSRK method choice (RKC = " << ARKODE_LSRK_RKC_2
+       << ", RKL = " << ARKODE_LSRK_RKL_2 << ")" << endl;
 }
 
 // Print user options
