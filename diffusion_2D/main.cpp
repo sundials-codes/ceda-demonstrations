@@ -23,18 +23,17 @@
 struct UserOptions
 {
   // Integrator settings
+  std::string integrator = "dirk";          // time integration method
   sunrealtype rtol   = SUN_RCONST(1.0e-5);  // relative tolerance
   sunrealtype atol   = SUN_RCONST(1.0e-10); // absolute tolerance
   sunrealtype hfixed = ZERO;                // fixed step size
-  int order          = 3;                   // ARKode method order
+  int order          = 2;                   // ARKode method order
   int controller     = 0;                   // step size adaptivity method
   int maxsteps       = 0;                   // max steps between outputs
   int onestep        = 0;                   // one step mode, number of steps
-  bool linear        = true;                // linearly implicit RHS
-  bool implicit      = true;                // implicit (ARKStep) vs explicit STS (LSRKStep)
-  ARKODE_LSRKMethodType lsrkmethod = ARKODE_LSRK_RKC_2; // LSRK method type
 
-  // Linear solver and preconditioner settings
+  // Implicit solver and preconditioner settings
+  bool linear          = true;  // linearly implicit RHS
   std::string ls       = "cg";  // linear solver to use
   bool preconditioning = true;  // preconditioner on/off
   bool lsinfo          = false; // output residual history
@@ -129,26 +128,30 @@ int main(int argc, char* argv[])
       return 1;
     }
 
+    // Return with error on unsupported integration method type
+    if ((uopts.integrator != "dirk") &&
+        (uopts.integrator != "erk") &&
+        (uopts.integrator != "rkc") &&
+        (uopts.integrator != "rkl"))
+    {
+      cerr << "ERROR: illegal integrator" << endl;
+      return 1;
+    }
+
+    // Set boolean control parameters based on user inputs
+    bool impl = (uopts.integrator == "dirk");
+    bool expl = (uopts.integrator == "erk");
+    bool sts = ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"));
+
 #ifdef USE_HYPRE
 #if HYPRE_RELEASE_NUMBER >= 22000
-    if (uopts.implicit && uopts.preconditioning)
+    if (impl && uopts.preconditioning)
     {
       flag = HYPRE_Init();
       if (check_flag(&flag, "HYPRE_Init", 1)) { return 1; }
     }
 #endif
 #endif
-
-    // Return with error on unsupported LSRK method type
-    if (!uopts.implicit)
-    {
-      if ((uopts.lsrkmethod != ARKODE_LSRK_RKC_2) &&
-          (uopts.lsrkmethod != ARKODE_LSRK_RKL_2))
-      {
-        cerr << "ERROR: illegal lsrkmethod" << endl;
-        return 1;
-      }
-    }
 
     // -----------------------------
     // Setup parallel decomposition
@@ -189,7 +192,7 @@ int main(int argc, char* argv[])
     // Set up implicit solver, if applicable
     SUNLinearSolver LS = nullptr;
     SUNMatrix A        = nullptr;
-    if (uopts.implicit)
+    if (impl)
     {
       // ---------------------
       // Create linear solver
@@ -229,9 +232,14 @@ int main(int argc, char* argv[])
 
     // Create integrator
     void* arkode_mem = nullptr;
-    if (uopts.implicit)
+    if (impl)
     {
       arkode_mem = ARKStepCreate(nullptr, diffusion, ZERO, u, ctx);
+      if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
+    }
+    else if (expl)
+    {
+      arkode_mem = ARKStepCreate(diffusion, nullptr, ZERO, u, ctx);
       if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
     }
     else
@@ -248,8 +256,14 @@ int main(int argc, char* argv[])
     flag = ARKodeSetUserData(arkode_mem, (void*)&udata);
     if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
 
-    // Configure implicit solver
-    if (uopts.implicit)
+    // Integration method order
+    if (impl || expl)
+    {
+      flag = ARKodeSetOrder(arkode_mem, uopts.order);
+      if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+    }
+
+    if (impl)
     {
       // Attach linear solver
       flag = ARKodeSetLinearSolver(arkode_mem, LS, A);
@@ -270,10 +284,6 @@ int main(int argc, char* argv[])
       flag = ARKodeSetEpsLin(arkode_mem, uopts.epslin);
       if (check_flag(&flag, "ARKodeSetEpsLin", 1)) { return 1; }
 
-      // Select method order
-      flag = ARKodeSetOrder(arkode_mem, uopts.order);
-      if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
-
       // Specify linearly implicit non-time-dependent RHS
       if (uopts.linear)
       {
@@ -281,10 +291,14 @@ int main(int argc, char* argv[])
         if (check_flag(&flag, "ARKodeSetLinear", 1)) { return 1; }
       }
     }
-    else // Configure explicit STS solver
+
+    // Configure expl STS solver
+    if ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"))
     {
       // Select LSRK method
-      flag = LSRKStepSetSTSMethod(arkode_mem, uopts.lsrkmethod);
+      ARKODE_LSRKMethodType type = (uopts.integrator == "rkc") ?
+        ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
+      flag = LSRKStepSetSTSMethod(arkode_mem, type);
       if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
       // Provide dominant eigenvalue function
@@ -339,6 +353,8 @@ int main(int argc, char* argv[])
     sunrealtype t     = ZERO;
     sunrealtype dTout = udata.tf / uout.nout;
     sunrealtype tout  = dTout;
+    double tstart = 0.0;
+    double simtime = 0.0;
 
     // Initial output
     flag = uout.open(&udata);
@@ -351,10 +367,11 @@ int main(int argc, char* argv[])
     {
       SUNDIALS_MARK_BEGIN(prof, "Evolve");
 
-      // Evolve in time
+      // Evolve in time, recording elapsed runtime
+      tstart = MPI_Wtime();
       flag = ARKodeEvolve(arkode_mem, tout, u, &t, stepmode);
       if (check_flag(&flag, "ARKodeEvolve", 1)) { break; }
-
+      simtime += MPI_Wtime() - tstart;
       SUNDIALS_MARK_END(prof, "Evolve");
 
       // Output solution
@@ -377,12 +394,13 @@ int main(int argc, char* argv[])
     // Print final integrator stats
     if (outproc)
     {
+      cout << "Total simulation time = " << simtime << endl << endl;
       cout << "Final integrator statistics:" << endl;
       flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
       if (check_flag(&flag, "ARKodePrintAllStats", 1)) { return 1; }
 
 #if HYPRE_RELEASE_NUMBER >= 22000
-      if (uopts.preconditioning)
+      if (impl && uopts.preconditioning)
       {
         cout << "Total PFMG iterations        = " << udata.pfmg_its << endl;
       }
@@ -398,7 +416,7 @@ int main(int argc, char* argv[])
     (void)SUNAdaptController_Destroy(C); // Free timestep adaptivity controller
 
     ARKodeFree(&arkode_mem);
-    if (uopts.implicit)
+    if (impl)
     {
       SUNLinSolFree(LS);
 
@@ -413,9 +431,6 @@ int main(int argc, char* argv[])
     }
 
     // Free vectors
-#if defined(USE_HIP) || defined(USE_CUDA)
-    N_VDestroy(N_VGetLocalVector_MPIPlusX(u));
-#endif
     N_VDestroy(u);
   }
   // Close scope so objects are destroyed before MPI_Finalize
@@ -462,6 +477,13 @@ int UserOptions::parse_args(vector<string>& args, bool outproc)
     return 0;
   }
 
+  it = find(args.begin(), args.end(), "--integrator");
+  if (it != args.end())
+  {
+    integrator = *(it + 1);
+    args.erase(it, it + 2);
+  }
+
   it = find(args.begin(), args.end(), "--rtol");
   if (it != args.end())
   {
@@ -483,24 +505,10 @@ int UserOptions::parse_args(vector<string>& args, bool outproc)
     args.erase(it, it + 2);
   }
 
-  it = find(args.begin(), args.end(), "--explicitSTS");
-  if (it != args.end())
-  {
-    implicit = false;
-    args.erase(it);
-  }
-
   it = find(args.begin(), args.end(), "--order");
   if (it != args.end())
   {
     order = stoi(*(it + 1));
-    args.erase(it, it + 2);
-  }
-
-  it = find(args.begin(), args.end(), "--lsrkmethod");
-  if (it != args.end())
-  {
-    lsrkmethod = (ARKODE_LSRKMethodType)stoi(*(it + 1));
     args.erase(it, it + 2);
   }
 
@@ -582,77 +590,78 @@ void UserOptions::help()
 {
   cout << endl;
   cout << "Integrator command line options:" << endl;
-  cout << "  --rtol <rtol>           : relative tolerance" << endl;
-  cout << "  --atol <atol>           : absolute tolerance" << endl;
-  cout << "  --controller <ctr>      : time step adaptivity controller" << endl;
-  cout << "  --fixedstep <step>      : used fixed step size" << endl;
-  cout << "  --explicitSTS           : use LSRKStep (instead of ARKStep)" << endl;
+  cout << "  --integrator <dirk|erk|rkc|rkl> : time integration method" << endl;
+  cout << "  --rtol <rtol>        : relative tolerance" << endl;
+  cout << "  --atol <atol>        : absolute tolerance" << endl;
+  cout << "  --onestep            : evolve in one-step mode" << endl;
+  cout << "  --controller <ctr>   : time step adaptivity controller" << endl;
+  cout << "                         PID = " << ARK_ADAPT_PID << endl;
+  cout << "                         PI = " << ARK_ADAPT_PI << endl;
+  cout << "                         I = " << ARK_ADAPT_I << endl;
+  cout << "                         ExpGus = " << ARK_ADAPT_EXP_GUS << endl;
+  cout << "                         ImpGus = " << ARK_ADAPT_IMP_GUS << endl;
+  cout << "                         ImExGus = " << ARK_ADAPT_IMEX_GUS << endl;
+  cout << "  --fixedstep <step>   : fixed step size to use" << endl;
   cout << endl;
-  cout << "Implicit (ARKStep) solver command line options:" << endl;
-  cout << "  --nonlinear             : disable linearly implicit flag" << endl;
-  cout << "  --order <ord>           : method order" << endl;
-  cout << "  --ls <cg|gmres>         : linear solver" << endl;
-  cout << "  --lsinfo                : output residual history" << endl;
-  cout << "  --liniters <iters>      : max number of iterations" << endl;
-  cout << "  --epslin <factor>       : linear tolerance factor" << endl;
-  cout << "  --noprec                : disable preconditioner" << endl;
-  cout << "  --msbp <steps>          : max steps between prec setups" << endl;
+  cout << "ERK solver command line options:" << endl;
+  cout << "  --order <ord>        : method order" << endl;
   cout << endl;
-  cout << "Explicit STS (LSRKStep) solver command line options:" << endl;
-  cout << "  --lsrkmethod            : LSRK method choice (RKC = " << ARKODE_LSRK_RKC_2
-       << ", RKL = " << ARKODE_LSRK_RKL_2 << ")" << endl;
+  cout << "DIRK solver command line options:" << endl;
+  cout << "  --order <ord>        : method order" << endl;
+  cout << "  --nonlinear          : disable linearly implicit flag" << endl;
+  cout << "  --ls <cg|gmres>      : linear solver" << endl;
+  cout << "  --lsinfo             : output residual history" << endl;
+  cout << "  --liniters <iters>   : max number of iterations" << endl;
+  cout << "  --epslin <factor>    : linear tolerance factor" << endl;
+  cout << "  --noprec             : disable preconditioner" << endl;
+  cout << "  --msbp <steps>       : max steps between prec setups" << endl;
+  cout << endl;
 }
 
 // Print user options
 void UserOptions::print()
 {
+  bool impl = (integrator == "dirk");
+  bool expl = (integrator == "erk");
+  bool sts = ((integrator == "rkc") || (integrator == "rkl"));
+
   cout << endl;
-  cout << " Integrator options:" << endl;
+  cout << " Integrator: " << integrator << endl;
   cout << " --------------------------------- " << endl;
   cout << " rtol        = " << rtol << endl;
   cout << " atol        = " << atol << endl;
   cout << " controller  = " << controller << endl;
   cout << " hfixed      = " << hfixed << endl;
-  cout << " --------------------------------- " << endl;
-  cout << endl;
-  if (implicit)
+  cout << " max steps   = " << maxsteps << endl;
+  if (impl || expl)
   {
-    cout << " ARKStep options:" << endl;
-    cout << " --------------------------------- " << endl;
     cout << " order       = " << order << endl;
-    cout << " max steps   = " << maxsteps << endl;
-    if (linear)
-      cout << " linear RHS" << endl;
-    else
-      cout << " nonlinear RHS" << endl;
-    cout << " --------------------------------- " << endl;
-    cout << endl;
-    cout << " Linear solver options:" << endl;
-    cout << " --------------------------------- " << endl;
-    cout << " LS       = " << ls << endl;
-    cout << " precond  = " << preconditioning << endl;
-#ifdef USE_HYPRE
-    cout << " HYPRE preconditioner" << endl;
-#else
-    cout << " Jacobi preconditioner" << endl;
-#endif
-    cout << " LS info  = " << lsinfo << endl;
-    cout << " LS iters = " << liniters << endl;
-    cout << " msbp     = " << msbp << endl;
-    cout << " epslin   = " << epslin << endl;
-    cout << " --------------------------------- " << endl;
-  }
-  else
-  {
-    cout << " LSRKStep options:" << endl;
-    cout << " --------------------------------- " << endl;
-    switch (lsrkmethod)
+    if (impl)
     {
-    case (ARKODE_LSRK_RKC_2): cout << " method = RKC_2 " << endl; break;
-    case (ARKODE_LSRK_RKL_2): cout << " method = RKL_2 " << endl; break;
-    default: cout << " method unkown (will likely fail)" << endl;
+      if (linear)
+        cout << " linearly implicit RHS" << endl;
+      else
+        cout << " nonlinearly implicit RHS" << endl;
     }
     cout << " --------------------------------- " << endl;
+    if (impl)
+    {
+      cout << endl;
+      cout << " Linear solver options:" << endl;
+      cout << " --------------------------------- " << endl;
+      cout << " LS       = " << ls << endl;
+      cout << " precond  = " << preconditioning << endl;
+#ifdef USE_HYPRE
+      cout << " HYPRE preconditioner" << endl;
+#else
+      cout << " Jacobi preconditioner" << endl;
+#endif
+      cout << " LS info  = " << lsinfo << endl;
+      cout << " LS iters = " << liniters << endl;
+      cout << " msbp     = " << msbp << endl;
+      cout << " epslin   = " << epslin << endl;
+      cout << " --------------------------------- " << endl;
+    }
   }
 }
 

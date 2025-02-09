@@ -125,7 +125,7 @@ int UserData::parse_args(vector<string>& args, bool outproc)
   if (it != args.end())
   {
     inhomogeneous = true;
-    args.erase(it, it + 2);
+    args.erase(it, it + 1);
   }
 
   it = find(args.begin(), args.end(), "--tf");
