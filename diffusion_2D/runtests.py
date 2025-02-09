@@ -35,8 +35,8 @@ def runtest(solver, pg, rtol, kxy, commonargs, showcommand=False):
                 stats['Steps'] = int(txt[2])
             elif (("Error" in txt) and ("test" in txt)):
                 stats['Fails'] = int(txt[4])
-            elif ("Relative" in txt):
-                stats['Accuracy'] = float(txt[3])
+            elif (("Maximum" in txt) and ("relative" in txt)):
+                stats['Accuracy'] = float(txt[4])
             elif (("Explicit" in txt) and ("RHS" in txt)):
                 stats['FEvals'] += int(txt[5])
             elif (("Implicit" in txt) and ("RHS" in txt)):
@@ -63,7 +63,8 @@ RKLSolver = "./diffusion_2D_mpi --integrator rkl"
 homo = " --inhomogeneous"
 atol = " --atol 1.e-11"
 controller = " --controller 2"
-common = homo + atol + controller
+calcerror = " --error"
+common = homo + atol + controller + calcerror
 
 # parameter arrays to iterate over
 kxky = [{'kx': 0.01, 'ky': 0.0},

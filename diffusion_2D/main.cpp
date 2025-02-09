@@ -31,6 +31,7 @@ struct UserOptions
   int controller     = 0;                   // step size adaptivity method
   int maxsteps       = 0;                   // max steps between outputs
   int onestep        = 0;                   // one step mode, number of steps
+  bool error         = false;               // compute reference solution to compare error
 
   // Implicit solver and preconditioner settings
   bool linear          = true;  // linearly implicit RHS
@@ -172,22 +173,25 @@ int main(int argc, char* argv[])
     // ---------------
 
     // Create vector for solution
-#if defined(USE_HIP)
-    N_Vector u = N_VMake_MPIPlusX(udata.comm_c,
-                                  N_VNew_Hip(udata.nodes_loc, ctx), ctx);
-    if (check_flag((void*)u, "N_VMake_MPIPlusX", 0)) return 1;
-#elif defined(USE_CUDA)
-    N_Vector u = N_VMake_MPIPlusX(udata.comm_c,
-                                  N_VNew_Cuda(udata.nodes_loc, ctx), ctx);
-    if (check_flag((void*)u, "N_VMake_MPIPlusX", 0)) return 1;
-#else
     N_Vector u = N_VNew_Parallel(udata.comm_c, udata.nodes_loc, udata.nodes, ctx);
     if (check_flag((void*)u, "N_VNew_Parallel", 0)) { return 1; }
-#endif
 
     // Set initial condition
     flag = Initial(ZERO, u, &udata);
     if (check_flag(&flag, "Initial", 1)) { return 1; }
+
+    // if computing reference solution and error, create vectors
+    N_Vector uref = nullptr;
+    N_Vector uerr = nullptr;
+    if (uopts.error)
+    {
+      uref = N_VClone(u);
+      if (check_flag((void*)uref, "N_VClone", 0)) { return 1; }
+      uerr = N_VClone(u);
+      if (check_flag((void*)uerr, "N_VClone", 0)) { return 1; }
+      N_VScale(1.0, u, uref);
+      N_VConst(0.0, uerr);
+    }
 
     // Set up implicit solver, if applicable
     SUNLinearSolver LS = nullptr;
@@ -232,6 +236,7 @@ int main(int argc, char* argv[])
 
     // Create integrator
     void* arkode_mem = nullptr;
+    void* arkref_mem = nullptr;
     if (impl)
     {
       arkode_mem = ARKStepCreate(nullptr, diffusion, ZERO, u, ctx);
@@ -336,6 +341,21 @@ int main(int argc, char* argv[])
     flag = ARKodeSetStopTime(arkode_mem, udata.tf);
     if (check_flag(&flag, "ARKodeSetStopTime", 1)) { return 1; }
 
+    // Create and configure reference integrator
+    if (uopts.error)
+    {
+      arkref_mem = LSRKStepCreateSTS(diffusion, ZERO, u, ctx);
+      if (check_flag((void*)arkref_mem, "LSRKStepCreateSTS", 0)) { return 1; }
+      flag = ARKodeSStolerances(arkref_mem, 1.e-8, uopts.atol);
+      if (check_flag(&flag, "ARKodeSStolerances", 1)) { return 1; }
+      flag = ARKodeSetUserData(arkref_mem, (void*)&udata);
+      if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
+      flag = LSRKStepSetDomEigFn(arkref_mem, dom_eig);
+      if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+      flag = ARKodeSetMaxNumSteps(arkref_mem, 100000 * uopts.maxsteps);
+      if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+    }
+
     // -----------------------
     // Loop over output times
     // -----------------------
@@ -350,9 +370,11 @@ int main(int argc, char* argv[])
       stepmode  = ARK_ONE_STEP;
     }
 
-    sunrealtype t     = ZERO;
-    sunrealtype dTout = udata.tf / uout.nout;
-    sunrealtype tout  = dTout;
+    sunrealtype t      = ZERO;
+    sunrealtype t2     = ZERO;
+    sunrealtype dTout  = udata.tf / uout.nout;
+    sunrealtype tout   = dTout;
+    sunrealtype errtot = ZERO;
     double tstart = 0.0;
     double simtime = 0.0;
 
@@ -369,14 +391,35 @@ int main(int argc, char* argv[])
 
       // Evolve in time, recording elapsed runtime
       tstart = MPI_Wtime();
+      if (uopts.error)
+      {
+        flag = ARKodeSetStopTime(arkode_mem, tout);
+        if (check_flag(&flag, "ARKodeSetStopTime", 1)) { break; }
+      }
       flag = ARKodeEvolve(arkode_mem, tout, u, &t, stepmode);
       if (check_flag(&flag, "ARKodeEvolve", 1)) { break; }
       simtime += MPI_Wtime() - tstart;
       SUNDIALS_MARK_END(prof, "Evolve");
 
+      // Evolve reference solution
+      if (uopts.error)
+      {
+        flag = ARKodeSetStopTime(arkref_mem, t);
+        if (check_flag(&flag, "ARKodeSetStopTime", 1)) { break; }
+        flag = ARKodeEvolve(arkref_mem, tout, uref, &t2, ARK_NORMAL);
+        if (check_flag(&flag, "ARKodeEvolve", 1)) { break; }
+      }
+
       // Output solution
       flag = uout.write(t, u, &udata);
       if (check_flag(&flag, "UserOutput::write", 1)) { return 1; }
+
+      // Accumulate temporal error
+      if (uopts.error)
+      {
+        N_VLinearSum(1.0, uref, -1.0, u, uerr);
+        errtot = std::max(errtot, N_VMaxNorm(uerr)/N_VMaxNorm(uref));
+      }
 
       // Update output time
       tout += dTout;
@@ -394,6 +437,8 @@ int main(int argc, char* argv[])
     // Print final integrator stats
     if (outproc)
     {
+      if (uopts.error)
+        cout << "Maximum relative error = " << errtot << endl;
       cout << "Total simulation time = " << simtime << endl << endl;
       cout << "Final integrator statistics:" << endl;
       flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
@@ -533,6 +578,13 @@ int UserOptions::parse_args(vector<string>& args, bool outproc)
     args.erase(it, it + 2);
   }
 
+  it = find(args.begin(), args.end(), "--error");
+  if (it != args.end())
+  {
+    error = true;
+    args.erase(it);
+  }
+
   it = find(args.begin(), args.end(), "--nonlinear");
   if (it != args.end())
   {
@@ -602,6 +654,7 @@ void UserOptions::help()
   cout << "                         ImpGus = " << ARK_ADAPT_IMP_GUS << endl;
   cout << "                         ImExGus = " << ARK_ADAPT_IMEX_GUS << endl;
   cout << "  --fixedstep <step>   : fixed step size to use" << endl;
+  cout << "  --error              : compute reference solution to compare error" << endl;
   cout << endl;
   cout << "ERK solver command line options:" << endl;
   cout << "  --order <ord>        : method order" << endl;
