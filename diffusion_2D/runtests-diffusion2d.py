@@ -55,41 +55,46 @@ fname = "results_diffusion_2D"
 # shortcuts to executable/configuration of different solver types
 DIRKSolver = "./diffusion_2D_mpi --integrator dirk --order 2"
 DIRKSolverHypre = "./diffusion_2D_mpi_hypre --integrator dirk --order 2"
-ERKSolver = "./diffusion_2D_mpi --integrator erk --order 2"
+ERK2Solver = "./diffusion_2D_mpi --integrator erk --order -2"
+ERK3Solver = "./diffusion_2D_mpi --integrator erk --order -3"
 RKCSolver = "./diffusion_2D_mpi --integrator rkc"
 RKLSolver = "./diffusion_2D_mpi --integrator rkl"
 
 # common testing parameters
 homo = " --inhomogeneous"
-atol = " --atol 1.e-11"
+atol = " --atol 1.e-8"
 controller = " --controller 2"
 calcerror = " --error"
-common = homo + atol + controller + calcerror
+precsetup = " --nonlinear --msbp 1"
+maxsteps = " --maxsteps 100000"
+common = homo + atol + controller + calcerror + precsetup + maxsteps
 
 # parameter arrays to iterate over
-kxky = [{'kx': 0.01, 'ky': 0.0},
-        {'kx': 0.1,  'ky': 0.0},
-        {'kx': 1.0,  'ky': 0.0}]
-# procgrids = [{'np': 1,   'grid': 64},
-#              {'np': 4,   'grid': 128},
-#              {'np': 16,  'grid': 256},
-#              {'np': 64,  'grid': 512},
-#              {'np': 256, 'grid': 1024}]
-procgrids = [{'np': 1,   'grid': 64},
-             {'np': 4,   'grid': 128}]
-rtols = [1.e-2, 1.e-4, 1.e-6]
+kxky = [{'kx': 0.1,  'ky': 0.0},
+        {'kx': 1.0,  'ky': 0.0},
+        {'kx': 10.0, 'ky': 0.0}]
+# procgrids = [{'np': 1,   'grid': 32},
+#              {'np': 4,   'grid': 64},
+#              {'np': 16,  'grid': 128},
+#              {'np': 64,  'grid': 256`},
+#              {'np': 256, 'grid': 512}]
+procgrids = [{'np': 1,   'grid': 32},
+             {'np': 4,   'grid': 64},
+             {'np': 16,  'grid': 128}]
+rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
 solvertype = [{'name': 'dirk-Jacobi', 'exe': DIRKSolver},
               {'name': 'dirk-hypre', 'exe': DIRKSolverHypre},
-              {'name': 'erk', 'exe': ERKSolver},
+              {'name': 'erk2', 'exe': ERK2Solver},
+              {'name': 'erk3', 'exe': ERK3Solver},
               {'name': 'rkc', 'exe': RKCSolver},
               {'name': 'rkl', 'exe': RKLSolver}]
 
 # run tests and collect results as a pandas data frame
 RunStats = []
-for solver in solvertype:
-    for pg in procgrids:
-        for kxy in kxky:
-            for rtol in rtols:
+for kxy in kxky:
+    for rtol in rtols:
+        for pg in procgrids:
+            for solver in solvertype:
                 stat = runtest(solver, pg, rtol, kxy, common)
                 RunStats.append(stat)
 RunStatsDf = pd.DataFrame.from_records(RunStats)
