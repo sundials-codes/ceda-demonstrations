@@ -16,13 +16,23 @@ import numpy as np
 
 # Set plot defaults: increase default font size, increase plot width, enable LaTeX rendering
 plt.rc('font', size=15)
-#plt.rcParams['figure.figsize'] = [7.2, 4.8]
 plt.rcParams['text.usetex'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
 
-# flags to turn on/off certain plots
-Generate_PDF = True
-Generate_PNG = False
+# method name-mangling function, to convert between "internal" names and official method names
+def mname(method):
+    if (method == 'dirk-Jacobi'):
+        return 'DIRK2 + Jacobi'
+    if (method == 'dirk-hypre'):
+        return 'DIRK2 + hypre'
+    if (method == 'erk2'):
+        return 'SSP-RK-2'
+    if (method == 'erk3'):
+        return 'SSP-RK-3'
+    if (method == 'rkc'):
+        return 'RKC-2'
+    if (method == 'rkl'):
+        return 'RKL-2'
 
 def comparison_plot(fname, kx, tol, picname):
     """
@@ -50,10 +60,10 @@ def comparison_plot(fname, kx, tol, picname):
         runtime = (data.groupby(['method','kx','rtol']).get_group((method,kx,tol)))['Runtime']
 
         # add data to plots
-        ax0.loglog(grid, steps, marker='o', ls='-', label=method)
-        ax1.loglog(grid, fevals, marker='o', ls='-', label=method)
-        ax2.loglog(grid, relerr, marker='o', ls='-', label=method)
-        ax3.loglog(grid, runtime, marker='o', ls='-', label=method)
+        ax0.loglog(grid, steps, marker='o', ls='-', label=mname(method))
+        ax1.loglog(grid, fevals, marker='o', ls='-', label=mname(method))
+        ax2.loglog(grid, relerr, marker='o', ls='-', label=mname(method))
+        ax3.loglog(grid, runtime, marker='o', ls='-', label=mname(method))
 
     fig.suptitle("Method comparisons, kx = " + repr(kx) + ', tol = ' + repr(tol))
     handles, labels = ax0.get_legend_handles_labels()
@@ -67,7 +77,7 @@ def comparison_plot(fname, kx, tol, picname):
     ax1.grid(linestyle='--', linewidth=0.5)
     ax2.grid(linestyle='--', linewidth=0.5)
     ax3.grid(linestyle='--', linewidth=0.5)
-    fig.legend(handles, labels, loc='upper left', bbox_to_anchor=[0.75, 0.9])
+    fig.legend(handles, labels, loc='upper left', bbox_to_anchor=[0.725, 0.92])
     plt.savefig(picname)
 
 def efficiency_plot(fname, kx, grid, picname):
@@ -87,7 +97,7 @@ def efficiency_plot(fname, kx, grid, picname):
         runtime = (data.groupby(['method','kx','grid']).get_group((method,kx,grid)))['Runtime']
 
         # add data to plot
-        plt.loglog(runtime, relerr, marker='o', ls='-', label=method)
+        plt.loglog(runtime, relerr, marker='o', ls='-', label=mname(method))
 
     plt.title('Computational efficiency (kx = ' + repr(kx) + ', grid = ' + repr(grid) + ')')
     plt.xlabel('runtime (sec)')

@@ -73,11 +73,6 @@ common = homo + atol + controller + calcerror + precsetup + maxsteps
 kxky = [{'kx': 0.1,  'ky': 0.0},
         {'kx': 1.0,  'ky': 0.0},
         {'kx': 10.0, 'ky': 0.0}]
-# procgrids = [{'np': 1,   'grid': 32},
-#              {'np': 4,   'grid': 64},
-#              {'np': 16,  'grid': 128},
-#              {'np': 64,  'grid': 256`},
-#              {'np': 256, 'grid': 512}]
 procgrids = [{'np': 1,   'grid': 32},
              {'np': 4,   'grid': 64},
              {'np': 16,  'grid': 128}]
