@@ -85,6 +85,18 @@ cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_I
 make -j install
 ```
 
+The following steps will build SUNDIALS on Perlmutter with *hypre* (but not CUDA)
+
+```bash
+module load spack
+spack env activate gcc
+spack load hypre
+mkdir deps/sundials/build
+cd deps/sundials/build
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_HYPRE=ON ..
+make -j install
+```
+
 Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
 
 #### GkeyllZero
