@@ -28,6 +28,7 @@
 #include <sundials/sundials_types.h> /* definition of type sunrealtype          */
 
 #include <rt_arg_parse.h>
+#include <time.h>
 
 void test_nvector_gkylzero (bool use_gpu) {
 
@@ -885,6 +886,7 @@ forward_euler(struct gkyl_diffusion_app* app, double tcurr, double dt,
 }
 
 
+sunbooleantype first_RHS_call = SUNTRUE;
 /* f routine to compute the ODE RHS function f(t,y). */
 static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
@@ -892,6 +894,9 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 
   struct gkyl_array *fin = N_VGetVector_Gkylzero(y);
   struct gkyl_array *fout  = N_VGetVector_Gkylzero(ydot);
+
+  if(first_RHS_call)
+    first_RHS_call = SUNFALSE;
 
   gkyl_array_clear(app->cflrate, 0.0);
   gkyl_array_clear(fout, 0.0);
@@ -909,6 +914,9 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
                    sunrealtype* lambdaI, void* user_data, N_Vector temp1,
                    N_Vector temp2, N_Vector temp3)
 {
+  if(first_RHS_call)
+    f(t, y, fn, user_data);
+
   struct gkyl_diffusion_app *app = (struct gkyl_diffusion_app*) user_data;
 
   gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
@@ -980,14 +988,14 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 
 int flag;                /* reusable error-checking flag */
 
+/* general problem parameters */
+sunrealtype T0    = 0.0;  /* initial time */
+
+sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+sunrealtype abstol = SUN_RCONST(1.0e-8);
+
 int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
-  /* general problem parameters */
-  sunrealtype T0    = 0.0;  /* initial time */
-
-  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
-  sunrealtype abstol = SUN_RCONST(1.0e-10);
-
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
   flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
@@ -1018,7 +1026,7 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 
   /* Specify after how many successful steps dom_eig is recomputed
      Note that nsteps = 0 refers to constant dominant eigenvalue */
-  flag = LSRKStepSetDomEigFrequency(*arkode_mem, 1);
+  flag = LSRKStepSetDomEigFrequency(*arkode_mem, 0);
   if (check_flag(&flag, "LSRKStepSetDomEigFrequency", 1)) { return 1; }
 
   /* Specify max number of stages allowed */
@@ -1037,21 +1045,29 @@ int LSRK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  /* Specify the fixed step size */
-  flag = ARKodeSetFixedStep(*arkode_mem, 0.005);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+  // to make sure ERKstep and LSRKstep use the same time step adaptivity
+  SUNAdaptController C = NULL; // timestep adaptivity controller
+  C = SUNAdaptController_PI(ctx);
+  flag = ARKodeSetAdaptController(*arkode_mem, C);
+  if (check_flag(&flag, "ARKodeSetAdaptController", 1)) { return 1; }
+
+  ARKodeSetSafetyFactor(*arkode_mem, 0.99);
+  ARKodeSetMaxEFailGrowth(*arkode_mem, 0.3);
+  ARKodeSetMaxGrowth(*arkode_mem, 25.0);
+  ARKodeSetErrorBias(*arkode_mem, 1.01);
+
+  // flag = ARKodeSetInitStep(*arkode_mem, 0.9);
+  // if (check_flag(&flag, "ARKodeSetInitStep", 1)) { return 1; }
+
+  // /* Specify the fixed step size */
+  // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
+  // if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
 
   return 0;
 }
 
 int ERK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
-  /* general problem parameters */
-  sunrealtype T0    = 0.0;  /* initial time */
-
-  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
-  sunrealtype abstol = SUN_RCONST(1.0e-10);
-
   /* Create the SUNDIALS context object for this simulation */
   SUNContext ctx;
   flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
@@ -1080,9 +1096,25 @@ int ERK_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
-  /* Specify the fixed step size */
-  flag = ARKodeSetFixedStep(*arkode_mem, 0.005);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+  // /* Specify the order of ERK method */
+  // flag = ARKodeSetOrder(*arkode_mem, 2);
+  // if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+
+  // for the current fixed mesh and diffusion coefficient
+  // maxstep size is as follows:
+  sunrealtype maxstep = 2.0*app->cfl*0.000430668;
+
+  /* Specify the max step size */
+  flag = ARKodeSetMaxStep(*arkode_mem, maxstep);
+  if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+
+
+  // flag = ARKodeSetInitStep(*arkode_mem, 0.1);
+  // if (check_flag(&flag, "ARKodeSetInitStep", 1)) { return 1; }
+
+  // /* Specify the fixed step size */
+  // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
+  // if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
 
   return 0;
 }
@@ -1394,7 +1426,9 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
 
 int main(int argc, char **argv)
 {
-  bool is_STS = false;
+  clock_t begin = clock();
+
+  bool is_STS = true;
   bool is_ERKSTEP = true;
   bool test_nvector = false;
   if(test_nvector)
@@ -1413,7 +1447,7 @@ int main(int argc, char **argv)
     .cells = {ctx.cells[0], ctx.cells[1]}, // Number of cells.
     .poly_order = ctx.poly_order, // Polynomial order of DG basis.
 
-    .cfl_frac = 1.0, // CFL factor.
+    .cfl_frac = 0.5, // CFL factor.
 
     // Mapping from computational to physical space.
     .mapc2p_func = mapc2p,
@@ -1538,5 +1572,10 @@ int main(int argc, char **argv)
 
   // Free the app.
   gkyl_diffusion_app_release(app);
+
+  clock_t end = clock();
+  double cpu_time_used = (double)(end - begin) / CLOCKS_PER_SEC;
+
+  printf("\ncomputation time is %10.5f\n", cpu_time_used);
 
 }
