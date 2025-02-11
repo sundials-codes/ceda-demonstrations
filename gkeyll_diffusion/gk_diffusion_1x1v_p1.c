@@ -1114,7 +1114,7 @@ int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, voi
 }
 
 static struct gkyl_update_status
-sts_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
+lsrk_step(struct gkyl_diffusion_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Take time-step using the STS methods. Also sets the status object
   // which has the actual and suggested dts used. These can be different
@@ -1221,7 +1221,7 @@ gkyl_diffusion_update_STS(struct gkyl_diffusion_app* app, void* arkode_mem,  dou
 {
   // Update the state of the system by taking a single time step.
 
-  struct gkyl_update_status status = sts_step(app, arkode_mem, tout, y, tcurr);
+  struct gkyl_update_status status = lsrk_step(app, arkode_mem, tout, y, tcurr);
 
   app->tcurr += status.dt_actual;
 
