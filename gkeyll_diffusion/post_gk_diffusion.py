@@ -17,7 +17,7 @@ outDir  = './'  #.Directory to place output files.
 simName = 'gk_diffusion_1x1v_p1'  #.Simulation name.
 fieldName = 'f'  #.Quantity to plot.
 
-frame = 0  #.Frame number to plot.
+frame = 10  #.Frame number to plot.
 
 outFigureFile    = False    #.Output a figure file?.
 figureFileFormat = '.png'    #.Can be .png, .pdf, .ps, .eps, .svg.

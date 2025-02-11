@@ -40,8 +40,8 @@ void test_nvector_gkylzero (bool use_gpu) {
   printf("\nTESTING nvector_gkylzero:\n");
 
   /* Create the SUNDIALS context object for this simulation */
-  SUNContext ctx;
-  SUNContext_Create(SUN_COMM_NULL, &ctx);
+  SUNContext sunctx;
+  SUNContext_Create(SUN_COMM_NULL, &sunctx);
 
   struct gkyl_array *testarray;
 
@@ -53,7 +53,7 @@ void test_nvector_gkylzero (bool use_gpu) {
     ta_data[i] = (double)i;
   }
 
-  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, ctx);
+  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, sunctx);
 
   struct gkyl_array *testarrayreturn;
 
@@ -172,9 +172,9 @@ void test_nvector_gkylzero (bool use_gpu) {
   struct gkyl_array* v2 = mkarr(use_gpu, num_basis, size);
   struct gkyl_array *lin_sum = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, ctx);
-  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, ctx);
-  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, ctx);
+  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, sunctx);
+  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, sunctx);
+  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
   N_VConst_Gkylzero(d, Nv2);
@@ -217,9 +217,9 @@ void test_nvector_gkylzero (bool use_gpu) {
   struct gkyl_array* v4 = mkarr(use_gpu, num_basis, size);
   struct gkyl_array *lin_comb = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nv3      = N_VMake_Gkylzero(v3, use_gpu, ctx);
-  N_Vector Nv4      = N_VMake_Gkylzero(v4, use_gpu, ctx);
-  N_Vector Nlin_comb = N_VMake_Gkylzero(lin_comb, use_gpu, ctx);
+  N_Vector Nv3      = N_VMake_Gkylzero(v3, use_gpu, sunctx);
+  N_Vector Nv4      = N_VMake_Gkylzero(v4, use_gpu, sunctx);
+  N_Vector Nlin_comb = N_VMake_Gkylzero(lin_comb, use_gpu, sunctx);
 
   N_VConst_Gkylzero(e, Nv1);
   N_VConst_Gkylzero(f, Nv2);
@@ -291,7 +291,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   struct gkyl_array *nvdiv = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, ctx);
+  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
   N_VConst_Gkylzero(d, Nv2);
@@ -323,7 +323,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   struct gkyl_array *nvabs = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, ctx);
+  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, sunctx);
 
   N_VConst_Gkylzero(-1.0, Nv1);
 
@@ -354,7 +354,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   struct gkyl_array *nvinv = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, ctx);
+  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
 
@@ -405,7 +405,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   struct gkyl_array *nvadd = mkarr(use_gpu, num_basis, size);
 
-  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, ctx);
+  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
 
@@ -485,7 +485,7 @@ create_diffusion_ctx(void)
     .temp = 2.75, // Temperature.
     .mass = 1.0, // Species mass.
     .B0 = 1.0, // Magnetic field.
-    .diffD0 = 0.1, // Diffusion amplitude.
+    .diffD0 = 10.0, // Diffusion amplitude.
 
     .x_min = -M_PI, // Minimum x of the grid.
     .x_max =  M_PI, // Maximum x of the grid.
@@ -997,18 +997,18 @@ sunrealtype abstol = SUN_RCONST(1.0e-8);
 int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
   /* Create the SUNDIALS context object for this simulation */
-  SUNContext ctx;
-  flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
+  SUNContext sunctx;
+  flag = SUNContext_Create(SUN_COMM_NULL, &sunctx);
   if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
   /* Initialize data structures */
-  *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
+  *y = N_VMake_Gkylzero(app->f, app->use_gpu, sunctx);
   if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
 
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
-  *arkode_mem = LSRKStepCreateSTS(f, T0, *y, ctx);
+  *arkode_mem = LSRKStepCreateSTS(f, T0, *y, sunctx);
   if (check_flag((void*)*arkode_mem, "LSRKStepCreateSTS", 0)) { return 1; }
 
   /* Set routines */
@@ -1034,7 +1034,7 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   if (check_flag(&flag, "LSRKStepSetMaxNumStages", 1)) { return 1; }
 
   /* Specify max number of steps allowed */
-  flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 100000);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   /* Specify safety factor for user provided dom_eig */
@@ -1055,21 +1055,21 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   return 0;
 }
 
-int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
+int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, void *ctx)
 {
   /* Create the SUNDIALS context object for this simulation */
-  SUNContext ctx;
-  flag = SUNContext_Create(SUN_COMM_NULL, &ctx);
+  SUNContext sunctx;
+  flag = SUNContext_Create(SUN_COMM_NULL, &sunctx);
   if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
   /* Initialize data structures */
-  *y = N_VMake_Gkylzero(app->f, app->use_gpu, ctx);
+  *y = N_VMake_Gkylzero(app->f, app->use_gpu, sunctx);
   if (check_flag((void*)*y, "N_VMake_Gkylzero", 0)) { return 1; }
 
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
      specify the right-hand side function in y'=f(t,y), the initial time
      T0, and the initial dependent variable vector y. */
-  *arkode_mem = LSRKStepCreateSSP(f, T0, *y, ctx);
+  *arkode_mem = LSRKStepCreateSSP(f, T0, *y, sunctx);
   if (check_flag((void*)*arkode_mem, "LSRKStepCreateSSP", 0)) { return 1; }
 
   /* Set routines */
@@ -1082,16 +1082,18 @@ int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
 
   /* Specify max number of steps allowed */
-  flag = ARKodeSetMaxNumSteps(*arkode_mem, 10000);
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, 100000);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   /* Specify the Runge--Kutta--Legendre LSRK method */
   flag = LSRKStepSetSSPMethod(*arkode_mem, ARKODE_LSRK_SSP_S_3);
   if (check_flag(&flag, "LSRKStepSetSSPMethod", 1)) { return 1; }
 
-  // for the current fixed mesh and diffusion coefficient
+  // for the current fixed mesh
   // maxstep size is as follows:
-  sunrealtype maxstep = 2.0*app->cfl*0.000430668;
+  struct diffusion_ctx *dctx = ctx;
+  double diffD0 = dctx->diffD0;
+  sunrealtype maxstep = 2.0*app->cfl*0.000430668/diffD0;
 
   /* Specify the max step size */
   flag = ARKodeSetMaxStep(*arkode_mem, maxstep);
@@ -1494,7 +1496,7 @@ int main(int argc, char **argv)
   else if (is_SSP)
   {
     int flag;
-    flag = SSP_init(app, &y, &arkode_mem);
+    flag = SSP_init(app, &y, &arkode_mem, &ctx);
     if (check_flag(&flag, "SSP_init", 1)) { return 1; }
   }
 
