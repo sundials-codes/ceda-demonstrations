@@ -262,10 +262,75 @@ int main(int argc, char* argv[])
     if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
 
     // Integration method order
-    if (impl || expl)
+    if (impl)
     {
       flag = ARKodeSetOrder(arkode_mem, uopts.order);
       if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+    }
+    if (expl)  // order: -2,-3,-4 indicate use of SSPRK methods
+    {
+      ARKodeButcherTable B = nullptr;
+      if (uopts.order == -2)
+      {
+        B = ARKodeButcherTable_Alloc(2, SUNTRUE);
+        B->q = 2;
+        B->p = 1;
+        B->A[1][0] = SUN_RCONST(1.0);
+        B->b[0] = SUN_RCONST(0.5);
+        B->b[1] = SUN_RCONST(0.5);
+        B->d[0] = SUN_RCONST(0.694021459207626);
+        B->d[1] = SUN_RCONST(1.0) - SUN_RCONST(0.694021459207626);
+        B->c[1] = SUN_RCONST(1.0);
+      }
+      else if (uopts.order == -3)
+      {
+        B = ARKodeButcherTable_Alloc(3, SUNTRUE);
+        B->q = 2;
+        B->p = 1;
+        B->A[1][0] = SUN_RCONST(0.5);
+        B->A[2][0] = SUN_RCONST(0.5);
+        B->A[2][1] = SUN_RCONST(0.5);
+        B->b[0] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+        B->b[1] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+        B->b[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+        B->d[0] = SUN_RCONST(4.0)/SUN_RCONST(9.0);
+        B->d[1] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+        B->d[2] = SUN_RCONST(2.0)/SUN_RCONST(9.0);
+        B->c[1] = SUN_RCONST(0.5);
+        B->c[2] = SUN_RCONST(1.0);
+      }
+      else if (uopts.order == -4)
+      {
+        B = ARKodeButcherTable_Alloc(4, SUNTRUE);
+        const sunrealtype third = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+        B->q = 2;
+        B->p = 1;
+        B->A[1][0] = third;
+        B->A[2][0] = third;
+        B->A[2][1] = third;
+        B->A[3][0] = third;
+        B->A[3][1] = third;
+        B->A[3][2] = third;
+        B->b[0] = SUN_RCONST(0.25);
+        B->b[1] = SUN_RCONST(0.25);
+        B->b[2] = SUN_RCONST(0.25);
+        B->b[3] = SUN_RCONST(0.25);
+        B->d[0] = SUN_RCONST(5.0)/SUN_RCONST(16.0);
+        B->d[1] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
+        B->d[2] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
+        B->d[3] = SUN_RCONST(3.0)/SUN_RCONST(16.0);
+        B->c[1] = third;
+        B->c[2] = SUN_RCONST(2.0) * third;
+        B->c[3] = SUN_RCONST(1.0);
+      }
+      if (B != nullptr)
+      {
+        flag = ARKStepSetTables(arkode_mem, B->q, B->p, nullptr, B);
+        if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+      } else {
+        flag = ARKodeSetOrder(arkode_mem, uopts.order);
+        if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+      }
     }
 
     if (impl)
@@ -653,6 +718,7 @@ void UserOptions::help()
   cout << "                         ExpGus = " << ARK_ADAPT_EXP_GUS << endl;
   cout << "                         ImpGus = " << ARK_ADAPT_IMP_GUS << endl;
   cout << "                         ImExGus = " << ARK_ADAPT_IMEX_GUS << endl;
+  cout << "  --maxsteps <nstep>   : maximum allowed number of time steps" << endl;
   cout << "  --fixedstep <step>   : fixed step size to use" << endl;
   cout << "  --error              : compute reference solution to compare error" << endl;
   cout << endl;
