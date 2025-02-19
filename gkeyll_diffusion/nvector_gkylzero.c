@@ -52,7 +52,6 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
 
   /* vector operations */
   v->ops->nvlinearsum         = N_VLinearSum_Gkylzero;
-  v->ops->nvlinearcombination = N_VLinearCombination_Gkylzero;
   v->ops->nvconst             = N_VConst_Gkylzero;
   v->ops->nvscale             = N_VScale_Gkylzero;
   v->ops->nvwrmsnorm          = N_VWrmsNorm_Gkylzero;
@@ -207,21 +206,7 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
 
-  gkyl_array_set(zdptr, a, xdptr);
-  gkyl_array_accumulate(zdptr, b, ydptr);
-}
-
-/* fused vector operation */
-SUNErrCode N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z)
-{
-  N_VScale_Gkylzero(c[0], X[0], z);
-
-  for (int i = 1; i < nvec; i++)
-  {
-    N_VLinearSum_Gkylzero(SUN_RCONST(1.0), z, c[i], X[i], z);
-  }
-
-  return SUN_SUCCESS;
+  gkyl_array_comp_op(zdptr, GKYL_AXPBY, a, xdptr, b, ydptr);
 }
 
 void N_VConst_Gkylzero(sunrealtype c, N_Vector z)
@@ -274,15 +259,8 @@ void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
-  sunrealtype *w_data = wdptr->data;
-
-  sunindextype N = (udptr->size*udptr->ncomp);
-
-  for (sunindextype i=0; i<N; ++i) {
-    w_data[i] = u_data[i] / v_data[i];
-  }
+  /* SUN_RCONST(1.0) values are unused dummy variables */
+  gkyl_array_comp_op(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
 
   return;
 }
@@ -292,14 +270,8 @@ void N_VAbs_Gkylzero(N_Vector u, N_Vector v)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
-
-  sunindextype N = (udptr->size*udptr->ncomp);
-
-  for (sunindextype i=0; i<N; ++i) {
-    v_data[i] = SUNRabs(u_data[i]);
-  }
+  /* SUN_RCONST(1.0) values and the last vdptr pointer are unused dummy variables */
+  gkyl_array_comp_op(vdptr, GKYL_ABS, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
 
   return;
 }
@@ -309,14 +281,8 @@ void N_VInv_Gkylzero(N_Vector u, N_Vector v)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
-
-  sunindextype N = (udptr->size*udptr->ncomp);
-
-  for (sunindextype i=0; i<N; ++i) {
-    v_data[i] = 1.0 / u_data[i];
-  }
+  /* SUN_RCONST(1.0) values and the last vdptr pointer are unused dummy variables */
+  gkyl_array_comp_op(vdptr, GKYL_INV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
 
   return;
 }
@@ -332,8 +298,7 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 
   sunrealtype max = 0.0;
 
-  // gkyl_array_reduce(&max, udptr, GKYL_MAX);
-
+  // we still need this function
   for (sunindextype i=0; i<N; ++i) {
     if (SUNRabs(u_data[i]) > max) { max = SUNRabs(u_data[i]); }
   }

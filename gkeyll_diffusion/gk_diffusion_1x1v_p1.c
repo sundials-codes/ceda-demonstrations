@@ -201,68 +201,6 @@ void test_nvector_gkylzero (bool use_gpu) {
   }
 
   /* ----------------------------------------------------------------------
-  * N_VLinearCombination_Gkylzero(int nvec, sunrealtype* c, N_Vector* X, N_Vector z) Test
-  * --------------------------------------------------------------------*/
-
-  a = 2.0;
-  b = 3.0;
-  c = -1.75;
-  d = -2.89;
-  sunrealtype e = 1.21;
-  sunrealtype f = 3.43;
-  sunrealtype g = 12.12;
-  sunrealtype h = -0.23;
-
-  struct gkyl_array* v3 = mkarr(use_gpu, num_basis, size);
-  struct gkyl_array* v4 = mkarr(use_gpu, num_basis, size);
-  struct gkyl_array *lin_comb = mkarr(use_gpu, num_basis, size);
-
-  N_Vector Nv3      = N_VMake_Gkylzero(v3, use_gpu, sunctx);
-  N_Vector Nv4      = N_VMake_Gkylzero(v4, use_gpu, sunctx);
-  N_Vector Nlin_comb = N_VMake_Gkylzero(lin_comb, use_gpu, sunctx);
-
-  N_VConst_Gkylzero(e, Nv1);
-  N_VConst_Gkylzero(f, Nv2);
-  N_VConst_Gkylzero(g, Nv3);
-  N_VConst_Gkylzero(h, Nv4);
-
-  sunrealtype* cvals;
-  N_Vector* Xvecs;
-
-  cvals = (sunrealtype*)calloc(4, sizeof(sunrealtype));
-  Xvecs = (N_Vector*)calloc(4, sizeof(N_Vector));
-
-  cvals[0] = a;
-  Xvecs[0] = Nv1;
-  cvals[1] = b;
-  Xvecs[1] = Nv2;
-  cvals[2] = c;
-  Xvecs[2] = Nv3;
-  cvals[3] = d;
-  Xvecs[3] = Nv4;
-
-  N_VLinearCombination_Gkylzero(4, cvals, Xvecs, Nlin_comb);
-
-  lin_comb = N_VGetVector_Gkylzero(Nlin_comb);
-
-  double *lin_comb_data = lin_comb->data;
-
-  failure = false;
-  for (unsigned int i=0; i<(testarrayreturn->size*testarrayreturn->ncomp); ++i) {
-    failure = (fabs(lin_comb_data[i] - (a*e + b*f + c*g + d*h)) > eq_check_tol) || failure;
-  }
-
-  if(failure)
-  {
-    printf("\n      FAILED in N_VLinearCombination_Gkylzero");
-    num_of_failures++;
-  }
-  else
-  {
-    printf("\n      N_VLinearCombination_Gkylzero PASSED the test");
-  }
-
-  /* ----------------------------------------------------------------------
   * N_VWrmsNorm_Gkylzero Test
   * --------------------------------------------------------------------*/
 
@@ -1045,9 +983,6 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  // flag = ARKodeSetInitStep(*arkode_mem, 0.9);
-  // if (check_flag(&flag, "ARKodeSetInitStep", 1)) { return 1; }
-
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
   // if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
@@ -1089,22 +1024,9 @@ int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, voi
   flag = LSRKStepSetSSPMethod(*arkode_mem, ARKODE_LSRK_SSP_S_3);
   if (check_flag(&flag, "LSRKStepSetSSPMethod", 1)) { return 1; }
 
-  // for the current fixed mesh
-  // maxstep size is as follows:
-  struct diffusion_ctx *dctx = ctx;
-  double diffD0 = dctx->diffD0;
-  sunrealtype maxstep = 2.0*app->cfl*0.000430668/diffD0;
-
-  /* Specify the max step size */
-  flag = ARKodeSetMaxStep(*arkode_mem, maxstep);
-  if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
-
   /* Specify the number of SSP stages */
   flag = LSRKStepSetNumSSPStages(*arkode_mem, 4);
   if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
-
-  // flag = ARKodeSetInitStep(*arkode_mem, 0.9);
-  // if (check_flag(&flag, "ARKodeSetInitStep", 1)) { return 1; }
 
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
