@@ -1422,6 +1422,10 @@ int main(int argc, char **argv)
     if (check_flag(&flag, "SSP_init", 1)) { return 1; }
   }
 
+  printf("\nNumber of cells             = %ld", app->f->size);
+  printf("\nNumber of DoFs in each cell = %ld", app->f->ncomp);
+  printf("\nNumber of DoFs              = %ld\n", app->f->size*app->f->ncomp);
+
   double tout = 0;
 
   long step = 1;

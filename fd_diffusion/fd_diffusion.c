@@ -12,6 +12,9 @@
 
 #include <time.h>
 
+// Macro to access (x,y) location in 1D NVector array
+#define IDX(x, y, n) ((n) * (y) + (x))
+
 typedef struct {
   int cells[2];
   double xmax;
@@ -105,7 +108,7 @@ static void interpolate_initial_values(N_Vector* u, UserData* data) {
         const sunrealtype x = data->xmin + i * data->dx;
         const sunrealtype y = data->ymin + j * data->dy;
 
-        uptr[j * data->nx + i] = (1.0 + 0.3*sin(2.0*x))/sqrt(5.5*M_PI)*exp(-(y*y)/5.5);
+        uptr[IDX(i, j, data->nx)] = (1.0 + 0.3*sin(2.0*x))/sqrt(5.5*M_PI)*exp(-(y*y)/5.5);
       }
   }
 }
@@ -129,7 +132,7 @@ static void output_plot(N_Vector* u, UserData* data) {
       for (int i = 0; i < data->nx; i++) {
           const sunrealtype x = data->xmin + i * data->dx;
           const sunrealtype y = data->ymin + j * data->dy;
-          fprintf(fp, "%10.16f,%10.16f,%10.16f\n", x, y, uptr[j * data->nx + i]);
+          fprintf(fp, "%10.16f,%10.16f,%10.16f\n", x, y, uptr[IDX(i, j, data->nx)]);
       }
   }
 
@@ -278,10 +281,10 @@ int SSP_init(UserData* data, N_Vector* y, void** arkode_mem)
 
 static int fd_diffusion_update_LSRK(UserData* data, void* arkode_mem,  double tout, N_Vector y, sunrealtype* tcurr)
 {
-    flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
-    if (check_flag(&flag, "ARKodeEvolve", 1)) {return 1; }
+  flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL); /* call integrator */
+  if (check_flag(&flag, "ARKodeEvolve", 1)) {return 1; }
 
-    return 0;
+  return 0;
 }
 
 static void compute_rhs(UserData* data, N_Vector rhs, N_Vector u) {
@@ -289,27 +292,26 @@ static void compute_rhs(UserData* data, N_Vector rhs, N_Vector u) {
   uptr = N_VGetArrayPointer(u);
   rhsptr = N_VGetArrayPointer(rhs);
 
-    for (int j = 1; j < data->ny - 1; j++) {
-        for (int i = 1; i < data->nx - 1; i++) {
-            // Central difference for the second derivative in x and y direction
-            rhsptr[j * data->nx + i] =
-                data->kx[i] *(uptr[j * data->nx + (i + 1)] - 2.0 * uptr[j * data->nx + i] + uptr[j * data->nx + (i - 1)]) / (data->dx * data->dx) +
-                data->ky[j] *(uptr[(j + 1) * data->nx + i] - 2.0 * uptr[j * data->nx + i] + uptr[(j - 1) * data->nx + i]) / (data->dy * data->dy);
-        }
+  for (int j = 1; j < data->ny - 1; j++) {
+    for (int i = 1; i < data->nx - 1; i++) {
+      rhsptr[IDX(i, j, data->nx)] =
+      data->kx[i] *(uptr[IDX(i + 1, j, data->nx)] - 2.0 * uptr[IDX(i, j, data->nx)] + uptr[IDX(i - 1, j, data->nx)]) / (data->dx * data->dx) +
+      data->ky[j] *(uptr[IDX(i, j + 1, data->nx)] - 2.0 * uptr[IDX(i, j, data->nx)] + uptr[IDX(i, j - 1, data->nx)]) / (data->dy * data->dy);
     }
+  }
 
-    // Apply periodic boundary conditions
-    // In the x direction
-    for (int j = 0; j < data->ny; j++) {
-        rhsptr[j * data->nx] = rhsptr[j * data->nx + (data->nx - 2)];  // Left boundary
-        rhsptr[j * data->nx + (data->nx - 1)] = rhsptr[j * data->nx + 1]; // Right boundary
-    }
+  // Apply periodic boundary conditions
+  // In the x direction
+  for (int j = 0; j < data->ny; j++) {
+    rhsptr[IDX(0, j, data->nx)] = rhsptr[IDX(data->nx - 2, j, data->nx)]; // Left boundary
+    rhsptr[IDX(data->nx - 1, j, data->nx)] = rhsptr[IDX(1, j, data->nx)];   // Right boundary
+  }
 
-    // In the y direction
-    for (int i = 0; i < data->nx; i++) {
-        rhsptr[i] = rhsptr[(data->ny - 2) * data->nx + i];  // Bottom boundary
-        rhsptr[(data->ny - 1) * data->nx + i] = rhsptr[1 * data->nx + i]; // Top boundary
-    }
+  // In the y direction
+  for (int i = 0; i < data->nx; i++) {
+    rhsptr[IDX(i, 0, data->nx)] = rhsptr[IDX(i, data->ny - 2, data->nx)]; // Bottom boundary
+    rhsptr[IDX(i, data->ny - 1, data->nx)] = rhsptr[IDX(i, 1, data->nx)]; // Top boundary
+  }
 }
 
 static void compute_error(N_Vector u, N_Vector v, UserData* data) {
@@ -321,7 +323,7 @@ static void compute_error(N_Vector u, N_Vector v, UserData* data) {
 
     for (int j = 0; j < data->ny; j++) {
         for (int i = 0; i < data->nx; i++) {
-            error = fmax(error, fabs(uptr[j * data->nx + i] - vptr[j * data->nx + i]));
+            error = fmax(error, fabs(uptr[IDX(i, j, data->nx)] - vptr[IDX(i, j, data->nx)]));
         }
     }
     printf("\nerror = %e\n", error);
@@ -348,8 +350,8 @@ void diffusion_coefficients(UserData* data) {
 
 UserData create_userdata() {
   UserData data;
-  data.cells[0] = 120;
-  data.cells[1] = 20;
+  data.cells[0] = 243;
+  data.cells[1] = 59;
   data.xmax =  M_PI;
   data.xmin = -M_PI;
   data.ymax =  6.0;
@@ -367,9 +369,9 @@ UserData create_userdata() {
   data.rtol = 1.0e-05;
   data.atol = 1.0e-08;
 
-  data.diffD0 = 1.0;
+  data.diffD0 = 10.0;
 
-  data.compute_error = SUNTRUE;
+  data.compute_error = SUNFALSE;
 
   data.kx = (double*)malloc(data.nx * sizeof(double));
   data.ky = (double*)malloc(data.nx * sizeof(double));
@@ -503,11 +505,13 @@ int main() {
     printf("\ncomputation time for the reference solution is %10.5f\n", cpu_time_for_ref);
     printf("\ncomputation time is %10.5f\n", cpu_time_used);
 
-    if(data.compute_error)
-      compute_error(y, yref, &data);
-
-    N_VLinearSum(1.0, y, -1.0, yref, y);
     output_plot(&y, &data);
+
+    if(data.compute_error) {
+      compute_error(y, yref, &data);
+      N_VLinearSum(1.0, y, -1.0, yref, y);
+      // output_plot(&y, &data);
+    }
 
     return 0;
 }
