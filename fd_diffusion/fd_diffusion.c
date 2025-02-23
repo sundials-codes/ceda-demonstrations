@@ -113,12 +113,15 @@ static void interpolate_initial_values(N_Vector* u, UserData* data) {
   }
 }
 
-static void output_plot(N_Vector* u, UserData* data) {
+static void output_plot(N_Vector* u, UserData* data, int output_ID) {
   sunrealtype* uptr;
   uptr = N_VGetArrayPointer(*u);
 
+  char fileName[100];
+  sprintf(fileName, "output_%d.csv", output_ID);
+
   // Export the array to a CSV file
-  FILE* fp = fopen("output.csv", "w");
+  FILE* fp = fopen(fileName, "w");
   if (fp == NULL) {
       printf("Error opening file for writing\n");
       return;
@@ -300,18 +303,54 @@ static void compute_rhs(UserData* data, N_Vector rhs, N_Vector u) {
     }
   }
 
-  // Apply periodic boundary conditions
-  // In the x direction
-  for (int j = 0; j < data->ny; j++) {
-    rhsptr[IDX(0, j, data->nx)] = rhsptr[IDX(data->nx - 2, j, data->nx)]; // Left boundary
-    rhsptr[IDX(data->nx - 1, j, data->nx)] = rhsptr[IDX(1, j, data->nx)];   // Right boundary
+  // i = 0 wall
+  for (int j = 1; j < data->ny - 1; j++) {
+    rhsptr[IDX(0, j, data->nx)] =
+    data->kx[0] *(uptr[IDX(data->nx - 1 , j, data->nx)] - 2.0 * uptr[IDX(0, j, data->nx)] + uptr[IDX(1, j, data->nx)]) / (data->dx * data->dx) +
+    data->ky[j] *(uptr[IDX(0, j + 1, data->nx)] - 2.0 * uptr[IDX(0, j, data->nx)] + uptr[IDX(0, j - 1, data->nx)]) / (data->dy * data->dy);
   }
 
-  // In the y direction
-  for (int i = 0; i < data->nx; i++) {
-    rhsptr[IDX(i, 0, data->nx)] = rhsptr[IDX(i, data->ny - 2, data->nx)]; // Bottom boundary
-    rhsptr[IDX(i, data->ny - 1, data->nx)] = rhsptr[IDX(i, 1, data->nx)]; // Top boundary
+  // i = nx - 1 wall
+  for (int j = 1; j < data->ny - 1; j++) {
+    rhsptr[IDX(data->nx - 1, j, data->nx)] =
+    data->kx[data->nx - 1] *(uptr[IDX(data->nx - 2 , j, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, j, data->nx)] + uptr[IDX(0, j, data->nx)]) / (data->dx * data->dx) +
+    data->ky[j] *(uptr[IDX(data->nx - 1, j + 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, j, data->nx)] + uptr[IDX(data->nx - 1, j - 1, data->nx)]) / (data->dy * data->dy);
   }
+
+  // j = 0 wall
+  for (int i = 1; i < data->nx - 1; i++) {
+    rhsptr[IDX(i, 0, data->nx)] =
+    data->ky[0] *(uptr[IDX(i, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(i, 0, data->nx)] + uptr[IDX(i, 1, data->nx)]) / (data->dy * data->dy) +
+    data->kx[i] *(uptr[IDX(i - 1, 0, data->nx)] - 2.0 * uptr[IDX(i, 0, data->nx)] + uptr[IDX(i + 1, 0, data->nx)]) / (data->dx * data->dx);
+  }
+
+  // j = ny - 1 wall
+  for (int i = 1; i < data->nx - 1; i++) {
+    rhsptr[IDX(i, data->ny - 1, data->nx)] =
+    data->ky[0] *(uptr[IDX(i, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(i, data->ny - 1, data->nx)] + uptr[IDX(i, 0, data->nx)]) / (data->dy * data->dy) +
+    data->kx[i] *(uptr[IDX(i - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(i, data->ny - 1, data->nx)] + uptr[IDX(i + 1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
+  }
+
+  // origin
+  rhsptr[IDX(0, 0, data->nx)] =
+  data->ky[0] *(uptr[IDX(0, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(0, 0, data->nx)] + uptr[IDX(0, 1, data->nx)]) / (data->dy * data->dy) +
+  data->kx[0] *(uptr[IDX(data->nx - 1, 0, data->nx)] - 2.0 * uptr[IDX(0, 0, data->nx)] + uptr[IDX(1, 0, data->nx)]) / (data->dx * data->dx);
+
+  // lu corner
+  rhsptr[IDX(0, data->ny - 1, data->nx)] =
+  data->ky[data->ny - 1] *(uptr[IDX(0, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(0, data->ny - 1, data->nx)] + uptr[IDX(0, 0, data->nx)]) / (data->dy * data->dy) +
+  data->kx[0] *(uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(0, data->ny - 1, data->nx)] + uptr[IDX(1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
+
+  // rl corner
+  rhsptr[IDX(data->nx - 1, 0, data->nx)] =
+  data->ky[0] *(uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, 0, data->nx)] + uptr[IDX(data->nx - 1, 1, data->nx)]) / (data->dy * data->dy) +
+  data->kx[data->nx - 1] *(uptr[IDX(0, 0, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, 0, data->nx)] + uptr[IDX(data->nx - 2, 0, data->nx)]) / (data->dx * data->dx);
+
+  // ru corner
+  rhsptr[IDX(data->nx - 1, data->ny - 1, data->nx)] =
+  data->ky[data->ny - 1] *(uptr[IDX(data->nx - 1, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + uptr[IDX(data->nx - 1, 0, data->nx)]) / (data->dy * data->dy) +
+  data->kx[data->nx - 1] *(uptr[IDX(data->nx - 2, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + uptr[IDX(0, data->ny - 1, data->nx)]) / (data->dx * data->dx);
+
 }
 
 static void compute_error(N_Vector u, N_Vector v, UserData* data) {
@@ -350,16 +389,16 @@ void diffusion_coefficients(UserData* data) {
 
 UserData create_userdata() {
   UserData data;
-  data.cells[0] = 243;
-  data.cells[1] = 59;
+  data.cells[0] = 244;
+  data.cells[1] = 60;
   data.xmax =  M_PI;
   data.xmin = -M_PI;
   data.ymax =  6.0;
   data.ymin = -6.0;
-  data.nx = data.cells[0] + 1;
-  data.ny = data.cells[1] + 1;
-  data.dx = (data.xmax - data.xmin)/data.nx;
-  data.dy = (data.ymax - data.ymin)/data.ny;
+  data.nx = data.cells[0];
+  data.ny = data.cells[1];
+  data.dx = (data.xmax - data.xmin)/data.cells[0];
+  data.dy = (data.ymax - data.ymin)/data.cells[1];
 
   data.t0 = 0.0;
   data.ft = 1.0;
@@ -374,7 +413,7 @@ UserData create_userdata() {
   data.compute_error = SUNFALSE;
 
   data.kx = (double*)malloc(data.nx * sizeof(double));
-  data.ky = (double*)malloc(data.nx * sizeof(double));
+  data.ky = (double*)malloc(data.ny * sizeof(double));
 
   diffusion_coefficients(&data);
 
@@ -409,7 +448,7 @@ int main() {
 
     UserData data = create_userdata();
 
-    data.is_STS = SUNTRUE; // Either STS or SSP
+    data.is_STS = SUNFALSE; // Either STS or SSP
 
     N_Vector yref    = NULL; /* empty vector for storing solution */
 
@@ -469,6 +508,8 @@ int main() {
       if (check_flag(&flag, "SSP_init", 1)) { return 1; }
     }
 
+    output_plot(&y, &data, 0);
+
     double dt = 0.0;
     double tout = 0;
     double t_curr = 0.0;
@@ -493,7 +534,7 @@ int main() {
         fprintf(stdout, "** Update method failed! Aborting simulation ....\n");
         break;
       }
-
+      output_plot(&y, &data, step);
       step += 1;
     }
 
@@ -504,8 +545,6 @@ int main() {
 
     printf("\ncomputation time for the reference solution is %10.5f\n", cpu_time_for_ref);
     printf("\ncomputation time is %10.5f\n", cpu_time_used);
-
-    output_plot(&y, &data);
 
     if(data.compute_error) {
       compute_error(y, yref, &data);
