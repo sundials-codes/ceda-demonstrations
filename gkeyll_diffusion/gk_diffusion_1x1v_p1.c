@@ -926,6 +926,30 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 
 int flag;                /* reusable error-checking flag */
 
+int efun(N_Vector x, N_Vector w, void *user_data) {
+
+  sunrealtype xnorm;
+
+  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-8);
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  xnorm = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    xnorm += x_data[i] * x_data[i];
+  }
+  xnorm = reltol*SUNRsqrt(xnorm/N) + abstol;
+
+  N_VConst(xnorm, w);
+
+  return 0;
+}
+
 /* general problem parameters */
 sunrealtype T0    = 0.0;  /* initial time */
 
@@ -983,6 +1007,10 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
+  /* Specify the Ewt function */
+  flag = ARKodeWFtolerances(*arkode_mem, efun);
+  if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
+
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
   // if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
@@ -1027,6 +1055,10 @@ int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, voi
   /* Specify the number of SSP stages */
   flag = LSRKStepSetNumSSPStages(*arkode_mem, 4);
   if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+
+  /* Specify the Ewt function */
+  flag = ARKodeWFtolerances(*arkode_mem, efun);
+  if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
 
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);

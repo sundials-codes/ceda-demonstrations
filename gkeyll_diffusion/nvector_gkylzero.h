@@ -19,6 +19,8 @@
 #include <gkyl_array.h>
 #include <gkyl_array_ops.h>
 
+#define NV_CONTENT_GKZ(v) ((N_VectorContent_Gkylzero)(v->content))
+
 #ifdef __cplusplus /* wrapper to enable C++ usage */
 extern "C" {
 #endif

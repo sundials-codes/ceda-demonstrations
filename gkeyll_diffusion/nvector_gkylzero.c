@@ -14,8 +14,6 @@
  * This gives access to the Gkylzero vector from within the NVECTOR.
  * -----------------------------------------------------------------*/
 
-#define NV_CONTENT_GKZ(v) ((N_VectorContent_Gkylzero)(v->content))
-
 /* -----------------------------------------------------------------
  * exported functions
  * -----------------------------------------------------------------*/
@@ -226,7 +224,7 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
 
 sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
 {
-  sunrealtype asum, prodi;
+  sunrealtype asum;
 
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
@@ -238,10 +236,10 @@ sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
   asum = 0.0;
 
   for (sunindextype i=0; i<N; ++i) {
-    prodi = x_data[i] * w_data[i];
-    asum += SUNSQR(prodi);
+    asum += SUNSQR(x_data[i]);
   }
-  asum = SUNRsqrt(asum/N);
+  asum = SUNRsqrt(asum/N)/w_data[0];
+
   return asum;
 }
 
