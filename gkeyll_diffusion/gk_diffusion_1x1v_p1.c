@@ -201,25 +201,25 @@ void test_nvector_gkylzero (bool use_gpu) {
   }
 
   /* ----------------------------------------------------------------------
-  * N_VWrmsNorm_Gkylzero Test
+  * N_VWrmsNorm_abs_comp_Gkylzero Test
   * --------------------------------------------------------------------*/
 
   N_VConst_Gkylzero(-0.5, Nv1);
   N_VConst_Gkylzero( 0.5, Nv2);
 
-  double wrmsnorm = N_VWrmsNorm_Gkylzero(Nv1, Nv2);
+  double wrmsnorm = N_VWrmsNorm_abs_comp_Gkylzero(Nv1, Nv2);
 
   /* ans should equal 1/4 */
   failure = (wrmsnorm < 0.0) ? 1 : (fabs(wrmsnorm - 1.0/4.0) > eq_check_tol);
 
   if(failure)
   {
-    printf("\n      FAILED in N_VWrmsNorm_Gkylzero");
+    printf("\n      FAILED in N_VWrmsNorm_abs_comp_Gkylzero");
     num_of_failures++;
   }
   else
   {
-    printf("\n      N_VWrmsNorm_Gkylzero PASSED the test");
+    printf("\n      N_VWrmsNorm_abs_comp_Gkylzero PASSED the test");
   }
 
 
@@ -926,7 +926,8 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 
 int flag;                /* reusable error-checking flag */
 
-int efun(N_Vector x, N_Vector w, void *user_data) {
+// Error weight function for global norm of y_{n-1}
+int efun_glob_norm(N_Vector x, N_Vector w, void *user_data) {
 
   sunrealtype xnorm;
 
@@ -945,7 +946,35 @@ int efun(N_Vector x, N_Vector w, void *user_data) {
   }
   xnorm = reltol*SUNRsqrt(xnorm/N) + abstol;
 
-  N_VConst(xnorm, w);
+  N_VConst(1.0/xnorm, w);
+
+  return 0;
+}
+
+// Error weight function for cellwise norm of y_{n-1}
+int efun_cell_norm(N_Vector x, N_Vector w, void *user_data) {
+
+  sunrealtype xcnorm;
+
+  sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
+  sunrealtype abstol = SUN_RCONST(1.0e-8);
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  for (sunindextype i=0; i<xdptr->size; ++i) {
+    xcnorm = 0.0;
+    for(sunindextype j=0; j<xdptr->ncomp; ++j) {
+      xcnorm += x_data[i*xdptr->ncomp + j] * x_data[i*xdptr->ncomp + j];
+    }
+    xcnorm = reltol*SUNRsqrt(xcnorm/xdptr->ncomp) + abstol;
+    for(sunindextype j=0; j<xdptr->ncomp; ++j) {
+      w_data[i*xdptr->ncomp + j] = 1.0/xcnorm;
+    }
+  }
 
   return 0;
 }
@@ -1007,10 +1036,6 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = LSRKStepSetSTSMethod(*arkode_mem, ARKODE_LSRK_RKL_2);
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-  /* Specify the Ewt function */
-  flag = ARKodeWFtolerances(*arkode_mem, efun);
-  if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
-
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
   // if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
@@ -1055,10 +1080,6 @@ int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, voi
   /* Specify the number of SSP stages */
   flag = LSRKStepSetNumSSPStages(*arkode_mem, 4);
   if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
-
-  /* Specify the Ewt function */
-  flag = ARKodeWFtolerances(*arkode_mem, efun);
-  if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
 
   // /* Specify the fixed step size */
   // flag = ARKodeSetFixedStep(*arkode_mem, 1.0e-5);
@@ -1382,6 +1403,8 @@ int main(int argc, char **argv)
   if(test_nvector)
     test_nvector_gkylzero(false);
 
+  int wrms_norm_type = 1;
+
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
   // Create the context struct.
@@ -1452,6 +1475,28 @@ int main(int argc, char **argv)
     int flag;
     flag = SSP_init(app, &y, &arkode_mem, &ctx);
     if (check_flag(&flag, "SSP_init", 1)) { return 1; }
+  }
+
+  /* Specify the Ewt function */
+  switch (wrms_norm_type) {
+    case 1:
+      y->ops->nvwrmsnorm          = N_VWrmsNorm_abs_comp_Gkylzero;
+      printf("\nUsing WRMSNorm with componentwise absolute values\n");
+      break;
+
+    case 2:
+      flag = ARKodeWFtolerances(arkode_mem, efun_cell_norm);
+      if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
+      y->ops->nvwrmsnorm          = N_VWrmsNorm_cell_norm_Gkylzero;
+      printf("\nUsing WRMSNorm with cellwise norm values\n");
+      break;
+
+    case 3:
+      flag = ARKodeWFtolerances(arkode_mem, efun_glob_norm);
+      if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
+      y->ops->nvwrmsnorm          = N_VWrmsNorm_glob_norm_Gkylzero;
+      printf("\nUsing WRMSNorm with global norm values\n");
+      break;
   }
 
   printf("\nNumber of cells             = %ld", app->f->size);

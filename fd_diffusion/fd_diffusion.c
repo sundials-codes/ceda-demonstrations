@@ -298,59 +298,58 @@ static void compute_rhs(UserData* data, N_Vector rhs, N_Vector u) {
   for (int j = 1; j < data->ny - 1; j++) {
     for (int i = 1; i < data->nx - 1; i++) {
       rhsptr[IDX(i, j, data->nx)] =
-      data->kx[i] *(uptr[IDX(i + 1, j, data->nx)] - 2.0 * uptr[IDX(i, j, data->nx)] + uptr[IDX(i - 1, j, data->nx)]) / (data->dx * data->dx) +
-      data->ky[j] *(uptr[IDX(i, j + 1, data->nx)] - 2.0 * uptr[IDX(i, j, data->nx)] + uptr[IDX(i, j - 1, data->nx)]) / (data->dy * data->dy);
+      (data->kx[i + 1] * uptr[IDX(i + 1, j, data->nx)] - 2.0 * data->kx[i] * uptr[IDX(i, j, data->nx)] + data->kx[i - 1] * uptr[IDX(i - 1, j, data->nx)]) / (data->dx * data->dx) +
+      (data->ky[j + 1] * uptr[IDX(i, j + 1, data->nx)] - 2.0 * data->ky[j] * uptr[IDX(i, j, data->nx)] + data->ky[j - 1] * uptr[IDX(i, j - 1, data->nx)]) / (data->dy * data->dy);
     }
   }
 
   // i = 0 wall
   for (int j = 1; j < data->ny - 1; j++) {
     rhsptr[IDX(0, j, data->nx)] =
-    data->kx[0] *(uptr[IDX(data->nx - 1 , j, data->nx)] - 2.0 * uptr[IDX(0, j, data->nx)] + uptr[IDX(1, j, data->nx)]) / (data->dx * data->dx) +
-    data->ky[j] *(uptr[IDX(0, j + 1, data->nx)] - 2.0 * uptr[IDX(0, j, data->nx)] + uptr[IDX(0, j - 1, data->nx)]) / (data->dy * data->dy);
+    (data->kx[data->nx - 1] * uptr[IDX(data->nx - 1 , j, data->nx)] - 2.0 * data->kx[0] * uptr[IDX(0, j, data->nx)] + data->kx[1] * uptr[IDX(1, j, data->nx)]) / (data->dx * data->dx) +
+    (data->ky[j + 1] * uptr[IDX(0, j + 1, data->nx)] - 2.0 * data->ky[j] * uptr[IDX(0, j, data->nx)] + data->ky[j - 1] * uptr[IDX(0, j - 1, data->nx)]) / (data->dy * data->dy);
   }
 
   // i = nx - 1 wall
   for (int j = 1; j < data->ny - 1; j++) {
     rhsptr[IDX(data->nx - 1, j, data->nx)] =
-    data->kx[data->nx - 1] *(uptr[IDX(data->nx - 2 , j, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, j, data->nx)] + uptr[IDX(0, j, data->nx)]) / (data->dx * data->dx) +
-    data->ky[j] *(uptr[IDX(data->nx - 1, j + 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, j, data->nx)] + uptr[IDX(data->nx - 1, j - 1, data->nx)]) / (data->dy * data->dy);
+    (data->kx[data->nx - 2] * uptr[IDX(data->nx - 2 , j, data->nx)] - 2.0 * data->kx[data->nx - 1] * uptr[IDX(data->nx - 1, j, data->nx)] + data->kx[0] * uptr[IDX(0, j, data->nx)]) / (data->dx * data->dx) +
+    (data->ky[j + 1] * uptr[IDX(data->nx - 1, j + 1, data->nx)] - 2.0 * data->ky[j] * uptr[IDX(data->nx - 1, j, data->nx)] + data->ky[j - 1] * uptr[IDX(data->nx - 1, j - 1, data->nx)]) / (data->dy * data->dy);
   }
 
   // j = 0 wall
   for (int i = 1; i < data->nx - 1; i++) {
     rhsptr[IDX(i, 0, data->nx)] =
-    data->ky[0] *(uptr[IDX(i, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(i, 0, data->nx)] + uptr[IDX(i, 1, data->nx)]) / (data->dy * data->dy) +
-    data->kx[i] *(uptr[IDX(i - 1, 0, data->nx)] - 2.0 * uptr[IDX(i, 0, data->nx)] + uptr[IDX(i + 1, 0, data->nx)]) / (data->dx * data->dx);
+    (data->ky[data->ny - 1] * uptr[IDX(i, data->ny - 1, data->nx)] - 2.0 * data->ky[0] * uptr[IDX(i, 0, data->nx)] + data->ky[1] * uptr[IDX(i, 1, data->nx)]) / (data->dy * data->dy) +
+    (data->kx[i - 1] * uptr[IDX(i - 1, 0, data->nx)] - 2.0 * data->kx[i] * uptr[IDX(i, 0, data->nx)] + data->kx[i + 1] * uptr[IDX(i + 1, 0, data->nx)]) / (data->dx * data->dx);
   }
 
   // j = ny - 1 wall
   for (int i = 1; i < data->nx - 1; i++) {
     rhsptr[IDX(i, data->ny - 1, data->nx)] =
-    data->ky[0] *(uptr[IDX(i, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(i, data->ny - 1, data->nx)] + uptr[IDX(i, 0, data->nx)]) / (data->dy * data->dy) +
-    data->kx[i] *(uptr[IDX(i - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(i, data->ny - 1, data->nx)] + uptr[IDX(i + 1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
+    (data->ky[data->ny - 2] * uptr[IDX(i, data->ny - 2, data->nx)] - 2.0 * data->ky[data->ny - 1] * uptr[IDX(i, data->ny - 1, data->nx)] + data->ky[0] * uptr[IDX(i, 0, data->nx)]) / (data->dy * data->dy) +
+    (data->kx[i - 1] * uptr[IDX(i - 1, data->ny - 1, data->nx)] - 2.0 * data->kx[i] * uptr[IDX(i, data->ny - 1, data->nx)] + data->kx[i + 1] * uptr[IDX(i + 1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
   }
 
   // origin
   rhsptr[IDX(0, 0, data->nx)] =
-  data->ky[0] *(uptr[IDX(0, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(0, 0, data->nx)] + uptr[IDX(0, 1, data->nx)]) / (data->dy * data->dy) +
-  data->kx[0] *(uptr[IDX(data->nx - 1, 0, data->nx)] - 2.0 * uptr[IDX(0, 0, data->nx)] + uptr[IDX(1, 0, data->nx)]) / (data->dx * data->dx);
+  (data->ky[data->ny - 1] * uptr[IDX(0, data->ny - 1, data->nx)] - 2.0 * data->ky[0] * uptr[IDX(0, 0, data->nx)] + data->ky[1] * uptr[IDX(0, 1, data->nx)]) / (data->dy * data->dy) +
+  (data->kx[data->nx - 1] * uptr[IDX(data->nx - 1, 0, data->nx)] - 2.0 * data->kx[0] * uptr[IDX(0, 0, data->nx)] + data->kx[1] * uptr[IDX(1, 0, data->nx)]) / (data->dx * data->dx);
 
   // lu corner
   rhsptr[IDX(0, data->ny - 1, data->nx)] =
-  data->ky[data->ny - 1] *(uptr[IDX(0, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(0, data->ny - 1, data->nx)] + uptr[IDX(0, 0, data->nx)]) / (data->dy * data->dy) +
-  data->kx[0] *(uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(0, data->ny - 1, data->nx)] + uptr[IDX(1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
+  (data->ky[data->ny - 2] * uptr[IDX(0, data->ny - 2, data->nx)] - 2.0 * data->ky[data->ny - 1] * uptr[IDX(0, data->ny - 1, data->nx)] + data->ky[0] * uptr[IDX(0, 0, data->nx)]) / (data->dy * data->dy) +
+  (data->kx[data->nx - 1] * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * data->kx[0] * uptr[IDX(0, data->ny - 1, data->nx)] + data->kx[1] * uptr[IDX(1, data->ny - 1, data->nx)]) / (data->dx * data->dx);
 
   // rl corner
   rhsptr[IDX(data->nx - 1, 0, data->nx)] =
-  data->ky[0] *(uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, 0, data->nx)] + uptr[IDX(data->nx - 1, 1, data->nx)]) / (data->dy * data->dy) +
-  data->kx[data->nx - 1] *(uptr[IDX(0, 0, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, 0, data->nx)] + uptr[IDX(data->nx - 2, 0, data->nx)]) / (data->dx * data->dx);
+  (data->ky[data->ny - 1] * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] - 2.0 * data->ky[0] * uptr[IDX(data->nx - 1, 0, data->nx)] + data->ky[1] * uptr[IDX(data->nx - 1, 1, data->nx)]) / (data->dy * data->dy) +
+  (data->kx[0] * uptr[IDX(0, 0, data->nx)] - 2.0 * data->kx[data->nx - 1] * uptr[IDX(data->nx - 1, 0, data->nx)] + data->kx[data->nx - 2] * uptr[IDX(data->nx - 2, 0, data->nx)]) / (data->dx * data->dx);
 
   // ru corner
   rhsptr[IDX(data->nx - 1, data->ny - 1, data->nx)] =
-  data->ky[data->ny - 1] *(uptr[IDX(data->nx - 1, data->ny - 2, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + uptr[IDX(data->nx - 1, 0, data->nx)]) / (data->dy * data->dy) +
-  data->kx[data->nx - 1] *(uptr[IDX(data->nx - 2, data->ny - 1, data->nx)] - 2.0 * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + uptr[IDX(0, data->ny - 1, data->nx)]) / (data->dx * data->dx);
-
+  (data->ky[data->ny - 2] * uptr[IDX(data->nx - 1, data->ny - 2, data->nx)] - 2.0 * data->ky[data->ny - 1] * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + data->ky[0] * uptr[IDX(data->nx - 1, 0, data->nx)]) / (data->dy * data->dy) +
+  (data->kx[data->nx - 2] * uptr[IDX(data->nx - 2, data->ny - 1, data->nx)] - 2.0 * data->kx[data->nx - 1] * uptr[IDX(data->nx - 1, data->ny - 1, data->nx)] + data->kx[0] * uptr[IDX(0, data->ny - 1, data->nx)]) / (data->dx * data->dx);
 }
 
 static void compute_error(N_Vector u, N_Vector v, UserData* data) {

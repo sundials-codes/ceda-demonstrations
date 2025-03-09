@@ -52,7 +52,7 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   v->ops->nvlinearsum         = N_VLinearSum_Gkylzero;
   v->ops->nvconst             = N_VConst_Gkylzero;
   v->ops->nvscale             = N_VScale_Gkylzero;
-  v->ops->nvwrmsnorm          = N_VWrmsNorm_Gkylzero;
+  v->ops->nvwrmsnorm          = N_VWrmsNorm_abs_comp_Gkylzero;
   v->ops->nvspace             = N_VSpace_Gkylzero;
   v->ops->nvdiv               = N_VDiv_Gkylzero;
   v->ops->nvabs               = N_VAbs_Gkylzero;
@@ -222,7 +222,48 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
   gkyl_array_set(zdptr, c, xdptr);
 }
 
-sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
+sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
+{
+  sunrealtype asum, prodi;
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  asum = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    prodi = x_data[i] * w_data[i];
+    asum += SUNSQR(prodi);
+  }
+  asum = SUNRsqrt(asum/N);
+  return asum;
+}
+
+sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
+{
+  sunrealtype asum, prodi;
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  asum = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    asum += x_data[i] * x_data[i] * w_data[i];
+  }
+  asum = SUNRsqrt(asum/xdptr->size);
+  return asum;
+}
+
+sunrealtype N_VWrmsNorm_glob_norm_Gkylzero(N_Vector x, N_Vector w)
 {
   sunrealtype asum;
 
@@ -238,7 +279,7 @@ sunrealtype N_VWrmsNorm_Gkylzero(N_Vector x, N_Vector w)
   for (sunindextype i=0; i<N; ++i) {
     asum += SUNSQR(x_data[i]);
   }
-  asum = SUNRsqrt(asum/N)/w_data[0];
+  asum = SUNRsqrt(asum/N)*w_data[0];
 
   return asum;
 }
