@@ -927,7 +927,7 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
 int flag;                /* reusable error-checking flag */
 
 sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
-sunrealtype abstol = SUN_RCONST(1.0e-8);
+sunrealtype abstol = SUN_RCONST(1.0e-12);
 
 // Error weight function for global norm of y_{n-1}
 int efun_glob_norm(N_Vector x, N_Vector w, void *user_data) {
@@ -1038,7 +1038,7 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   return 0;
 }
 
-int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem, void *ctx)
+int SSP_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
 {
   /* Create the SUNDIALS context object for this simulation */
   SUNContext sunctx;
@@ -1389,7 +1389,7 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
   }
 }
 
-void compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app) {
+double compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app) {
   double error = 0;
 
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
@@ -1405,6 +1405,8 @@ void compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app) {
   }
 
   printf("\nerror = %e\n", error);
+
+  return error;
 }
 
 int main(int argc, char **argv)
@@ -1483,49 +1485,24 @@ int main(int argc, char **argv)
   struct gkyl_array *fref = mkarr(false, app->basis.num_basis, app->local_ext.volume);
   gkyl_array_set(fref, 1.0, app->f);
 
-  clock_t begin = clock();
   // compute the reference solution and the error
-  if(compute_error) {
-    /* Create the SUNDIALS context object for this simulation */
-    SUNContext sunctx;
-    flag = SUNContext_Create(SUN_COMM_NULL, &sunctx);
-    if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
+  SUNContext sunctx;
+  flag = SUNContext_Create(SUN_COMM_NULL, &sunctx);
+  if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
-    yref = N_VMake_Gkylzero(fref, app->use_gpu, sunctx);
+  yref = N_VMake_Gkylzero(fref, app->use_gpu, sunctx);
 
-    double dt = 0.0;
-    double tout = 0;
-    double t_curr = 0.0;
-    int flag;
+  int flag;
 
-    void* arkode_mem_ref = NULL;
-    flag = SSP_init(app, &yref, &arkode_mem_ref, &ctx);
-    if (check_flag(&flag, "SSP_init", 1)) { return 1; }
+  /* Create the reference solution memory*/
+  void* arkode_mem_ref = NULL;
+  flag = STS_init(app, &yref, &arkode_mem_ref);
+  if (check_flag(&flag, "SSP_init", 1)) { return 1; }
 
-    /* Specify the fixed step size */
-    flag = ARKodeSetFixedStep(arkode_mem_ref, 1.0e-05);
-    if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
+  /* Specify the fixed step size for the reference STS solution */
+  flag = ARKodeSetFixedStep(arkode_mem_ref, 1.0e-5);
+  if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
 
-    long int step = 1;
-    while ((t_end - t_curr > 1.0e-10) && (step <= app_args.num_steps)) {
-
-      if(step == 1) {
-      dt = 0.1;
-      flag = ARKodeGetCurrentTime(arkode_mem_ref, &t_curr);
-      if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
-      }
-      tout += dt;
-
-      gkyl_diffusion_update_STS(app, arkode_mem_ref, tout, yref, &t_curr);
-
-      step += 1;
-    }
-  }
-
-  clock_t end = clock();
-  double cpu_time_for_ref = (double)(end - begin) / CLOCKS_PER_SEC;
-
-  begin = clock();
   if (is_STS) {
     int flag;
     flag = STS_init(app, &y, &arkode_mem);
@@ -1534,7 +1511,7 @@ int main(int argc, char **argv)
   else if (is_SSP)
   {
     int flag;
-    flag = SSP_init(app, &y, &arkode_mem, &ctx);
+    flag = SSP_init(app, &y, &arkode_mem);
     if (check_flag(&flag, "SSP_init", 1)) { return 1; }
   }
 
@@ -1565,6 +1542,7 @@ int main(int argc, char **argv)
   printf("\nNumber of DoFs              = %ld\n", app->f->size*app->f->ncomp);
 
   double tout = 0;
+  double max_error = 0.0;
 
   long step = 1;
   while ((t_end - t_curr > 1.0e-10) && (step <= app_args.num_steps)) {
@@ -1575,12 +1553,17 @@ int main(int argc, char **argv)
     if(is_STS || is_SSP) {
       if(step == 1) {
         dt = 0.1;
+        flag = ARKodeGetCurrentTime(arkode_mem_ref, &t_curr);
+        if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
         flag = ARKodeGetCurrentTime(arkode_mem, &t_curr);
         if (check_flag(&flag, "ARKodeGetCurrentTime", 1)) { return 1; }
       }
       tout += dt;
 
+               gkyl_diffusion_update_STS(app, arkode_mem_ref, tout, yref, &t_curr);
       status = gkyl_diffusion_update_STS(app, arkode_mem, tout, y, &t_curr);
+
+      max_error = fmax(compute_max_error(y, yref, app), max_error);
     }
     else {
       status = gkyl_diffusion_update(app, dt);
@@ -1625,18 +1608,15 @@ int main(int argc, char **argv)
   }
 
   if(is_STS || is_SSP) {
+    printf("\nReference Solution Stats\n");
+    ARKodePrintAllStats(arkode_mem_ref, stdout, SUN_OUTPUTFORMAT_TABLE);
+    printf("\nComputed Solution Stats\n");
     ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
   }
 
-  end = clock();
-  double cpu_time_used = (double)(end - begin) / CLOCKS_PER_SEC;
+  compute_max_error(y, yref, app);
 
-  printf("\ncomputation time for the reference solution is %10.5f\n", cpu_time_for_ref);
-  printf("\ncomputation time is %10.5f\n", cpu_time_used);
-
-  if(compute_error) {
-    compute_max_error(y, yref, app);
-  }
+  printf("\nmax error = %e\n", max_error);
 
   // Free the app.
   gkyl_diffusion_app_release(app);

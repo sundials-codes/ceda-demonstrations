@@ -1,6 +1,0 @@
-NOTES:
-1. Diffusion coefficients:
-    (dx[i - 1] * uptr[i - 1, j] - 2.0 * dx[i] * uptr[i, j] + dx[i + 1] * uptr[i + 1, j]) / (dx * dx);
-    vs
-    dx[i] * (uptr[i - 1, j] - 2.0 * uptr[i, j] + uptr[i + 1, j]) / (dx * dx); //Seems like this is used!
-
