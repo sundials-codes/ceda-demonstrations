@@ -34,7 +34,7 @@ struct _N_VectorContent_Gkylzero
   sunbooleantype own_vector;  /* ownership Gkylzero vector */
   sunbooleantype use_gpu;     /* where to reside */
   struct gkyl_array* dataptr; /* the actual Gkylzero object pointer */
-  /* ADD ANY GKEYLLZERO OBJECTS HERE THAT WILL BE NEEDED, E.G., MPI COMMUNICATOR */
+  /* TODO: ADD GKYL COMMUNICATOR */
 };
 
 typedef struct _N_VectorContent_Gkylzero* N_VectorContent_Gkylzero;
@@ -59,7 +59,6 @@ void N_VConst_Gkylzero(sunrealtype c, N_Vector z);
 void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z);
 sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w);
 sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w);
-sunrealtype N_VWrmsNorm_glob_norm_Gkylzero(N_Vector x, N_Vector w);
 void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y);
 void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w);
 void N_VAbs_Gkylzero(N_Vector u, N_Vector v);
