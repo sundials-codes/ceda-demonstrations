@@ -18,6 +18,7 @@
 /* gkylzero header files -- ADD MORE AS NECESSARY */
 #include <gkyl_array.h>
 #include <gkyl_array_ops.h>
+#include <gkyl_array_reduce.h>
 
 #define NV_CONTENT_GKZ(v) ((N_VectorContent_Gkylzero)(v->content))
 
