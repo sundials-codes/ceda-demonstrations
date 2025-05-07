@@ -929,12 +929,49 @@ int flag;                /* reusable error-checking flag */
 sunrealtype reltol = SUN_RCONST(1.0e-5); /* tolerances */
 sunrealtype abstol = SUN_RCONST(1.0e-12);
 
+// Error weight function for global norm of y_{n-1}
+int efun_glob_norm(N_Vector x, N_Vector w, void *user_data) {
+
+  sunrealtype xnorm;
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  xnorm = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    xnorm += x_data[i] * x_data[i];
+  }
+  xnorm = reltol*SUNRsqrt(xnorm/N) + abstol;
+
+  N_VConst(1.0/xnorm, w);
+
+  return 0;
+}
+
 // Error weight function for cellwise norm of y_{n-1}
 int efun_cell_norm(N_Vector x, N_Vector w, void *user_data) {
+
+  sunrealtype xcnorm;
+
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
-  gkyl_array_error_denom_fac(wdptr, reltol, abstol, xdptr);
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  for (sunindextype i=0; i<xdptr->size; ++i) {
+    xcnorm = 0.0;
+    for(sunindextype j=0; j<xdptr->ncomp; ++j) {
+      xcnorm += x_data[i*xdptr->ncomp + j] * x_data[i*xdptr->ncomp + j];
+    }
+    xcnorm = reltol*SUNRsqrt(xcnorm/xdptr->ncomp) + abstol;
+    for(sunindextype j=0; j<xdptr->ncomp; ++j) {
+      w_data[i*xdptr->ncomp + j] = 1.0/xcnorm;
+    }
+  }
 
   return 0;
 }
@@ -1374,13 +1411,13 @@ double compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app)
 
 int main(int argc, char **argv)
 {
-  bool is_STS = false;
+  bool is_STS = true;
   bool is_SSP = true;
   bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
 
-  int wrms_norm_type = 1;
+  int wrms_norm_type = 2;
 
   bool compute_error = true;
 
@@ -1490,6 +1527,13 @@ int main(int argc, char **argv)
       if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
       y->ops->nvwrmsnorm          = N_VWrmsNorm_cell_norm_Gkylzero;
       printf("\nUsing WRMSNorm with cellwise norm values\n");
+      break;
+
+    case 3:
+      flag = ARKodeWFtolerances(arkode_mem, efun_glob_norm);
+      if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
+      y->ops->nvwrmsnorm          = N_VWrmsNorm_glob_norm_Gkylzero;
+      printf("\nUsing WRMSNorm with global norm values\n");
       break;
   }
 

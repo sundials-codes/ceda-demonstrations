@@ -245,19 +245,41 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
 
 sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
 {
+  sunrealtype asum, prodi;
+
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
-  sunrealtype red[xdptr->ncomp];
-  gkyl_array_reduce_weighted(red, xdptr, wdptr, GKYL_SQ_SUM);
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
 
-  /* TODO: Add a GPU to CPU copy */
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  asum = 0.0;
 
-  sunrealtype asum = 0.0;
-  for (sunindextype i=0; i<xdptr->ncomp; ++i) {
-    asum += red[i];
+  for (sunindextype i=0; i<N; ++i) {
+    asum += x_data[i] * x_data[i] * w_data[i];
   }
   asum = SUNRsqrt(asum/xdptr->size);
+  return asum;
+}
+
+sunrealtype N_VWrmsNorm_glob_norm_Gkylzero(N_Vector x, N_Vector w)
+{
+  sunrealtype asum;
+
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *w_data = wdptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  asum = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    asum += SUNSQR(x_data[i]);
+  }
+  asum = SUNRsqrt(asum/N)*w_data[0];
 
   return asum;
 }
@@ -309,14 +331,15 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
 {
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
 
-  sunrealtype red[udptr->ncomp];
-  gkyl_array_reduce(red, udptr, GKYL_ABS_MAX);
+  sunrealtype *u_data = udptr->data;
 
-  /* TODO: Add a GPU to CPU copy */
+  sunindextype N = (udptr->size*udptr->ncomp);
 
   sunrealtype max = 0.0;
-  for (sunindextype i=0; i<udptr->ncomp; ++i) {
-    max = fmax(max, red[i]);
+
+  // we still need this function
+  for (sunindextype i=0; i<N; ++i) {
+    if (SUNRabs(u_data[i]) > max) { max = SUNRabs(u_data[i]); }
   }
 
   return (max);
