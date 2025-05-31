@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 
     //   Advance in time
     flag = ARKodeEvolve(arkode_mem, tout, y, &t, ARK_NORMAL);
-    if (check_flag(flag, "ARKodeEvolve")) { break; }
+    if (check_flag(flag, "ARKodeEvolve")) { return 1; }
 
     // Advance reference solution and compute error
     if (uopts.calc_error)
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
       flag = ARKodeSetStopTime(arkref_mem, tout);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
       flag = ARKodeEvolve(arkref_mem, tout, yref, &t2, ARK_NORMAL);
-      if (check_flag(flag, "ARKodeEvolve")) { break; }
+      if (check_flag(flag, "ARKodeEvolve (ref)")) { return 1; }
       N_VLinearSum(1.0, y, -1.0, yref, yerr);
       total_error += N_VDotProd(yerr, yerr);
     }
