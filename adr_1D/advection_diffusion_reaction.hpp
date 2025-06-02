@@ -24,11 +24,11 @@
 #include "arkode/arkode_mristep.h"
 #include "nvector/nvector_serial.h"
 #include "sundials/sundials_core.hpp"
+#include "sunlinsol/sunlinsol_spgmr.h"
 #include "sunlinsol/sunlinsol_band.h"
 #include "sunmatrix/sunmatrix_band.h"
 
 // Macros for problem constants
-#define PI   SUN_RCONST(3.141592653589793238462643383279502884197169)
 #define ZERO SUN_RCONST(0.0)
 #define ONE  SUN_RCONST(1.0)
 #define TWO  SUN_RCONST(2.0)
@@ -115,6 +115,16 @@ struct UserOptions
   // Integration method (0 = ERK, 1 = ARK, 2 = ExtSTS)
   int integrator = 1;
 
+  // Table ID for ARK methods:
+  //   0 = default
+  //   1 = ARS(2,2,2)
+  //   2 = Giraldo ARK2
+  //   3 = Ralston
+  //   4 = Heun-Euler
+  //   5 = SSP SDIRK 2
+  //   6 = Giraldo DIRK2
+  int table_id = 0;
+
   // Method order
   int order = 2;
 
@@ -143,6 +153,7 @@ struct UserOptions
   int maxsteps      = 10000; // max steps between outputs
   int predictor     = 0;     // predictor for nonlinear systems
   int ls_setup_freq = 0;     // linear solver setup frequency
+  int maxl          = 0;     // maximum number of GMRES iterations
 
   bool linear = false; // signal that the problem is linearly implicit
 
@@ -224,11 +235,14 @@ int SetupERK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
              void** arkode_mem);
 
 int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-             SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem);
+             SUNLinearSolver* LS, void** arkode_mem);
 
 int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
                 SUNMatrix* A, SUNLinearSolver* LS, MRIStepInnerStepper* sts_mem,
                 void** arkode_mem);
+
+int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
+                   SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem);
 
 // Compute the initial condition
 int SetIC(N_Vector y, UserData& udata);
@@ -286,7 +300,7 @@ static int OutputStatsARK(void* arkode_mem, UserData& udata)
   int flag;
 
   // Get integrator and solver stats
-  long int nst, nst_a, netf, nfe, nfi;
+  long int nst, nst_a, netf, nfe, nfi, nfils;
   flag = ARKodeGetNumSteps(arkode_mem, &nst);
   if (check_flag(flag, "ARKodeGetNumSteps")) { return -1; }
   flag = ARKodeGetNumStepAttempts(arkode_mem, &nst_a);
@@ -297,13 +311,15 @@ static int OutputStatsARK(void* arkode_mem, UserData& udata)
   if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
   flag = ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
   if (check_flag(flag, "ARKodeGetNumRhsEvals")) { return -1; }
+  flag = ARKodeGetNumLinRhsEvals(arkode_mem, &nfils);
+  if (check_flag(flag, "ARKodeGetNumLinRhsEvals")) { return -1; }
 
   cout << fixed << setprecision(6);
   cout << "  Steps              = " << nst << endl;
   cout << "  Step attempts      = " << nst_a << endl;
   cout << "  Error test fails   = " << netf << endl;
   cout << "  Explicit RHS evals = " << nfe << endl;
-  cout << "  Implicit RHS evals = " << nfi << endl;
+  cout << "  Implicit RHS evals = " << nfi + nfils << endl;
 
   long int nni, ncfn;
   flag = ARKodeGetNumNonlinSolvIters(arkode_mem, &nni);
@@ -376,6 +392,7 @@ static void InputHelp()
   cout << "  --xu <real>              : domain upper boundary\n";
   cout << "  --nx <int>               : number of mesh points\n";
   cout << "  --integrator <int>       : integrator option (0=ERK, 1=ARK, 2=ExtSTS)\n";
+  cout << "  --table_id <int>         : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
   cout << "  --order <int>            : method order\n";
   cout << "  --sts_method <int>       : STS method type (0=RKC, 1=RKL)\n";
   cout << "  --extsts_method <int>    : ExtSTS method type (0=ARS/Ralston/SSPSDIRK2, 1=Giraldo/HeunEuler)\n";
@@ -384,6 +401,7 @@ static void InputHelp()
   cout << "  --fixed_h <real>         : fixed step size\n";
   cout << "  --predictor <int>        : nonlinear solver predictor\n";
   cout << "  --lssetupfreq <int>      : LS setup frequency\n";
+  cout << "  --maxl <int>             : max GMRES iterations\n";
   cout << "  --maxsteps <int>         : max steps between outputs\n";
   cout << "  --linear                 : linearly implicit\n";
   cout << "  --calc_error             : use reference solution to compute solution error\n";
@@ -465,6 +483,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
 
   // Integrator options
   find_arg(args, "--integrator", uopts.integrator);
+  find_arg(args, "--table_id", uopts.table_id);
   find_arg(args, "--order", uopts.order);
   find_arg(args, "--sts_method", uopts.sts_method);
   find_arg(args, "--extsts_method", uopts.extsts_method);
@@ -473,6 +492,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--fixed_h", uopts.fixed_h);
   find_arg(args, "--predictor", uopts.predictor);
   find_arg(args, "--lssetupfreq", uopts.ls_setup_freq);
+  find_arg(args, "--maxl", uopts.maxl);
   find_arg(args, "--maxsteps", uopts.maxsteps);
   find_arg(args, "--linear", uopts.linear);
   find_arg(args, "--calc_error", uopts.calc_error);
@@ -490,7 +510,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
     if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
     N_VConst(ZERO, udata.temp_v);
   }
-  if ((uopts.integrator == 1) || uopts.calc_error)
+  if (uopts.calc_error)
   {
     udata.temp_J = SUNBandMatrix(udata.neq, 3, 3, ctx);
     if (check_ptr(udata.temp_J, "SUNBandMatrix")) { return -1; }
@@ -507,6 +527,12 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   if (uopts.integrator < 0 || uopts.integrator > 2)
   {
     cerr << "ERROR: Invalid integrator option" << endl;
+    return -1;
+  }
+
+  if (uopts.table_id < 0 || uopts.table_id > 6)
+  {
+    cerr << "ERROR: Invalid ARK table ID" << endl;
     return -1;
   }
 
@@ -548,6 +574,17 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
     else { cout << "  reaction         = OFF" << endl; }
     cout << "  diffusion        = Implicit" << endl;
+    cout << "  ARK table ID     = ";
+    switch(uopts.table_id)
+    {
+      case 1: cout << "ARS(2,2,2)" << endl; break;
+      case 2: cout << "Giraldo ARK2" << endl; break;
+      case 3: cout << "Ralston" << endl; break;
+      case 4: cout << "Heun-Euler" << endl; break;
+      case 5: cout << "SSP SDIRK 2" << endl; break;
+      case 6: cout << "Giraldo DIRK2" << endl; break;
+      default: cout << "default" << endl;
+    }
   }
   else if (uopts.integrator == 2)
   {
@@ -588,6 +625,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     }
     else { cout << "  predictor        = " << uopts.predictor << endl; }
     cout << "  ls setup freq    = " << uopts.ls_setup_freq << endl;
+    cout << "  max GMRES iters  = " << uopts.maxl << endl;
     cout << "  linear           = " << uopts.linear << endl;
   }
   if (uopts.integrator == 2)

@@ -17,7 +17,7 @@ import shlex
 # utility routines
 
 # utility routine to set inputs for running a specific integration type
-def int_method(probtype, inttype, ststype, extststype):
+def int_method(probtype, inttype, ststype, extststype, table_id):
     flags = ""
     if (probtype == "AdvDiff"):
         flags += " --no-reaction"
@@ -33,7 +33,7 @@ def int_method(probtype, inttype, ststype, extststype):
         raise(ValueError, msg)
 
     if (inttype == "ARK"):
-        flags += " --integrator 1"
+        flags += " --integrator 1 --table_id %d" % table_id
 
     elif (inttype == "ERK"):
         flags += " --integrator 0"
@@ -97,9 +97,9 @@ def int_method(probtype, inttype, ststype, extststype):
     return flags
 
 # utility routine to run a single nested KPR test, storing the run options and solver statistics
-def runtest(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, c=1e-2, d=1e-1, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
-    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10, 'AdvEvals': 1e10, 'DiffEvals': 1e10, 'RxEvals': 1e10}
-    runcommand = "%s --c %e --d %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --calc_error" % (exe, c, d, eps, nx, rtol, atol, fixedh) + int_method(probtype, inttype, ststype, extststype)
+def runtest(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, showcommand=False):
+    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10, 'AdvEvals': 1e10, 'DiffEvals': 1e10, 'RxEvals': 1e10}
+    runcommand = "%s --c %e --d %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --calc_error" % (exe, c, d, eps, nx, rtol, atol, fixedh, maxl) + int_method(probtype, inttype, ststype, extststype, table_id)
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
     stats['ReturnCode'] = result.returncode
     if (result.returncode != 0):
@@ -177,31 +177,36 @@ DoAdvDiffRx = True
 DoAdvDiff = True
 DoRxDiff = True
 DoFixedTests = True
-DoAdaptiveTests = False
+DoAdaptiveTests = True
 
 # Shared testing parameters
 Executable = './bin/advection_diffusion_reaction'
-AdvDiffRxSolvers = [['ARK', None, None],
-                    ['ExtSTS', 'RKC', 'ARS'],
-                    ['ExtSTS', 'RKL', 'ARS'],
-                    ['ExtSTS', 'RKC', 'GiraldoARK'],
-                    ['ExtSTS', 'RKL', 'GiraldoARK']]
-AdvDiffSolvers = [['ARK', None, None],
-                  ['ExtSTS', 'RKC', 'Ralston'],
-                  ['ExtSTS', 'RKL', 'Ralston'],
-                  ['ExtSTS', 'RKC', 'HeunEuler'],
-                  ['ExtSTS', 'RKL', 'HeunEuler']]
-RxDiffSolvers = [['ARK', None, None],
-                 ['ExtSTS', 'RKC', 'SSPSDIRK2'],
-                 ['ExtSTS', 'RKL', 'SSPSDIRK2'],
-                 ['ExtSTS', 'RKC', 'GiraldoDIRK'],
-                 ['ExtSTS', 'RKL', 'GiraldoDIRK']]
+AdvDiffRxSolvers = [['ARK', None, None, 0],
+                    ['ARK', None, None, 1],
+                    ['ARK', None, None, 2],
+                    ['ExtSTS', 'RKC', 'ARS', None],
+                    ['ExtSTS', 'RKL', 'ARS', None],
+                    ['ExtSTS', 'RKC', 'GiraldoARK', None],
+                    ['ExtSTS', 'RKL', 'GiraldoARK', None]]
+AdvDiffSolvers = [['ARK', None, None, 0],
+                  ['ExtSTS', 'RKC', 'Ralston', None],
+                  ['ExtSTS', 'RKL', 'Ralston', None],
+                  ['ExtSTS', 'RKC', 'HeunEuler', None],
+                  ['ExtSTS', 'RKL', 'HeunEuler', None]]
+RxDiffSolvers = [['ARK', None, None, 0],
+                 ['ARK', None, None, 5],
+                 ['ARK', None, None, 6],
+                 ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKC', 'GiraldoDIRK', None],
+                 ['ExtSTS', 'RKL', 'GiraldoDIRK', None]]
 c = 1e-2
 d = 1e-1
 eps = 1e-2
 nx = 512
-rtol = [1e-3, 1e-4, 1e-5]
+rtol = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 atol = 1e-11
+fixed_maxl = 500
 fixedh = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
 # Advection-diffusion-reaction tests
@@ -213,8 +218,9 @@ if (DoAdvDiffRx):
         for solver in AdvDiffRxSolvers:
             for h in fixedh:
                 Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], c=c, d=d, eps=eps,
-                                     nx=nx, fixedh=h))
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d, eps=eps,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
         Df = pd.DataFrame.from_records(Stats)
         print("Fixed step AdvDiffRx test Df:")
         print(Df)
@@ -227,7 +233,8 @@ if (DoAdvDiffRx):
         for solver in AdvDiffRxSolvers:
             for rt in rtol:
                 Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], c=c, d=d,
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
                                      eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step AdvDiffRx test Df:")
@@ -244,8 +251,9 @@ if (DoAdvDiff):
         for solver in AdvDiffSolvers:
             for h in fixedh:
                 Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], c=c, d=d,
-                                     nx=nx, fixedh=h))
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
         Df = pd.DataFrame.from_records(Stats)
         print("Fixed step AdvDiff test Df:")
         print(Df)
@@ -258,7 +266,8 @@ if (DoAdvDiff):
         for solver in AdvDiffSolvers:
             for rt in rtol:
                 Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], c=c, d=d,
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
                                      nx=nx, rtol=rt, atol=atol, fixedh=0.0))
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step AdvDiff test Df:")
@@ -275,8 +284,9 @@ if (DoRxDiff):
         for solver in RxDiffSolvers:
             for h in fixedh:
                 Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], d=d, eps=eps,
-                                     nx=nx, fixedh=h))
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], d=d, eps=eps,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
         Df = pd.DataFrame.from_records(Stats)
         print("Fixed step RxDiff test Df:")
         print(Df)
@@ -289,7 +299,8 @@ if (DoRxDiff):
         for solver in RxDiffSolvers:
             for rt in rtol:
                 Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2], d=d, eps=eps,
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], d=d, eps=eps,
                                      nx=nx, rtol=rt, atol=atol, fixedh=0.0))
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step RxDiff test Df:")

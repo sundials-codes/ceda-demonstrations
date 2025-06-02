@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
     flag = SetupERK(ctx, udata, uopts, y, &arkode_mem);
     break;
   case (1):
-    flag = SetupARK(ctx, udata, uopts, y, &A, &LS, &arkode_mem);
+    flag = SetupARK(ctx, udata, uopts, y, &LS, &arkode_mem);
     break;
   case (2):
     flag = SetupExtSTS(ctx, udata, uopts, y, &A, &LS, &sts_mem, &arkode_mem);
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
   // Create reference solver (4th-order ARK with tighter relative tolerance)
   if (uopts.calc_error)
   {
-    flag = SetupARK(ctx, udata, uopts, yref, &Aref, &LSref, &arkref_mem);
+    flag = SetupReference(ctx, udata, uopts, yref, &Aref, &LSref, &arkref_mem);
     if (check_flag(flag, "Reference solver setup")) { return 1; }
     flag = ARKodeSStolerances(arkref_mem, 1e-10, uopts.atol);
     if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
@@ -328,7 +328,247 @@ int SetupERK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 }
 
 int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-             SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem)
+             SUNLinearSolver* LS, void** arkode_mem)
+{
+  // Problem configuration
+  ARKRhsFn fe_RHS;   // explicit RHS function
+  ARKRhsFn fi_RHS;   // implicit RHS function
+
+  // advection-diffusion-reaction
+  if (udata.reaction && udata.advection)
+  {
+    fe_RHS = f_advection;
+    fi_RHS = f_diff_react;
+  }
+  // advection-diffusion
+  else if (!udata.reaction && udata.advection)
+  {
+    fe_RHS = f_advection;
+    fi_RHS = f_diffusion;
+  }
+  // diffusion-reaction
+  else if (udata.reaction && !udata.advection)
+  {
+    fe_RHS = nullptr;
+    fi_RHS = f_diff_react;
+  }
+  // diffusion
+  else if (!udata.reaction && !udata.advection)
+  {
+    fe_RHS = nullptr;
+    fi_RHS = f_diffusion;
+  }
+  else
+  {
+    cerr << "ERROR: Invalid problem configuration" << endl;
+    return -1;
+  }
+
+  // Create ARKStep memory
+  *arkode_mem = ARKStepCreate(fe_RHS, fi_RHS, ZERO, y, ctx);
+  if (check_ptr(arkode_mem, "ARKStepCreate")) { return 1; }
+
+  // Specify tolerances
+  int flag = ARKodeSStolerances(*arkode_mem, uopts.rtol, uopts.atol);
+  if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
+
+  // Attach user data
+  flag = ARKodeSetUserData(*arkode_mem, &udata);
+  if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
+
+  // Create linear solver
+  *LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, uopts.maxl, ctx);
+  if (check_ptr(*LS, "SUNLinSol_Band")) { return 1; }
+
+  // Attach linear solver
+  flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
+  if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
+
+  // Tighten implicit solver tolerances
+  flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-2);
+  if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
+  flag = ARKodeSetEpsLin(*arkode_mem, 1.e-2);
+  if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
+
+  // Use "deduce implicit RHS" option
+  flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
+  if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
+
+  // Set the predictor method
+  flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
+  if (check_flag(flag, "ARKodeSetPredictorMethod")) { return 1; }
+
+  if (uopts.linear)
+  {
+    // Specify linearly implicit non-time-dependent RHS
+    flag = ARKodeSetLinear(*arkode_mem, SUNFALSE);
+    if (check_flag(flag, "ARKodeSetLinear")) { return 1; }
+  }
+
+  if (uopts.table_id > 0)
+  {
+    // Set the RK tables
+    ARKodeButcherTable Be = nullptr;
+    ARKodeButcherTable Bi = nullptr;
+    if (uopts.table_id == 1) // ARS(2,2,2)
+    {
+      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
+      const sunrealtype delta = SUN_RCONST(1.0)-SUN_RCONST(1.0)/(SUN_RCONST(2.0)*gamma);
+      Be->c[1] = gamma;
+      Be->c[2] = SUN_RCONST(1.0);;
+      Be->A[1][0] = gamma;
+      Be->A[2][0] = delta;
+      Be->A[2][1] = SUN_RCONST(1.0)-delta;
+      Be->b[0] = delta;
+      Be->b[1] = SUN_RCONST(1.0)-delta;
+      Be->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
+      Be->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+      Be->q = 2;
+      Be->p = 1;
+      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1] = gamma;
+      Bi->c[2] = SUN_RCONST(1.0);;
+      Bi->A[1][1] = gamma;
+      Bi->A[2][1] = SUN_RCONST(1.0)-gamma;
+      Bi->A[2][2] = gamma;
+      Bi->b[1] = SUN_RCONST(1.0)-gamma;
+      Bi->b[2] = gamma;
+      Bi->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
+      Bi->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+      Bi->q = 2;
+      Bi->p = 1;
+    }
+    else if (uopts.table_id == 2) // Giraldo ARK2
+    {
+      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Be->c[2] = SUN_RCONST(1.0);
+      Be->A[1][0] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Be->A[2][0] = (SUN_RCONST(3.0)-SUNRsqrt(SUN_RCONST(8.0)))/SUN_RCONST(6.0);
+      Be->A[2][1] = (SUN_RCONST(3.0)+SUNRsqrt(SUN_RCONST(8.0)))/SUN_RCONST(6.0);
+      Be->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Be->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Be->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Be->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Be->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Be->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Be->q = 2;
+      Be->p = 1;
+      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Bi->c[2] = SUN_RCONST(1.0);
+      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[1][1] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[2][0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Bi->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Bi->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->q = 2;
+      Bi->p = 1;
+    }
+    else if (uopts.table_id == 3) // Ralston
+    {
+      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
+      Be->c[2] = SUN_RCONST(1.0);
+      Be->A[1][0] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
+      Be->A[2][0] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
+      Be->A[2][1] = SUN_RCONST(3.0)/SUN_RCONST(4.0);
+      Be->b[0] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
+      Be->b[1] = SUN_RCONST(3.0)/SUN_RCONST(4.0);
+      Be->d[0] = SUN_RCONST(5.0)/SUN_RCONST(37.0);
+      Be->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
+      Be->d[2] = SUN_RCONST(22.0)/SUN_RCONST(111.0);
+      Be->q = 2;
+      Be->p = 1;
+    }
+    else if (uopts.table_id == 4) // Heun-Euler
+    {
+      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1] = SUN_RCONST(1.0);
+      Be->c[2] = SUN_RCONST(1.0);
+      Be->A[1][0] = SUN_RCONST(1.0);
+      Be->A[2][0] = SUN_RCONST(0.5);
+      Be->A[2][1] = SUN_RCONST(0.5);
+      Be->b[0] = SUN_RCONST(0.5);
+      Be->b[1] = SUN_RCONST(0.5);
+      Be->d[0] = SUN_RCONST(1.0);
+      Be->q = 2;
+      Be->p = 1;
+    }
+    else if (uopts.table_id == 5) // SSP SDIRK2
+    {
+      Bi = ARKodeButcherTable_Alloc(2, SUNTRUE);
+      const sunrealtype beta = SUN_RCONST(1.0) - SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->c[0] = beta;
+      Bi->c[1] = SUN_RCONST(1.0)-beta;
+      Bi->A[0][0] = beta;
+      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(2.0)*beta;
+      Bi->A[1][1] = beta;
+      Bi->b[0] = SUN_RCONST(0.5);
+      Bi->b[1] = SUN_RCONST(0.5);
+      Bi->d[0] = SUN_RCONST(5.0)/SUN_RCONST(12.0);
+      Bi->d[1] = SUN_RCONST(7.0)/SUN_RCONST(12.0);
+      Bi->q = 2;
+      Bi->p = 1;
+    }
+    else if (uopts.table_id == 6) // Giraldo DIRK2
+    {
+      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Bi->c[2] = SUN_RCONST(1.0);
+      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[1][1] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[2][0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
+      Bi->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Bi->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
+      Bi->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
+      Bi->q = 2;
+      Bi->p = 1;
+    }
+    flag = ARKStepSetTables(*arkode_mem, 2, 1, Bi, Be);
+    if (check_flag(flag, "ARKStepSetTables")) { return 1; }
+    if (Be) { ARKodeButcherTable_Free(Be); }
+    if (Bi) { ARKodeButcherTable_Free(Bi); }
+  }
+  else
+  {
+    // Select default method of a given order
+    flag = ARKodeSetOrder(*arkode_mem, uopts.order);
+    if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
+  }
+
+  // Set fixed step size
+  if (uopts.fixed_h > ZERO)
+  {
+    flag = ARKodeSetFixedStep(*arkode_mem, uopts.fixed_h);
+    if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+  }
+
+  // Set max steps between outputs
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, uopts.maxsteps);
+  if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
+
+  // Set stopping time
+  flag = ARKodeSetStopTime(*arkode_mem, udata.tf);
+  if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
+
+  return 0;
+}
+
+int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
+                   SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem)
 {
   // Problem configuration
   ARKRhsFn fe_RHS;   // explicit RHS function
@@ -752,6 +992,10 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   flag = ARKodeSetMaxNumSteps(*arkode_mem, uopts.maxsteps);
   if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
 
+  // Tighten safety factor for time step selection
+  flag = ARKodeSetSafetyFactor(*arkode_mem, 0.8);
+  if (check_flag(flag, "ARKodeSetSafetyFactor")) { return 1; }
+
   // Set stopping time
   flag = ARKodeSetStopTime(*arkode_mem, udata.tf);
   if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
@@ -788,7 +1032,9 @@ int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
   // Evolve a single time step
   sunrealtype tret;
   flag = ARKodeEvolve(content->sts_arkode_mem, tout, y, &tret, ARK_ONE_STEP);
-  if (check_flag(flag, "ARKodeEvolve")) { return flag; }
+  if (check_flag(flag, "ARKodeEvolve")) {
+    return flag;
+  }
 
   return 0;
 }
@@ -1153,7 +1399,7 @@ int SetIC(N_Vector y, UserData& udata)
   for (sunindextype i = 0; i < udata.nx; i++)
   {
     x              = udata.xl + i * udata.dx;
-    p              = SUN_RCONST(0.1) * sin(PI * x);
+    p              = SUN_RCONST(0.1) * sin(M_PI * x);
     ydata[UIDX(i)] = udata.A + p;
     ydata[VIDX(i)] = udata.B / udata.A + p;
     ydata[WIDX(i)] = udata.B + p;
