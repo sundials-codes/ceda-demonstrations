@@ -1374,13 +1374,13 @@ double compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app)
 
 int main(int argc, char **argv)
 {
-  bool is_STS = false;
+  bool is_STS = true;
   bool is_SSP = true;
   bool test_nvector = false;
   if(test_nvector)
     test_nvector_gkylzero(false);
 
-  int wrms_norm_type = 1;
+  int wrms_norm_type = 2;
 
   bool compute_error = true;
 
