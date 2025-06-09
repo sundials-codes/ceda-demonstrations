@@ -41,7 +41,7 @@ void test_nvector_gkylzero (bool use_gpu) {
 
   /* Create the SUNDIALS context object for this simulation */
   SUNContext sunctx;
-  SUNContext_Create(SUN_COMM_NULL, &sunctx);
+  SUNContext_Create(MPI_COMM_WORLD, &sunctx);
 
   struct gkyl_array *testarray;
 
