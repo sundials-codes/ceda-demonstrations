@@ -19,6 +19,7 @@
 #include <gkyl_array.h>
 #include <gkyl_array_ops.h>
 #include <gkyl_array_reduce.h>
+#include <gkyl_alloc.h>
 
 #ifdef GKYL_HAVE_MPI
 #include <mpi.h>

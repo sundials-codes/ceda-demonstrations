@@ -1352,21 +1352,47 @@ write_data(struct gkyl_tm_trigger* iot, struct gkyl_diffusion_app* app, double t
   }
 }
 
-double compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app) {
-  double error = 0;
-
+double compute_max_error(N_Vector u, N_Vector v, struct gkyl_diffusion_app* app)
+{
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
+  double error = -DBL_MAX;
 
-  sunrealtype *u_data = udptr->data;
-  sunrealtype *v_data = vdptr->data;
-
-  sunindextype N = (udptr->size*udptr->ncomp);
-
-  for (int i = 0; i < N; i++) {
-    error = fmax(error, fabs(u_data[i] - v_data[i]));
+  // TODO: change code so these allocations only happen once.
+  int ncomp = udptr->ncomp;
+  struct gkyl_array* wdptr; // Temporary buffer. Should change code to avoid this.
+  double *red_ho = gkyl_malloc(ncomp * sizeof(double));
+  double *red;
+  if (app->use_gpu) {
+    red = gkyl_cu_malloc(ncomp * sizeof(double));
+    wdptr = mkarr(true, ncomp, udptr->size);
+  }
+  else {
+    red = gkyl_malloc(ncomp * sizeof(double));
+    wdptr = mkarr(false, ncomp, udptr->size);
   }
 
+  gkyl_array_set(wdptr, 1.0, udptr);
+  gkyl_array_accumulate(wdptr, -1.0, vdptr);
+  gkyl_array_reduce(red, wdptr, GKYL_ABS_MAX);
+
+  if (app->use_gpu)
+    gkyl_cu_memcpy(red_ho, red, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
+  else
+    memcpy(red_ho, red, ncomp * sizeof(double));
+
+  // Reduce over components.
+  for (int i=0; i<ncomp; i++)
+    error = fmax(error, fabs(red_ho[i]));
+
+  gkyl_free(red_ho);
+  if (app->use_gpu)
+    gkyl_cu_free(red);
+  else
+    gkyl_free(red);
+
+  gkyl_array_release(wdptr);
+ 
   printf("\nerror = %e\n", error);
 
   return error;
@@ -1445,7 +1471,7 @@ int main(int argc, char **argv)
   N_Vector y       = NULL; /* empty vector for storing solution */
   N_Vector yref    = NULL; /* empty vector for storing solution */
 
-  struct gkyl_array *fref = mkarr(false, app->basis.num_basis, app->local_ext.volume);
+  struct gkyl_array *fref = mkarr(app->use_gpu, app->basis.num_basis, app->local_ext.volume);
   gkyl_array_set(fref, 1.0, app->f);
 
   // compute the reference solution and the error
@@ -1575,6 +1601,7 @@ int main(int argc, char **argv)
   printf("\nmax error = %e\n", max_error);
 
   // Free the app.
+  gkyl_array_release(fref);
   gkyl_diffusion_app_release(app);
 
   return 0;
