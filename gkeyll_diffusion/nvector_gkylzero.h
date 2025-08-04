@@ -19,6 +19,12 @@
 #include <gkyl_array.h>
 #include <gkyl_array_ops.h>
 #include <gkyl_array_reduce.h>
+#include <gkyl_alloc.h>
+
+#ifdef GKYL_HAVE_MPI
+#include <mpi.h>
+#include <gkyl_mpi_comm.h>
+#endif
 
 #define NV_CONTENT_GKZ(v) ((N_VectorContent_Gkylzero)(v->content))
 

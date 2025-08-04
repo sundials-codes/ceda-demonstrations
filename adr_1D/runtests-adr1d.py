@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #------------------------------------------------------------
 # Programmer(s):  Daniel R. Reynolds @ SMU
 #------------------------------------------------------------
@@ -9,100 +9,302 @@
 
 # imports
 import pandas as pd
+import numpy as np
 import subprocess
 import shlex
-from time import perf_counter
 
 #####################
 # utility routines
 
-# utility routine to run a test, storing the run options and solver statistics
-def runtest_adr(exe, adv, rx, c, d, eps, nx, integrator, order, sts, extsts, rtol, h, calcerr, commonargs, showcommand=False):
-    stats = {'adv': adv, 'rx': rx, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'integrator': integrator, 'order': order, 'sts': sts, 'extsts': extsts,
-             'rtol': rtol, 'h': h, 'calcerr': calcerr, 'commonargs': commonargs,
-             'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10, 'FeEvals': 1e10, 'FiEvals': 1e10, 'Runtime': 1e10}
-    runcommand = "%s --c %e --d %e --eps %e --nx %i --integrator %i --order %i --sts_method %i --extsts_method %i --rtol %e %s" % (exe, c, d, eps, nx, integrator, order, sts, extsts, rtol, commonargs)
-    if (not adv):
-        runcommand = runcommand + " --no-advection"
-    if (not rx):
-        runcommand = runcommand + " --no-reaction"
-    if (h > 0.0):
-        runcommand = runcommand + " --fixed_h %e" % (h)
-    if (calcerr):
-        runcommand = runcommand + " --calc_error"
-    start = perf_counter()
+# utility routine to set inputs for running a specific integration type
+def int_method(probtype, inttype, ststype, extststype, table_id):
+    flags = ""
+    if (probtype == "AdvDiff"):
+        flags += " --no-reaction"
+    elif (probtype == "RxDiff"):
+        flags += " --no-advection"
+    elif (probtype == "AdvDiffRx"):
+        flags += " "
+    else:
+        msg = """
+        Error: invalid problem type
+        Valid problem types are: AdvDiff, RxDiff, AdvDiffRx
+        """
+        raise(ValueError, msg)
+
+    if (inttype == "ARK"):
+        flags += " --integrator 1 --table_id %d" % table_id
+
+    elif (inttype == "ERK"):
+        flags += " --integrator 0"
+
+    elif (inttype == "ExtSTS"):
+        flags += " --integrator 2"
+
+        if (ststype == "RKC"):
+            flags += " --sts_method 0"
+        elif (ststype == "RKL"):
+            flags += " --sts_method 1"
+        else:
+            msg = """
+            Error: invalid sts type
+            Valid choices are: RKC, RKL
+            """
+            raise(ValueError, msg)
+
+        if (extststype == "ARS"):
+            if (probtype != "AdvDiffRx"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 0"
+        elif (extststype == "Ralston"):
+            if (probtype != "AdvDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 0"
+        elif (extststype == "SSPSDIRK2"):
+            if (probtype != "RxDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 0"
+        elif (extststype == "SSPSDIRK2"):
+            if (probtype != "RxDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 0"
+        elif (extststype == "GiraldoARK"):
+            if (probtype != "AdvDiffRx"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 1"
+        elif (extststype == "GiraldoDIRK"):
+            if (probtype != "RxDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 1"
+        elif (extststype == "HeunEuler"):
+            if (probtype != "AdvDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 1"
+        else:
+            msg = """
+            Error: invalid extsts type
+            Valid choices are: ARS, Ralston, SSPSDIRK2, GiraldoARK, GiraldoDIRK, HeunEuler
+            """
+            raise(ValueError, msg)
+
+    else:
+        msg = """
+        Error: invalid integrator
+        Valid integrator choices are: ARK, ERK, ExtSTS
+        """
+        raise(ValueError, msg)
+
+    return flags
+
+# utility routine to run a single nested KPR test, storing the run options and solver statistics
+def runtest(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, showcommand=False):
+    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10, 'AdvEvals': 1e10, 'DiffEvals': 1e10, 'RxEvals': 1e10}
+    runcommand = "%s --c %e --d %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --calc_error" % (exe, c, d, eps, nx, rtol, atol, fixedh, maxl) + int_method(probtype, inttype, ststype, extststype, table_id)
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
-    elapsed = perf_counter() - start
     stats['ReturnCode'] = result.returncode
-    stats['Runtime'] = elapsed
     if (result.returncode != 0):
         print("Run command " + runcommand + " FAILURE: " + str(result.returncode))
-        print(result.stderr)
     else:
         if (showcommand):
             print("Run command " + runcommand + " SUCCESS")
         lines = str(result.stdout).split('\\n')
-        for line in lines:
-            txt = line.split()
-            if ("Steps" in txt):
-                stats['Steps'] = int(txt[2])
-            elif (("Error" in txt) and ("test" in txt)):
-                stats['Fails'] = int(txt[4])
-            elif (("Solution" in txt) and ("error" in txt)):
-                stats['Accuracy'] = float(txt[3])
-            elif (("Explicit" in txt) and ("RHS" in txt)):
-                stats['FeEvals'] += int(txt[4])
-            elif (("Implicit" in txt) and ("RHS" in txt)):
-                stats['FiEvals'] += int(txt[4])
+        if (inttype == "ARK"):
+            for line in lines:
+                txt = line.split()
+                if ("Steps" in txt):
+                    stats['Steps'] = int(txt[2])
+                if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
+                    stats['Fails'] = int(txt[4])
+                elif (("Solution" in txt) and ("error" in txt)):
+                    stats['Accuracy'] = float(txt[3])
+                elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                    if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+                        stats['AdvEvals'] = int(txt[4])
+                    if (probtype == "AdvDiff"):
+                        stats['AdvEvals'] = int(txt[4])
+                elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                    if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+                        stats['DiffEvals'] = int(txt[4])
+                        stats['RxEvals'] = int(txt[4])
+                    if (probtype == "AdvDiff"):
+                        stats['DiffEvals'] = int(txt[4])
+                        stats['RxEvals'] = 0
+        elif (inttype == "ERK"):
+            for line in lines:
+                txt = line.split()
+                if ("Steps" in txt):
+                    stats['Steps'] = int(txt[2])
+                if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
+                    stats['Fails'] = int(txt[4])
+                elif (("Solution" in txt) and ("error" in txt)):
+                    stats['Accuracy'] = float(txt[3])
+                elif (("RHS" in txt) and ("evals" in txt)):
+                    if (probtype == "AdvDiffRx"):
+                        stats['AdvEvals'] = int(txt[3])
+                        stats['DiffEvals'] = int(txt[3])
+                        stats['RxEvals'] = int(txt[3])
+                    if (probtype == "AdvDiff"):
+                        stats['AdvEvals'] = int(txt[3])
+                        stats['DiffEvals'] = int(txt[3])
+                        stats['RxEvals'] = 0
+                    if (probtype == "RxDiff"):
+                        stats['AdvEvals'] = 0
+                        stats['DiffEvals'] = int(txt[3])
+                        stats['RxEvals'] = int(txt[3])
+        else:
+            for line in lines:
+                txt = line.split()
+                if ("Steps" in txt and stats['Steps'] == 1e10):
+                    stats['Steps'] = int(txt[2])
+                if (("Error" in txt) and ("test" in txt) and ("fails" in txt) and stats['Fails'] == 1e10):
+                    stats['Fails'] = int(txt[4])
+                elif (("Solution" in txt) and ("error" in txt)):
+                    stats['Accuracy'] = float(txt[3])
+                elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                    stats['AdvEvals'] = int(txt[6])
+                elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                    stats['RxEvals'] = int(txt[6])
+                elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
+                    stats['DiffEvals'] = int(txt[4])
     return stats
 
-# filename to hold run statistics
-fname = "adr1d_results"
 
-# shortcuts to executable/configuration of different solver types
-DIRKSolver = "./diffusion_2D_mpi --integrator dirk --order 2"
-DIRKSolverHypre = "./diffusion_2D_mpi_hypre --integrator dirk --order 2"
-ERK2Solver = "./diffusion_2D_mpi --integrator erk --order -2"
-ERK3Solver = "./diffusion_2D_mpi --integrator erk --order -3"
-RKCSolver = "./diffusion_2D_mpi --integrator rkc"
-RKLSolver = "./diffusion_2D_mpi --integrator rkl"
+#####################
+# testing setup
 
-# common testing parameters
-homo = " --inhomogeneous"
-atol = " --atol 1.e-8"
-controller = " --controller 2"
-calcerror = " --error"
-precsetup = " --nonlinear --msbp 1"
-maxsteps = " --maxsteps 100000"
-common = homo + atol + controller + calcerror + precsetup + maxsteps
+# Flags to enable/disable categories of tests
+DoAdvDiffRx = True
+DoAdvDiff = True
+DoRxDiff = True
+DoFixedTests = True
+DoAdaptiveTests = True
 
-# parameter arrays to iterate over
-kxky = [{'kx': 0.1,  'ky': 0.0},
-        {'kx': 1.0,  'ky': 0.0},
-        {'kx': 10.0, 'ky': 0.0}]
-procgrids = [{'np': 1,   'grid': 32},
-             {'np': 4,   'grid': 64},
-             {'np': 16,  'grid': 128}]
-rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
-solvertype = [{'name': 'dirk-Jacobi', 'exe': DIRKSolver},
-              {'name': 'dirk-hypre', 'exe': DIRKSolverHypre},
-              {'name': 'erk2', 'exe': ERK2Solver},
-              {'name': 'erk3', 'exe': ERK3Solver},
-              {'name': 'rkc', 'exe': RKCSolver},
-              {'name': 'rkl', 'exe': RKLSolver}]
+# Shared testing parameters
+Executable = './bin/advection_diffusion_reaction'
+AdvDiffRxSolvers = [['ARK', None, None, 0],
+                    ['ARK', None, None, 1],
+                    ['ARK', None, None, 2],
+                    ['ExtSTS', 'RKC', 'ARS', None],
+                    ['ExtSTS', 'RKL', 'ARS', None],
+                    ['ExtSTS', 'RKC', 'GiraldoARK', None],
+                    ['ExtSTS', 'RKL', 'GiraldoARK', None]]
+AdvDiffSolvers = [['ARK', None, None, 0],
+                  ['ExtSTS', 'RKC', 'Ralston', None],
+                  ['ExtSTS', 'RKL', 'Ralston', None],
+                  ['ExtSTS', 'RKC', 'HeunEuler', None],
+                  ['ExtSTS', 'RKL', 'HeunEuler', None]]
+RxDiffSolvers = [['ARK', None, None, 0],
+                 ['ARK', None, None, 5],
+                 ['ARK', None, None, 6],
+                 ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKC', 'GiraldoDIRK', None],
+                 ['ExtSTS', 'RKL', 'GiraldoDIRK', None]]
+c = 1e-2
+d = 1e-1
+eps = 1e-2
+nx = 512
+rtol = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
+atol = 1e-11
+fixed_maxl = 500
+fixedh = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
-# run tests and collect results as a pandas data frame
-RunStats = []
-for kxy in kxky:
-    for rtol in rtols:
-        for pg in procgrids:
-            for solver in solvertype:
-                stat = runtest(solver, pg, rtol, kxy, common)
-                RunStats.append(stat)
-RunStatsDf = pd.DataFrame.from_records(RunStats)
+# Advection-diffusion-reaction tests
+if (DoAdvDiffRx):
 
-# save dataframe as Excel file
-print("RunStatsDf object:")
-print(RunStatsDf)
-print("Saving as Excel")
-RunStatsDf.to_excel(fname + '.xlsx', index=False)
+    if (DoFixedTests):
+
+        Stats = []
+        for solver in AdvDiffRxSolvers:
+            for h in fixedh:
+                Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d, eps=eps,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Fixed step AdvDiffRx test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('AdvDiffRx-fixed.xlsx', index=False)
+
+    if (DoAdaptiveTests):
+
+        Stats = []
+        for solver in AdvDiffRxSolvers:
+            for rt in rtol:
+                Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
+                                     eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Adaptive step AdvDiffRx test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('AdvDiffRx-adapt.xlsx', index=False)
+
+# Advection-diffusion tests
+if (DoAdvDiff):
+
+    if (DoFixedTests):
+
+        Stats = []
+        for solver in AdvDiffSolvers:
+            for h in fixedh:
+                Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Fixed step AdvDiff test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('AdvDiff-fixed.xlsx', index=False)
+
+    if (DoAdaptiveTests):
+
+        Stats = []
+        for solver in AdvDiffSolvers:
+            for rt in rtol:
+                Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], c=c, d=d,
+                                     nx=nx, rtol=rt, atol=atol, fixedh=0.0))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Adaptive step AdvDiff test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('AdvDiff-adapt.xlsx', index=False)
+
+# Reaction-diffusion tests
+if (DoRxDiff):
+
+    if (DoFixedTests):
+
+        Stats = []
+        for solver in RxDiffSolvers:
+            for h in fixedh:
+                Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], d=d, eps=eps,
+                                     nx=nx, fixedh=h, rtol=1e-3*(h*h), maxl=fixed_maxl))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Fixed step RxDiff test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('RxDiff-fixed.xlsx', index=False)
+
+    if (DoAdaptiveTests):
+
+        Stats = []
+        for solver in RxDiffSolvers:
+            for rt in rtol:
+                Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                     ststype=solver[1], extststype=solver[2],
+                                     table_id=solver[3], d=d, eps=eps,
+                                     nx=nx, rtol=rt, atol=atol, fixedh=0.0))
+        Df = pd.DataFrame.from_records(Stats)
+        print("Adaptive step RxDiff test Df:")
+        print(Df)
+        print("Saving as Excel")
+        Df.to_excel('RxDiff-adapt.xlsx', index=False)
+
