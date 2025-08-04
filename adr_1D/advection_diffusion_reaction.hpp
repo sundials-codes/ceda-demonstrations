@@ -146,12 +146,6 @@ struct UserOptions
 
   bool linear = false; // signal that the problem is linearly implicit
 
-  // save and reuse prior fast time step sizes
-  bool save_hinit = false;
-  bool save_hcur  = false;
-
-  sunrealtype hcur_factor = SUN_RCONST(0.7);
-
   bool calc_error = false;
 
   int output = 1;  // 0 = none, 1 = stats, 2 = disk, 3 = disk with tstop
@@ -392,9 +386,6 @@ static void InputHelp()
   cout << "  --lssetupfreq <int>      : LS setup frequency\n";
   cout << "  --maxsteps <int>         : max steps between outputs\n";
   cout << "  --linear                 : linearly implicit\n";
-  cout << "  --save_hinit             : reuse initial fast step\n";
-  cout << "  --save_hcur              : reuse current fast step\n";
-  cout << "  --hcur_factor            : current fast step safety factor\n";
   cout << "  --calc_error             : use reference solution to compute solution error\n";
   cout << "  --output <int>           : output level\n";
   cout << "  --nout <int>             : number of outputs\n";
@@ -484,9 +475,6 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--lssetupfreq", uopts.ls_setup_freq);
   find_arg(args, "--maxsteps", uopts.maxsteps);
   find_arg(args, "--linear", uopts.linear);
-  find_arg(args, "--save_hinit", uopts.save_hinit);
-  find_arg(args, "--save_hcur", uopts.save_hcur);
-  find_arg(args, "--hcur_factor", uopts.hcur_factor);
   find_arg(args, "--calc_error", uopts.calc_error);
   find_arg(args, "--output", uopts.output);
   find_arg(args, "--nout", uopts.nout);

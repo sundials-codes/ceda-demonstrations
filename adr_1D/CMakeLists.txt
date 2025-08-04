@@ -14,3 +14,6 @@ target_link_libraries(${target} PRIVATE
 
 #   request installation of the target into the overall "bin" folder
 install(TARGETS ${target} DESTINATION ${demonstration_bin})
+
+# install plotting and testing scripts
+install(FILES runtests-adr1d.py DESTINATION ${demonstration_bin})
