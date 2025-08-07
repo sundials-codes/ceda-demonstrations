@@ -6,7 +6,7 @@
  * This example simulates the 1D advection-diffusion-reaction equation,
  *
  *   u_t = -c u_x + d u_xx + A - (w + 1) * u + v * u^2
- *   v_t = -c v_x + d u_xx + w * u - v * u^2
+ *   v_t = -c v_x + d v_xx + w * u - v * u^2
  *   w_t = -c w_x + d w_xx + (B - w) / eps - w * u
  *
  * where u, v, and w represent the concentrations of chemical species, c = 0.01
@@ -835,16 +835,16 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->W[0][3][0] = delta - gamma;
       C->W[0][3][2] = one - delta;
       C->W[0][5][0] = -delta;
-      C->W[0][5][2] = delta - one / three;
-      C->W[0][5][4] = one / three;
+      C->W[0][5][2] = delta - SUN_RCONST(0.4);
+      C->W[0][5][4] = SUN_RCONST(0.4);
       C->G[0][1][0] =  gamma;
       C->G[0][2][0] = -gamma;
       C->G[0][2][2] =  gamma;
       C->G[0][3][2] =  one - gamma;
       C->G[0][4][2] = -gamma;
       C->G[0][4][4] =  gamma;
-      C->G[0][5][2] = -one / three;
-      C->G[0][5][4] =  one / three;
+      C->G[0][5][2] = -SUN_RCONST(0.4);
+      C->G[0][5][4] =  SUN_RCONST(0.4);
     }
     else                           // Giraldo ARK2
     {
@@ -905,7 +905,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->W[0][3][1] = two / three - three / four;
       C->W[0][3][2] = SUN_RCONST(22.0)/SUN_RCONST(111.0);
     }
-    else                           // Heun-Euler
+    else                           // Heun-Euler -- THE EMBEDDING LOOKS LIKE IT NEEDS WORK
     {
       C = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
