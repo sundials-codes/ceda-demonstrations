@@ -27,6 +27,8 @@
 #include <sundials/sundials_math.h> /* def. of SUNRsqrt, etc. */
 #include <sundials/sundials_types.h> /* definition of type sunrealtype          */
 
+#include <sundomeigest/sundomeigest_power.h> /* access to Power Iteration module */
+
 #include <rt_arg_parse.h>
 #include <time.h>
 
@@ -969,9 +971,26 @@ int STS_init(struct gkyl_diffusion_app* app, N_Vector* y, void** arkode_mem)
   flag = ARKodeSStolerances(*arkode_mem, reltol, abstol);
   if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
 
-  /* Specify user provided spectral radius */
-  flag = LSRKStepSetDomEigFn(*arkode_mem, dom_eig);
-  if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+  bool user_provided_dom_eig = false;
+  SUNDomEigEstimator DEE = NULL; /* domeig estimator object */
+
+  if(user_provided_dom_eig)
+  {
+    /* Specify user provided spectral radius */
+    flag = LSRKStepSetDomEigFn(*arkode_mem, dom_eig);
+    if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+  }
+  else
+  {
+    /* Set the initial random eigenvector for the DEE */
+   //TODO: find a better way to set the initial random eigenvector
+ 
+    DEE = SUNDomEigEst_Power(*y, 100, 0, 0.01, sunctx);
+    if (check_flag(DEE, "SUNDomEigEst_Power", 0)) { return 1; }
+
+    flag = LSRKStepSetDomEigEstimator(*arkode_mem, DEE);
+    if (check_flag(&flag, "LSRKStepSetDomEigEstimator", 1)) { return 1; }
+  }
 
   /* Specify after how many successful steps dom_eig is recomputed
      Note that nsteps = 0 refers to constant dominant eigenvalue */

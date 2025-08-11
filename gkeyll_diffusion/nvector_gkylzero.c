@@ -55,6 +55,7 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   v->ops->nvconst             = N_VConst_Gkylzero;
   v->ops->nvscale             = N_VScale_Gkylzero;
   v->ops->nvwrmsnorm          = N_VWrmsNorm_abs_comp_Gkylzero;
+  v->ops->nvdotprod           = N_VDotProd_Gkylzero;
   v->ops->nvspace             = N_VSpace_Gkylzero;
   v->ops->nvdiv               = N_VDiv_Gkylzero;
   v->ops->nvabs               = N_VAbs_Gkylzero;
@@ -305,6 +306,25 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
     gkyl_free(red);
 
   return red_out;
+}
+
+//TODO: update this function to its GPU version
+sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
+{
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
+
+  sunrealtype *x_data = xdptr->data;
+  sunrealtype *y_data = ydptr->data;
+
+  sunindextype N = (xdptr->size*xdptr->ncomp);
+  sunrealtype dot_prod = 0.0;
+
+  for (sunindextype i=0; i<N; ++i) {
+    dot_prod += x_data[i] * y_data[i];
+  }
+
+  return dot_prod;
 }
 
 //Will be removed soon. No need to create a new function.
