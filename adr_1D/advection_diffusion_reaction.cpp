@@ -116,12 +116,8 @@ int main(int argc, char* argv[])
   // Create integrator
   switch (uopts.integrator)
   {
-  case (0):
-    flag = SetupERK(ctx, udata, uopts, y, &arkode_mem);
-    break;
-  case (1):
-    flag = SetupARK(ctx, udata, uopts, y, &LS, &arkode_mem);
-    break;
+  case (0): flag = SetupERK(ctx, udata, uopts, y, &arkode_mem); break;
+  case (1): flag = SetupARK(ctx, udata, uopts, y, &LS, &arkode_mem); break;
   case (2):
     flag = SetupExtSTS(ctx, udata, uopts, y, &A, &LS, &sts_mem, &arkode_mem);
     break;
@@ -140,7 +136,6 @@ int main(int argc, char* argv[])
     if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
   }
 
-
   // ----------------------
   // Evolve problem in time
   // ----------------------
@@ -158,9 +153,8 @@ int main(int argc, char* argv[])
   flag = OpenOutput(udata, uopts);
   if (check_flag(flag, "OpenOutput")) { return 1; }
 
-  flag = (uopts.calc_error) ?
-    WriteOutput(t, y, yerr, udata, uopts) :
-    WriteOutput(t, y, udata, uopts);
+  flag = (uopts.calc_error) ? WriteOutput(t, y, yerr, udata, uopts)
+                            : WriteOutput(t, y, udata, uopts);
   if (check_flag(flag, "WriteOutput")) { return 1; }
 
   // Loop over output times
@@ -190,9 +184,8 @@ int main(int argc, char* argv[])
     }
 
     // Output solution
-    flag = (uopts.calc_error) ?
-      WriteOutput(t, y, yerr, udata, uopts) :
-      WriteOutput(t, y, udata, uopts);
+    flag = (uopts.calc_error) ? WriteOutput(t, y, yerr, udata, uopts)
+                              : WriteOutput(t, y, udata, uopts);
     if (check_flag(flag, "WriteOutput")) { return 1; }
 
     // Update output time
@@ -331,8 +324,8 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
              SUNLinearSolver* LS, void** arkode_mem)
 {
   // Problem configuration
-  ARKRhsFn fe_RHS;   // explicit RHS function
-  ARKRhsFn fi_RHS;   // implicit RHS function
+  ARKRhsFn fe_RHS; // explicit RHS function
+  ARKRhsFn fi_RHS; // implicit RHS function
 
   // advection-diffusion-reaction
   if (udata.reaction && udata.advection)
@@ -412,130 +405,137 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     ARKodeButcherTable Bi = nullptr;
     if (uopts.table_id == 1) // ARS(2,2,2)
     {
-      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
-      const sunrealtype delta = SUN_RCONST(1.0)-SUN_RCONST(1.0)/(SUN_RCONST(2.0)*gamma);
+      Be                      = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      const sunrealtype gamma = (SUN_RCONST(2.0) - SUNRsqrt(SUN_RCONST(2.0))) /
+                                SUN_RCONST(2.0);
+      const sunrealtype delta = SUN_RCONST(1.0) -
+                                SUN_RCONST(1.0) / (SUN_RCONST(2.0) * gamma);
       Be->c[1] = gamma;
-      Be->c[2] = SUN_RCONST(1.0);;
+      Be->c[2] = SUN_RCONST(1.0);
+      ;
       Be->A[1][0] = gamma;
       Be->A[2][0] = delta;
-      Be->A[2][1] = SUN_RCONST(1.0)-delta;
-      Be->b[0] = delta;
-      Be->b[1] = SUN_RCONST(1.0)-delta;
-      Be->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Be->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-      Be->q = 2;
-      Be->p = 1;
-      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Bi->c[1] = gamma;
-      Bi->c[2] = SUN_RCONST(1.0);;
+      Be->A[2][1] = SUN_RCONST(1.0) - delta;
+      Be->b[0]    = delta;
+      Be->b[1]    = SUN_RCONST(1.0) - delta;
+      Be->d[1]    = SUN_RCONST(2.0) / SUN_RCONST(3.0);
+      Be->d[2]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+      Be->q       = 2;
+      Be->p       = 1;
+      Bi          = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1]    = gamma;
+      Bi->c[2]    = SUN_RCONST(1.0);
+      ;
       Bi->A[1][1] = gamma;
-      Bi->A[2][1] = SUN_RCONST(1.0)-gamma;
+      Bi->A[2][1] = SUN_RCONST(1.0) - gamma;
       Bi->A[2][2] = gamma;
-      Bi->b[1] = SUN_RCONST(1.0)-gamma;
-      Bi->b[2] = gamma;
-      Bi->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Bi->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-      Bi->q = 2;
-      Bi->p = 1;
+      Bi->b[1]    = SUN_RCONST(1.0) - gamma;
+      Bi->b[2]    = gamma;
+      Bi->d[1]    = SUN_RCONST(2.0) / SUN_RCONST(3.0);
+      Bi->d[2]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+      Bi->q       = 2;
+      Bi->p       = 1;
     }
     else if (uopts.table_id == 2) // Giraldo ARK2
     {
-      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Be->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
-      Be->c[2] = SUN_RCONST(1.0);
-      Be->A[1][0] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
-      Be->A[2][0] = (SUN_RCONST(3.0)-SUNRsqrt(SUN_RCONST(8.0)))/SUN_RCONST(6.0);
-      Be->A[2][1] = (SUN_RCONST(3.0)+SUNRsqrt(SUN_RCONST(8.0)))/SUN_RCONST(6.0);
-      Be->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Be->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Be->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Be->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Be->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Be->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Be->q = 2;
-      Be->p = 1;
-      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Bi->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Be          = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1]    = SUN_RCONST(2.0) - SUNRsqrt(SUN_RCONST(2.0));
+      Be->c[2]    = SUN_RCONST(1.0);
+      Be->A[1][0] = SUN_RCONST(2.0) - SUNRsqrt(SUN_RCONST(2.0));
+      Be->A[2][0] = (SUN_RCONST(3.0) - SUNRsqrt(SUN_RCONST(8.0))) /
+                    SUN_RCONST(6.0);
+      Be->A[2][1] = (SUN_RCONST(3.0) + SUNRsqrt(SUN_RCONST(8.0))) /
+                    SUN_RCONST(6.0);
+      Be->b[0] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Be->b[1] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Be->b[2] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Be->d[0] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Be->d[1] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Be->d[2] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Be->q    = 2;
+      Be->p    = 1;
+      Bi       = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1] = SUN_RCONST(2.0) - SUNRsqrt(SUN_RCONST(2.0));
       Bi->c[2] = SUN_RCONST(1.0);
-      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->A[1][1] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->A[2][0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->A[2][1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->A[2][2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Bi->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Bi->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->q = 2;
-      Bi->p = 1;
+      Bi->A[1][0] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[1][1] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[2][0] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][1] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][2] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->b[0] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[1] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[2] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->d[0] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Bi->d[1] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Bi->d[2] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->q    = 2;
+      Bi->p    = 1;
     }
     else if (uopts.table_id == 3) // Ralston
     {
-      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Be->c[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Be->c[2] = SUN_RCONST(1.0);
-      Be->A[1][0] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Be->A[2][0] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
-      Be->A[2][1] = SUN_RCONST(3.0)/SUN_RCONST(4.0);
-      Be->b[0] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
-      Be->b[1] = SUN_RCONST(3.0)/SUN_RCONST(4.0);
-      Be->d[0] = SUN_RCONST(5.0)/SUN_RCONST(37.0);
-      Be->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Be->d[2] = SUN_RCONST(22.0)/SUN_RCONST(111.0);
-      Be->q = 2;
-      Be->p = 1;
+      Be          = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1]    = SUN_RCONST(2.0) / SUN_RCONST(3.0);
+      Be->c[2]    = SUN_RCONST(1.0);
+      Be->A[1][0] = SUN_RCONST(2.0) / SUN_RCONST(3.0);
+      Be->A[2][0] = SUN_RCONST(1.0) / SUN_RCONST(4.0);
+      Be->A[2][1] = SUN_RCONST(3.0) / SUN_RCONST(4.0);
+      Be->b[0]    = SUN_RCONST(1.0) / SUN_RCONST(4.0);
+      Be->b[1]    = SUN_RCONST(3.0) / SUN_RCONST(4.0);
+      Be->d[0]    = SUN_RCONST(5.0) / SUN_RCONST(37.0);
+      Be->d[1]    = SUN_RCONST(2.0) / SUN_RCONST(3.0);
+      Be->d[2]    = SUN_RCONST(22.0) / SUN_RCONST(111.0);
+      Be->q       = 2;
+      Be->p       = 1;
     }
     else if (uopts.table_id == 4) // Heun-Euler
     {
-      Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Be->c[1] = SUN_RCONST(1.0);
-      Be->c[2] = SUN_RCONST(1.0);
+      Be          = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Be->c[1]    = SUN_RCONST(1.0);
+      Be->c[2]    = SUN_RCONST(1.0);
       Be->A[1][0] = SUN_RCONST(1.0);
       Be->A[2][0] = SUN_RCONST(0.5);
       Be->A[2][1] = SUN_RCONST(0.5);
-      Be->b[0] = SUN_RCONST(0.5);
-      Be->b[1] = SUN_RCONST(0.5);
-      Be->d[0] = SUN_RCONST(1.0);
-      Be->q = 2;
-      Be->p = 1;
+      Be->b[0]    = SUN_RCONST(0.5);
+      Be->b[1]    = SUN_RCONST(0.5);
+      Be->d[0]    = SUN_RCONST(1.0);
+      Be->q       = 2;
+      Be->p       = 1;
     }
     else if (uopts.table_id == 5) // SSP SDIRK2
     {
-      Bi = ARKodeButcherTable_Alloc(2, SUNTRUE);
-      const sunrealtype beta = SUN_RCONST(1.0) - SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->c[0] = beta;
-      Bi->c[1] = SUN_RCONST(1.0)-beta;
+      Bi                     = ARKodeButcherTable_Alloc(2, SUNTRUE);
+      const sunrealtype beta = SUN_RCONST(1.0) -
+                               SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->c[0]    = beta;
+      Bi->c[1]    = SUN_RCONST(1.0) - beta;
       Bi->A[0][0] = beta;
-      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(2.0)*beta;
+      Bi->A[1][0] = SUN_RCONST(1.0) - SUN_RCONST(2.0) * beta;
       Bi->A[1][1] = beta;
-      Bi->b[0] = SUN_RCONST(0.5);
-      Bi->b[1] = SUN_RCONST(0.5);
-      Bi->d[0] = SUN_RCONST(5.0)/SUN_RCONST(12.0);
-      Bi->d[1] = SUN_RCONST(7.0)/SUN_RCONST(12.0);
-      Bi->q = 2;
-      Bi->p = 1;
+      Bi->b[0]    = SUN_RCONST(0.5);
+      Bi->b[1]    = SUN_RCONST(0.5);
+      Bi->d[0]    = SUN_RCONST(5.0) / SUN_RCONST(12.0);
+      Bi->d[1]    = SUN_RCONST(7.0) / SUN_RCONST(12.0);
+      Bi->q       = 2;
+      Bi->p       = 1;
     }
     else if (uopts.table_id == 6) // Giraldo DIRK2
     {
-      Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
-      Bi->c[1] = SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0));
+      Bi       = ARKodeButcherTable_Alloc(3, SUNTRUE);
+      Bi->c[1] = SUN_RCONST(2.0) - SUNRsqrt(SUN_RCONST(2.0));
       Bi->c[2] = SUN_RCONST(1.0);
-      Bi->A[1][0] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->A[1][1] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->A[2][0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->A[2][1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->A[2][2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->b[0] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->b[1] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->b[2] = SUN_RCONST(1.0)-SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(2.0));
-      Bi->d[0] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Bi->d[1] = (SUN_RCONST(4.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(8.0);
-      Bi->d[2] = SUN_RCONST(1.0)/SUNRsqrt(SUN_RCONST(8.0));
-      Bi->q = 2;
-      Bi->p = 1;
+      Bi->A[1][0] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[1][1] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->A[2][0] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][1] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->A[2][2] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->b[0] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[1] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->b[2] = SUN_RCONST(1.0) - SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(2.0));
+      Bi->d[0] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Bi->d[1] = (SUN_RCONST(4.0) - SUNRsqrt(SUN_RCONST(2.0))) / SUN_RCONST(8.0);
+      Bi->d[2] = SUN_RCONST(1.0) / SUNRsqrt(SUN_RCONST(8.0));
+      Bi->q    = 2;
+      Bi->p    = 1;
     }
     flag = ARKStepSetTables(*arkode_mem, 2, 1, Bi, Be);
     if (check_flag(flag, "ARKStepSetTables")) { return 1; }
@@ -567,8 +567,9 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   return 0;
 }
 
-int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-                   SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem)
+int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
+                   N_Vector y, SUNMatrix* A, SUNLinearSolver* LS,
+                   void** arkode_mem)
 {
   // Problem configuration
   ARKRhsFn fe_RHS;   // explicit RHS function
@@ -685,17 +686,17 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector
 }
 
 int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-                SUNMatrix* A, SUNLinearSolver* LS,  MRIStepInnerStepper* sts_mem,
+                SUNMatrix* A, SUNLinearSolver* LS, MRIStepInnerStepper* sts_mem,
                 void** arkode_mem)
 {
   // Problem configuration
-  ARKRhsFn fe_RHS;     // explicit RHS function
-  ARKRhsFn fi_RHS;     // implicit RHS function
-  ARKLsJacFn Ji_RHS;   // implicit RHS Jacobian function
+  ARKRhsFn fe_RHS;   // explicit RHS function
+  ARKRhsFn fi_RHS;   // implicit RHS function
+  ARKLsJacFn Ji_RHS; // implicit RHS Jacobian function
 
   fe_RHS = (udata.advection) ? f_advection : nullptr;
-  fi_RHS = (udata.reaction)  ? f_reaction  : nullptr;
-  Ji_RHS = (udata.reaction)  ? J_reaction  : nullptr;
+  fi_RHS = (udata.reaction) ? f_reaction : nullptr;
+  Ji_RHS = (udata.reaction) ? J_reaction : nullptr;
 
   // -------------------------------
   // Setup the custom STS integrator
@@ -710,8 +711,9 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
   // Select STS method
-  ARKODE_LSRKMethodType ststype = (uopts.sts_method == 0) ? ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
-  flag = LSRKStepSetSTSMethod(sts_arkode_mem, ststype);
+  ARKODE_LSRKMethodType ststype = (uopts.sts_method == 0) ? ARKODE_LSRK_RKC_2
+                                                          : ARKODE_LSRK_RKL_2;
+  flag                          = LSRKStepSetSTSMethod(sts_arkode_mem, ststype);
   if (check_flag(flag, "LSRKStepSetSTSMethod")) { return 1; }
 
   // Set dominant eigenvalue function and frequency
@@ -734,8 +736,8 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 
   // Attach memory and operations
   STSInnerStepperContent* inner_content = new STSInnerStepperContent;
-  inner_content->sts_arkode_mem = sts_arkode_mem;
-  inner_content->user_data      = &udata;
+  inner_content->sts_arkode_mem         = sts_arkode_mem;
+  inner_content->user_data              = &udata;
 
   flag = MRIStepInnerStepper_SetContent(*sts_mem, inner_content);
   if (check_flag(flag, "MRIStepInnerStepper_SetContent")) { return 1; }
@@ -811,66 +813,65 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     // Set the predictor method
     flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
     if (check_flag(flag, "ARKodeSetPredictorMethod")) { return 1; }
-
   }
 
   // Select ExtSTS method via MRIStepCoupling structure
   MRIStepCoupling C;
-  if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+  if (udata.advection && udata.reaction) // advection + diffusion + reaction
   {
-    if (uopts.extsts_method == 0)  // ARS(2,2,2)
+    if (uopts.extsts_method == 0) // ARS(2,2,2)
     {
-      C = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMEX);
-      const sunrealtype one = SUN_RCONST(1.0);
+      C                       = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMEX);
+      const sunrealtype one   = SUN_RCONST(1.0);
       const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
+      const sunrealtype delta = one - one / (SUN_RCONST(2.0) * gamma);
       const sunrealtype three = SUN_RCONST(3.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->W[0][1][0] = gamma;
-      C->W[0][3][0] = delta - gamma;
-      C->W[0][3][2] = one - delta;
-      C->W[0][5][0] = -delta;
-      C->W[0][5][2] = delta - one / three;
-      C->W[0][5][4] = one / three;
-      C->G[0][1][0] =  gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] =  gamma;
-      C->G[0][3][2] =  one - gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] =  gamma;
-      C->G[0][5][2] = -one / three;
-      C->G[0][5][4] =  one / three;
+      C->q                    = 2;
+      C->p                    = 1;
+      C->c[1]                 = gamma;
+      C->c[2]                 = gamma;
+      C->c[3]                 = one;
+      C->c[4]                 = one;
+      C->W[0][1][0]           = gamma;
+      C->W[0][3][0]           = delta - gamma;
+      C->W[0][3][2]           = one - delta;
+      C->W[0][5][0]           = -delta;
+      C->W[0][5][2]           = delta - one / three;
+      C->W[0][5][4]           = one / three;
+      C->G[0][1][0]           = gamma;
+      C->G[0][2][0]           = -gamma;
+      C->G[0][2][2]           = gamma;
+      C->G[0][3][2]           = one - gamma;
+      C->G[0][4][2]           = -gamma;
+      C->G[0][4][4]           = gamma;
+      C->G[0][5][2]           = -one / three;
+      C->G[0][5][4]           = one / three;
     }
-    else                           // Giraldo ARK2
+    else // Giraldo ARK2
     {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMEX);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
+      C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMEX);
+      const sunrealtype one   = SUN_RCONST(1.0);
+      const sunrealtype two   = SUN_RCONST(2.0);
       const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four = SUN_RCONST(4.0);
-      const sunrealtype six = SUN_RCONST(6.0);
+      const sunrealtype four  = SUN_RCONST(4.0);
+      const sunrealtype six   = SUN_RCONST(6.0);
       const sunrealtype eight = SUN_RCONST(8.0);
       const sunrealtype sqrt2 = SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = two - sqrt2;
-      C->c[2] = two - sqrt2;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->c[5] = one;
-      C->W[0][1][0] = two - sqrt2;
-      C->W[0][3][0] = (three - two * sqrt2)/six - (two - sqrt2);
-      C->W[0][3][2] = (three + two * sqrt2)/six;
-      C->W[0][5][0] = one/(two * sqrt2) - (three - two * sqrt2)/six;
-      C->W[0][5][2] = one/(two * sqrt2) - (three + two * sqrt2)/six;
+      C->q                    = 2;
+      C->p                    = 1;
+      C->c[1]                 = two - sqrt2;
+      C->c[2]                 = two - sqrt2;
+      C->c[3]                 = one;
+      C->c[4]                 = one;
+      C->c[5]                 = one;
+      C->W[0][1][0]           = two - sqrt2;
+      C->W[0][3][0]           = (three - two * sqrt2) / six - (two - sqrt2);
+      C->W[0][3][2]           = (three + two * sqrt2) / six;
+      C->W[0][5][0] = one / (two * sqrt2) - (three - two * sqrt2) / six;
+      C->W[0][5][2] = one / (two * sqrt2) - (three + two * sqrt2) / six;
       C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2)/six;
-      C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2)/six;
+      C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2) / six;
+      C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2) / six;
       C->W[0][6][4] = one / (two * sqrt2);
       C->G[0][1][0] = two - sqrt2;
       C->G[0][2][0] = one - one / sqrt2 - (two - sqrt2);
@@ -885,101 +886,101 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
     }
   }
-  else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
+  else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
   {
-    if (uopts.extsts_method == 0)  // Ralston
+    if (uopts.extsts_method == 0) // Ralston
     {
-      C = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
+      C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
+      const sunrealtype one   = SUN_RCONST(1.0);
+      const sunrealtype two   = SUN_RCONST(2.0);
       const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four = SUN_RCONST(4.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = two / three;
-      C->c[2] = one;
-      C->W[0][1][0] = two / three;
-      C->W[0][2][0] = one / four - two / three;
-      C->W[0][2][1] = three / four;
-      C->W[0][3][0] = SUN_RCONST(5.0)/SUN_RCONST(37.0) - two / three;
+      const sunrealtype four  = SUN_RCONST(4.0);
+      C->q                    = 2;
+      C->p                    = 1;
+      C->c[1]                 = two / three;
+      C->c[2]                 = one;
+      C->W[0][1][0]           = two / three;
+      C->W[0][2][0]           = one / four - two / three;
+      C->W[0][2][1]           = three / four;
+      C->W[0][3][0] = SUN_RCONST(5.0) / SUN_RCONST(37.0) - two / three;
       C->W[0][3][1] = two / three - three / four;
-      C->W[0][3][2] = SUN_RCONST(22.0)/SUN_RCONST(111.0);
+      C->W[0][3][2] = SUN_RCONST(22.0) / SUN_RCONST(111.0);
     }
-    else                           // Heun-Euler
+    else // Heun-Euler
     {
-      C = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
+      C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
+      const sunrealtype one   = SUN_RCONST(1.0);
+      const sunrealtype two   = SUN_RCONST(2.0);
       const sunrealtype three = SUN_RCONST(3.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = one;
-      C->c[2] = one;
-      C->W[0][1][0] = one;
-      C->W[0][2][0] = -one / two;
-      C->W[0][2][1] = one / two;
+      C->q                    = 2;
+      C->p                    = 1;
+      C->c[1]                 = one;
+      C->c[2]                 = one;
+      C->W[0][1][0]           = one;
+      C->W[0][2][0]           = -one / two;
+      C->W[0][2][1]           = one / two;
     }
   }
-  else if (!udata.advection && udata.reaction)  // diffusion + reaction
+  else if (!udata.advection && udata.reaction) // diffusion + reaction
   {
-    if (uopts.extsts_method == 0)  // SSP SDIRK 2
+    if (uopts.extsts_method == 0) // SSP SDIRK 2
     {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
-      const sunrealtype five = SUN_RCONST(5.0);
-      const sunrealtype seven = SUN_RCONST(7.0);
+      C                        = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+      const sunrealtype one    = SUN_RCONST(1.0);
+      const sunrealtype two    = SUN_RCONST(2.0);
+      const sunrealtype five   = SUN_RCONST(5.0);
+      const sunrealtype seven  = SUN_RCONST(7.0);
       const sunrealtype twelve = SUN_RCONST(12.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one - gamma;
-      C->c[4] = one - gamma;
-      C->c[5] = one;
-      C->G[0][1][0] = gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] = gamma;
-      C->G[0][3][2] = one - two * gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] = gamma;
-      C->G[0][5][2] = two * gamma - one / two;
-      C->G[0][5][4] = one / two - gamma;
-      C->G[0][6][2] = two*gamma - seven / twelve;
-      C->G[0][6][4] = seven / twelve - gamma;
+      const sunrealtype gamma  = one - one / SUNRsqrt(two);
+      C->q                     = 2;
+      C->p                     = 1;
+      C->c[1]                  = gamma;
+      C->c[2]                  = gamma;
+      C->c[3]                  = one - gamma;
+      C->c[4]                  = one - gamma;
+      C->c[5]                  = one;
+      C->G[0][1][0]            = gamma;
+      C->G[0][2][0]            = -gamma;
+      C->G[0][2][2]            = gamma;
+      C->G[0][3][2]            = one - two * gamma;
+      C->G[0][4][2]            = -gamma;
+      C->G[0][4][4]            = gamma;
+      C->G[0][5][2]            = two * gamma - one / two;
+      C->G[0][5][4]            = one / two - gamma;
+      C->G[0][6][2]            = two * gamma - seven / twelve;
+      C->G[0][6][4]            = seven / twelve - gamma;
     }
-    else                           // Giraldo DIRK2
+    else // Giraldo DIRK2
     {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
+      C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+      const sunrealtype one   = SUN_RCONST(1.0);
+      const sunrealtype two   = SUN_RCONST(2.0);
       const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four = SUN_RCONST(4.0);
-      const sunrealtype six = SUN_RCONST(6.0);
+      const sunrealtype four  = SUN_RCONST(4.0);
+      const sunrealtype six   = SUN_RCONST(6.0);
       const sunrealtype eight = SUN_RCONST(8.0);
       const sunrealtype sqrt2 = SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = two - sqrt2;
-      C->c[2] = two - sqrt2;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->c[5] = one;
-      C->G[0][1][0] = two - sqrt2;
-      C->G[0][2][0] = one - one / sqrt2 - (two - sqrt2);
-      C->G[0][2][2] = one - one / sqrt2;
-      C->G[0][3][0] = one / sqrt2 - one;
-      C->G[0][3][2] = one / sqrt2;
-      C->G[0][4][0] = one / (two * sqrt2);
-      C->G[0][4][2] = one / (two * sqrt2) - one;
-      C->G[0][4][4] = one - one / sqrt2;
-      C->G[0][6][0] = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
+      C->q                    = 2;
+      C->p                    = 1;
+      C->c[1]                 = two - sqrt2;
+      C->c[2]                 = two - sqrt2;
+      C->c[3]                 = one;
+      C->c[4]                 = one;
+      C->c[5]                 = one;
+      C->G[0][1][0]           = two - sqrt2;
+      C->G[0][2][0]           = one - one / sqrt2 - (two - sqrt2);
+      C->G[0][2][2]           = one - one / sqrt2;
+      C->G[0][3][0]           = one / sqrt2 - one;
+      C->G[0][3][2]           = one / sqrt2;
+      C->G[0][4][0]           = one / (two * sqrt2);
+      C->G[0][4][2]           = one / (two * sqrt2) - one;
+      C->G[0][4][4]           = one - one / sqrt2;
+      C->G[0][6][0]           = (four - sqrt2) / eight - one / (two * sqrt2);
+      C->G[0][6][2]           = (four - sqrt2) / eight - one / (two * sqrt2);
+      C->G[0][6][4]           = one / (two * sqrt2) - (one - one / sqrt2);
     }
   }
-  else   // illegal configuration
+  else // illegal configuration
   {
     cerr << "ERROR: Invalid problem configuration" << endl;
     return -1;
@@ -1012,7 +1013,7 @@ int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
                            sunrealtype tout, N_Vector y)
 {
   void* inner_content = nullptr;
-  int flag = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
+  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
   if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
 
   STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
@@ -1032,19 +1033,17 @@ int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
   // Evolve a single time step
   sunrealtype tret;
   flag = ARKodeEvolve(content->sts_arkode_mem, tout, y, &tret, ARK_ONE_STEP);
-  if (check_flag(flag, "ARKodeEvolve")) {
-    return flag;
-  }
+  if (check_flag(flag, "ARKodeEvolve")) { return flag; }
 
   return 0;
 }
 
 // Compute the RHS of the diffusion IVP
 int STSInnerStepper_FullRhs(MRIStepInnerStepper sts_mem, sunrealtype t,
-                              N_Vector y, N_Vector f, int mode)
+                            N_Vector y, N_Vector f, int mode)
 {
   void* inner_content = nullptr;
-  int flag = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
+  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
   if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
 
   STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
@@ -1056,11 +1055,10 @@ int STSInnerStepper_FullRhs(MRIStepInnerStepper sts_mem, sunrealtype t,
 }
 
 // Reset the fast integrator to the given time and state
-int STSInnerStepper_Reset(MRIStepInnerStepper sts_mem, sunrealtype tR,
-                            N_Vector yR)
+int STSInnerStepper_Reset(MRIStepInnerStepper sts_mem, sunrealtype tR, N_Vector yR)
 {
   void* inner_content = nullptr;
-  int flag = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
+  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
   if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
 
   STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
@@ -1374,9 +1372,8 @@ int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
 // Dominant eigenvalue function (for diffusion operator in LSRKStep)
 int diffusion_domeig(sunrealtype t, N_Vector y, N_Vector fn,
-                     sunrealtype* lambdaR, sunrealtype* lambdaI,
-                     void* user_data, N_Vector temp1, N_Vector temp2,
-                     N_Vector temp3)
+                     sunrealtype* lambdaR, sunrealtype* lambdaI, void* user_data,
+                     N_Vector temp1, N_Vector temp2, N_Vector temp3)
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;

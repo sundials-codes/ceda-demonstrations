@@ -23,15 +23,15 @@
 struct UserOptions
 {
   // Integrator settings
-  std::string integrator = "dirk";          // time integration method
-  sunrealtype rtol   = SUN_RCONST(1.0e-5);  // relative tolerance
-  sunrealtype atol   = SUN_RCONST(1.0e-10); // absolute tolerance
-  sunrealtype hfixed = ZERO;                // fixed step size
-  int order          = 2;                   // ARKode method order
-  int controller     = 0;                   // step size adaptivity method
-  int maxsteps       = 0;                   // max steps between outputs
-  int onestep        = 0;                   // one step mode, number of steps
-  bool error         = false;               // compute reference solution to compare error
+  std::string integrator = "dirk";              // time integration method
+  sunrealtype rtol       = SUN_RCONST(1.0e-5);  // relative tolerance
+  sunrealtype atol       = SUN_RCONST(1.0e-10); // absolute tolerance
+  sunrealtype hfixed     = ZERO;                // fixed step size
+  int order              = 2;                   // ARKode method order
+  int controller         = 0;                   // step size adaptivity method
+  int maxsteps           = 0;                   // max steps between outputs
+  int onestep            = 0;     // one step mode, number of steps
+  bool error             = false; // compute reference solution to compare error
 
   // Implicit solver and preconditioner settings
   bool linear          = true;  // linearly implicit RHS
@@ -130,10 +130,8 @@ int main(int argc, char* argv[])
     }
 
     // Return with error on unsupported integration method type
-    if ((uopts.integrator != "dirk") &&
-        (uopts.integrator != "erk") &&
-        (uopts.integrator != "rkc") &&
-        (uopts.integrator != "rkl"))
+    if ((uopts.integrator != "dirk") && (uopts.integrator != "erk") &&
+        (uopts.integrator != "rkc") && (uopts.integrator != "rkl"))
     {
       cerr << "ERROR: illegal integrator" << endl;
       return 1;
@@ -142,7 +140,7 @@ int main(int argc, char* argv[])
     // Set boolean control parameters based on user inputs
     bool impl = (uopts.integrator == "dirk");
     bool expl = (uopts.integrator == "erk");
-    bool sts = ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"));
+    bool sts  = ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"));
 
 #ifdef USE_HYPRE
 #if HYPRE_RELEASE_NUMBER >= 22000
@@ -267,67 +265,69 @@ int main(int argc, char* argv[])
       flag = ARKodeSetOrder(arkode_mem, uopts.order);
       if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
     }
-    if (expl)  // order: -2,-3,-4 indicate use of SSPRK methods
+    if (expl) // order: -2,-3,-4 indicate use of SSPRK methods
     {
       ARKodeButcherTable B = nullptr;
       if (uopts.order == -2)
       {
-        B = ARKodeButcherTable_Alloc(2, SUNTRUE);
-        B->q = 2;
-        B->p = 1;
+        B          = ARKodeButcherTable_Alloc(2, SUNTRUE);
+        B->q       = 2;
+        B->p       = 1;
         B->A[1][0] = SUN_RCONST(1.0);
-        B->b[0] = SUN_RCONST(0.5);
-        B->b[1] = SUN_RCONST(0.5);
-        B->d[0] = SUN_RCONST(0.694021459207626);
-        B->d[1] = SUN_RCONST(1.0) - SUN_RCONST(0.694021459207626);
-        B->c[1] = SUN_RCONST(1.0);
+        B->b[0]    = SUN_RCONST(0.5);
+        B->b[1]    = SUN_RCONST(0.5);
+        B->d[0]    = SUN_RCONST(0.694021459207626);
+        B->d[1]    = SUN_RCONST(1.0) - SUN_RCONST(0.694021459207626);
+        B->c[1]    = SUN_RCONST(1.0);
       }
       else if (uopts.order == -3)
       {
-        B = ARKodeButcherTable_Alloc(3, SUNTRUE);
-        B->q = 2;
-        B->p = 1;
+        B          = ARKodeButcherTable_Alloc(3, SUNTRUE);
+        B->q       = 2;
+        B->p       = 1;
         B->A[1][0] = SUN_RCONST(0.5);
         B->A[2][0] = SUN_RCONST(0.5);
         B->A[2][1] = SUN_RCONST(0.5);
-        B->b[0] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-        B->b[1] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-        B->b[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-        B->d[0] = SUN_RCONST(4.0)/SUN_RCONST(9.0);
-        B->d[1] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-        B->d[2] = SUN_RCONST(2.0)/SUN_RCONST(9.0);
-        B->c[1] = SUN_RCONST(0.5);
-        B->c[2] = SUN_RCONST(1.0);
+        B->b[0]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+        B->b[1]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+        B->b[2]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+        B->d[0]    = SUN_RCONST(4.0) / SUN_RCONST(9.0);
+        B->d[1]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+        B->d[2]    = SUN_RCONST(2.0) / SUN_RCONST(9.0);
+        B->c[1]    = SUN_RCONST(0.5);
+        B->c[2]    = SUN_RCONST(1.0);
       }
       else if (uopts.order == -4)
       {
-        B = ARKodeButcherTable_Alloc(4, SUNTRUE);
-        const sunrealtype third = SUN_RCONST(1.0)/SUN_RCONST(3.0);
-        B->q = 2;
-        B->p = 1;
-        B->A[1][0] = third;
-        B->A[2][0] = third;
-        B->A[2][1] = third;
-        B->A[3][0] = third;
-        B->A[3][1] = third;
-        B->A[3][2] = third;
-        B->b[0] = SUN_RCONST(0.25);
-        B->b[1] = SUN_RCONST(0.25);
-        B->b[2] = SUN_RCONST(0.25);
-        B->b[3] = SUN_RCONST(0.25);
-        B->d[0] = SUN_RCONST(5.0)/SUN_RCONST(16.0);
-        B->d[1] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
-        B->d[2] = SUN_RCONST(1.0)/SUN_RCONST(4.0);
-        B->d[3] = SUN_RCONST(3.0)/SUN_RCONST(16.0);
-        B->c[1] = third;
-        B->c[2] = SUN_RCONST(2.0) * third;
-        B->c[3] = SUN_RCONST(1.0);
+        B                       = ARKodeButcherTable_Alloc(4, SUNTRUE);
+        const sunrealtype third = SUN_RCONST(1.0) / SUN_RCONST(3.0);
+        B->q                    = 2;
+        B->p                    = 1;
+        B->A[1][0]              = third;
+        B->A[2][0]              = third;
+        B->A[2][1]              = third;
+        B->A[3][0]              = third;
+        B->A[3][1]              = third;
+        B->A[3][2]              = third;
+        B->b[0]                 = SUN_RCONST(0.25);
+        B->b[1]                 = SUN_RCONST(0.25);
+        B->b[2]                 = SUN_RCONST(0.25);
+        B->b[3]                 = SUN_RCONST(0.25);
+        B->d[0]                 = SUN_RCONST(5.0) / SUN_RCONST(16.0);
+        B->d[1]                 = SUN_RCONST(1.0) / SUN_RCONST(4.0);
+        B->d[2]                 = SUN_RCONST(1.0) / SUN_RCONST(4.0);
+        B->d[3]                 = SUN_RCONST(3.0) / SUN_RCONST(16.0);
+        B->c[1]                 = third;
+        B->c[2]                 = SUN_RCONST(2.0) * third;
+        B->c[3]                 = SUN_RCONST(1.0);
       }
       if (B != nullptr)
       {
         flag = ARKStepSetTables(arkode_mem, B->q, B->p, nullptr, B);
         if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
-      } else {
+      }
+      else
+      {
         flag = ARKodeSetOrder(arkode_mem, uopts.order);
         if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
       }
@@ -366,8 +366,8 @@ int main(int argc, char* argv[])
     if ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"))
     {
       // Select LSRK method
-      ARKODE_LSRKMethodType type = (uopts.integrator == "rkc") ?
-        ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
+      ARKODE_LSRKMethodType type =
+        (uopts.integrator == "rkc") ? ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
       flag = LSRKStepSetSTSMethod(arkode_mem, type);
       if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
@@ -440,8 +440,8 @@ int main(int argc, char* argv[])
     sunrealtype dTout  = udata.tf / uout.nout;
     sunrealtype tout   = dTout;
     sunrealtype errtot = ZERO;
-    double tstart = 0.0;
-    double simtime = 0.0;
+    double tstart      = 0.0;
+    double simtime     = 0.0;
 
     // Initial output
     flag = uout.open(&udata);
@@ -483,7 +483,7 @@ int main(int argc, char* argv[])
       if (uopts.error)
       {
         N_VLinearSum(1.0, uref, -1.0, u, uerr);
-        errtot = std::max(errtot, N_VMaxNorm(uerr)/N_VMaxNorm(uref));
+        errtot = std::max(errtot, N_VMaxNorm(uerr) / N_VMaxNorm(uref));
       }
 
       // Update output time
@@ -502,8 +502,7 @@ int main(int argc, char* argv[])
     // Print final integrator stats
     if (outproc)
     {
-      if (uopts.error)
-        cout << "Maximum relative error = " << errtot << endl;
+      if (uopts.error) cout << "Maximum relative error = " << errtot << endl;
       cout << "Total simulation time = " << simtime << endl << endl;
       cout << "Final integrator statistics:" << endl;
       flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
@@ -530,7 +529,7 @@ int main(int argc, char* argv[])
     {
       SUNLinSolFree(LS);
 
-  // Finalize hypre if v2.20.0 or newer
+      // Finalize hypre if v2.20.0 or newer
 #if HYPRE_RELEASE_NUMBER >= 22000
       if (uopts.preconditioning)
       {
@@ -720,7 +719,8 @@ void UserOptions::help()
   cout << "                         ImExGus = " << ARK_ADAPT_IMEX_GUS << endl;
   cout << "  --maxsteps <nstep>   : maximum allowed number of time steps" << endl;
   cout << "  --fixedstep <step>   : fixed step size to use" << endl;
-  cout << "  --error              : compute reference solution to compare error" << endl;
+  cout << "  --error              : compute reference solution to compare error"
+       << endl;
   cout << endl;
   cout << "ERK solver command line options:" << endl;
   cout << "  --order <ord>        : method order" << endl;
@@ -742,7 +742,7 @@ void UserOptions::print()
 {
   bool impl = (integrator == "dirk");
   bool expl = (integrator == "erk");
-  bool sts = ((integrator == "rkc") || (integrator == "rkl"));
+  bool sts  = ((integrator == "rkc") || (integrator == "rkl"));
 
   cout << endl;
   cout << " Integrator: " << integrator << endl;
@@ -757,10 +757,8 @@ void UserOptions::print()
     cout << " order       = " << order << endl;
     if (impl)
     {
-      if (linear)
-        cout << " linearly implicit RHS" << endl;
-      else
-        cout << " nonlinearly implicit RHS" << endl;
+      if (linear) cout << " linearly implicit RHS" << endl;
+      else cout << " nonlinearly implicit RHS" << endl;
     }
     cout << " --------------------------------- " << endl;
     if (impl)

@@ -131,16 +131,12 @@ int PSolve(sunrealtype t, N_Vector u, N_Vector f, N_Vector r, N_Vector z,
   flag = HYPRE_StructVectorAssemble(udata->xvec);
   if (flag != 0) { return -1; }
 
-
   // // Print matrix and RHS to disk
   // cout << "Printing HYPRE matrix, RHS, and solution to disk (gamma = " << gamma << ")" << endl;
   // flag = HYPRE_StructMatrixPrint("hypre_matrix", udata->Amatrix, 0);
   // if (flag != 0) { return -1; }
   // flag = HYPRE_StructVectorPrint("hypre_rhs", udata->bvec, 0);
   // if (flag != 0) { return -1; }
-
-
-
 
   // Update the preconditioner solver tolerance
   flag = HYPRE_StructPFMGSetTol(udata->precond, delta);
@@ -150,12 +146,9 @@ int PSolve(sunrealtype t, N_Vector u, N_Vector f, N_Vector r, N_Vector z,
   flag = HYPRE_StructPFMGSolve(udata->precond, udata->Amatrix, udata->bvec,
                                udata->xvec);
 
-
   // // Print solution to disk
   // flag = HYPRE_StructVectorPrint("hypre_sol", udata->xvec, 0);
   // if (flag != 0) { return -1; }
-
-
 
   // If a convergence error occurred, clear the error and continue. For any
   // other error return with a recoverable error.
@@ -428,16 +421,20 @@ static int Jac(UserData& udata)
     idx = 0;
     for (iy = 0; iy < ny_loc; iy++)
     {
-      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata.js+iy) * udata.dy, &udata)
-                             / (udata.dy * udata.dy);
-      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata.js+iy+1) * udata.dy, &udata)
-                             / (udata.dy * udata.dy);
+      const sunrealtype Dy_s = Diffusion_Coeff_Y((udata.js + iy) * udata.dy,
+                                                 &udata) /
+                               (udata.dy * udata.dy);
+      const sunrealtype Dy_n = Diffusion_Coeff_Y((udata.js + iy + 1) * udata.dy,
+                                                 &udata) /
+                               (udata.dy * udata.dy);
       for (ix = 0; ix < nx_loc; ix++)
       {
-        const sunrealtype Dx_w = Diffusion_Coeff_X((udata.is+ix) * udata.dx, &udata)
-                               / (udata.dx * udata.dx);
-        const sunrealtype Dx_e = Diffusion_Coeff_X((udata.is+ix+1) * udata.dx, &udata)
-                               / (udata.dx * udata.dx);
+        const sunrealtype Dx_w = Diffusion_Coeff_X((udata.is + ix) * udata.dx,
+                                                   &udata) /
+                                 (udata.dx * udata.dx);
+        const sunrealtype Dx_e =
+          Diffusion_Coeff_X((udata.is + ix + 1) * udata.dx, &udata) /
+          (udata.dx * udata.dx);
         work[idx]     = -((Dx_w + Dx_e) + (Dy_s + Dy_n));
         work[idx + 1] = Dx_w;
         work[idx + 2] = Dx_e;
@@ -448,14 +445,14 @@ static int Jac(UserData& udata)
     }
 
     // Insert entries into the matrix
-    flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, ilower, iupper, 5, entries, work);
+    flag = HYPRE_StructMatrixSetBoxValues(Jmatrix, ilower, iupper, 5, entries,
+                                          work);
     if (flag != 0)
     {
       cerr << "Error in HYPRE_StructMatrixSetBoxValues (interior) = " << flag
            << endl;
       return -1;
     }
-
   }
 
   // The matrix is assembled matrix in hypre setup
