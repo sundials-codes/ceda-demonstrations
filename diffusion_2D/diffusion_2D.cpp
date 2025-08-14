@@ -34,7 +34,6 @@ int diffusion(sunrealtype t, N_Vector u, N_Vector f, void* user_data)
   return 0;
 }
 
-
 // -----------------------------------------------------------------------------
 // UserData public functions
 // -----------------------------------------------------------------------------
@@ -135,13 +134,12 @@ int UserData::parse_args(vector<string>& args, bool outproc)
     args.erase(it, it + 2);
   }
 
-
 #ifdef USE_HYPRE
   it = find(args.begin(), args.end(), "--pfmg_relax");
   if (it != args.end())
   {
     int pfmg_relax_int = stoi(*(it + 1));
-    pfmg_relax = static_cast<HYPRE_Int>(pfmg_relax_int);
+    pfmg_relax         = static_cast<HYPRE_Int>(pfmg_relax_int);
     args.erase(it, it + 2);
   }
 
@@ -149,7 +147,7 @@ int UserData::parse_args(vector<string>& args, bool outproc)
   if (it != args.end())
   {
     int pfmg_nrelax_int = stoi(*(it + 1));
-    pfmg_nrelax = static_cast<HYPRE_Int>(pfmg_nrelax_int);
+    pfmg_nrelax         = static_cast<HYPRE_Int>(pfmg_nrelax_int);
     args.erase(it, it + 2);
   }
 #endif
@@ -158,8 +156,8 @@ int UserData::parse_args(vector<string>& args, bool outproc)
   nodes = nx * ny;
 
   // Recompute x and y mesh spacing
-  dx = (xu-xl) / (nx - 1);
-  dy = (yu-yl) / (ny - 1);
+  dx = (xu - xl) / (nx - 1);
+  dy = (yu - yl) / (ny - 1);
 
   return 0;
 }
@@ -177,12 +175,15 @@ void UserData::help()
   cout << "  --yu <yu>       : y-direction upper bound" << endl;
   cout << "  --kx <kx>       : x-direction diffusion coefficient" << endl;
   cout << "  --ky <kx>       : y-direction diffusion coefficient" << endl;
-  cout << "  --inhomogeneous : use spatially-varying diffusion coefficients" << endl;
+  cout << "  --inhomogeneous : use spatially-varying diffusion coefficients"
+       << endl;
   cout << "  --tf <time>     : final time" << endl;
 #ifdef USE_HYPRE
   cout << endl;
   cout << "Hypre preconditioner command line options:" << endl;
-  cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacobi, 2=symmGS, 3=nonsymmGS)" << endl;
+  cout << "  --pfmg_relax <type> : PFMG relaxation type (0=Jacobi, 1=wJacobi, "
+          "2=symmGS, 3=nonsymmGS)"
+       << endl;
   cout << "  --pfmg_nrelax <num> : num pre/post relaxation sweeps" << endl;
 #endif
 }
@@ -198,10 +199,8 @@ void UserData::print()
   cout << " --------------------------------- " << endl;
   cout << "  kx             = " << kx << endl;
   cout << "  ky             = " << ky << endl;
-  if (inhomogeneous)
-    cout << "  spatially-varying diffusion" << endl;
-  else
-    cout << "  homogeneous diffusion" << endl;
+  if (inhomogeneous) cout << "  spatially-varying diffusion" << endl;
+  else cout << "  homogeneous diffusion" << endl;
   cout << "  tf             = " << tf << endl;
   cout << "  xl             = " << xl << endl;
   cout << "  xu             = " << xu << endl;
@@ -682,7 +681,9 @@ void UserOutput::help()
 {
   cout << endl;
   cout << "Output command line options:" << endl;
-  cout << "  --output <level>  : output level (0 = none, 1 = stats, 2 = solution)" << endl;
+  cout
+    << "  --output <level>  : output level (0 = none, 1 = stats, 2 = solution)"
+    << endl;
   cout << "  --nout <nout>     : number of outputs" << endl;
 }
 
@@ -796,7 +797,6 @@ int UserOutput::write(sunrealtype t, N_Vector u, UserData* udata)
 
   if (output > 0)
   {
-
     // Compute rms norm of the state
     sunrealtype urms = sqrt(N_VDotProd(u, u) / udata->nx / udata->ny);
 
@@ -886,18 +886,14 @@ int UserOutput::close(UserData* udata)
 
 sunrealtype Diffusion_Coeff_X(sunrealtype x, UserData* udata)
 {
-  if (udata->inhomogeneous)
-    return (udata->kx * (1.0 + 0.99*sin(x)));
-  else
-    return (udata->kx);
+  if (udata->inhomogeneous) return (udata->kx * (1.0 + 0.99 * sin(x)));
+  else return (udata->kx);
 }
 
 sunrealtype Diffusion_Coeff_Y(sunrealtype y, UserData* udata)
 {
-  if (udata->inhomogeneous)
-    return (udata->ky * (1.0 + 0.99*sin(y)));
-  else
-    return (udata->ky);
+  if (udata->inhomogeneous) return (udata->ky * (1.0 + 0.99 * sin(y)));
+  else return (udata->ky);
 }
 
 // Check function return value

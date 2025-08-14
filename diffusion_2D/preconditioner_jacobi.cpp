@@ -20,23 +20,26 @@ int PSetup(sunrealtype t, N_Vector u, N_Vector f, sunbooleantype jok,
   if (check_flag((void*)darray, "N_VGetArrayPointer", 0)) { return -1; }
   for (sunindextype j = 0; j < udata->ny_loc; j++)
   {
-    const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js+j) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
-    const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js+j+1) * udata->dy, udata)
-                             / (udata->dy * udata->dy);
+    const sunrealtype Dy_s = Diffusion_Coeff_Y((udata->js + j) * udata->dy,
+                                               udata) /
+                             (udata->dy * udata->dy);
+    const sunrealtype Dy_n = Diffusion_Coeff_Y((udata->js + j + 1) * udata->dy,
+                                               udata) /
+                             (udata->dy * udata->dy);
 
     for (sunindextype i = 0; i < udata->nx_loc; i++)
     {
-      const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is+i) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
-      const sunrealtype Dx_e = Diffusion_Coeff_X((udata->is+i+1) * udata->dx, udata)
-                               / (udata->dx * udata->dx);
+      const sunrealtype Dx_w = Diffusion_Coeff_X((udata->is + i) * udata->dx,
+                                                 udata) /
+                               (udata->dx * udata->dx);
+      const sunrealtype Dx_e =
+        Diffusion_Coeff_X((udata->is + i + 1) * udata->dx, udata) /
+        (udata->dx * udata->dx);
 
-      const sunrealtype diag = -((Dx_w + Dx_e) + (Dy_s + Dy_n));
+      const sunrealtype diag           = -((Dx_w + Dx_e) + (Dy_s + Dy_n));
       darray[IDX(i, j, udata->nx_loc)] = ONE / (ONE - gamma * diag);
     }
   }
-
 
   // Return success
   return 0;

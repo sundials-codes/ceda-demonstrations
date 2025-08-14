@@ -5,7 +5,6 @@
  * Gkylzero data structure.
  * -----------------------------------------------------------------*/
 
-
 #include "nvector_gkylzero.h"
 #include <gkyl_alloc.h>
 #include <string.h> // for memcpy.
@@ -20,15 +19,12 @@
  * exported functions
  * -----------------------------------------------------------------*/
 
-struct gkyl_array*
-mkarr(bool on_gpu, long nc, long size)
+struct gkyl_array* mkarr(bool on_gpu, long nc, long size)
 {
   // Allocate array (filled with zeros).
   struct gkyl_array* a;
-  if (on_gpu)
-    a = gkyl_array_cu_dev_new(GKYL_DOUBLE, nc, size);
-  else
-    a = gkyl_array_new(GKYL_DOUBLE, nc, size);
+  if (on_gpu) a = gkyl_array_cu_dev_new(GKYL_DOUBLE, nc, size);
+  else a = gkyl_array_new(GKYL_DOUBLE, nc, size);
   return a;
 }
 
@@ -46,23 +42,22 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   /* Attach operations -- DELETE ANY THAT WERE DELETED FROM nvector_gkylzero.h */
 
   /* constructors, destructors, and utility operations */
-  v->ops->nvclone             = N_VClone_Gkylzero;
-  v->ops->nvcloneempty        = N_VCloneEmpty_Gkylzero;
-  v->ops->nvdestroy           = N_VDestroy_Gkylzero;
+  v->ops->nvclone      = N_VClone_Gkylzero;
+  v->ops->nvcloneempty = N_VCloneEmpty_Gkylzero;
+  v->ops->nvdestroy    = N_VDestroy_Gkylzero;
 
   /* vector operations */
-  v->ops->nvlinearsum         = N_VLinearSum_Gkylzero;
-  v->ops->nvconst             = N_VConst_Gkylzero;
-  v->ops->nvscale             = N_VScale_Gkylzero;
-  v->ops->nvwrmsnorm          = N_VWrmsNorm_abs_comp_Gkylzero;
-  v->ops->nvspace             = N_VSpace_Gkylzero;
-  v->ops->nvdiv               = N_VDiv_Gkylzero;
-  v->ops->nvabs               = N_VAbs_Gkylzero;
-  v->ops->nvinv               = N_VInv_Gkylzero;
-  v->ops->nvmaxnorm           = N_VMaxnorm_Gkylzero;
-  v->ops->nvaddconst          = N_VAddconst_Gkylzero;
-
-
+  v->ops->nvlinearsum = N_VLinearSum_Gkylzero;
+  v->ops->nvconst     = N_VConst_Gkylzero;
+  v->ops->nvscale     = N_VScale_Gkylzero;
+  v->ops->nvwrmsnorm  = N_VWrmsNorm_abs_comp_Gkylzero;
+  v->ops->nvdotprod   = N_VDotProd_Gkylzero;
+  v->ops->nvspace     = N_VSpace_Gkylzero;
+  v->ops->nvdiv       = N_VDiv_Gkylzero;
+  v->ops->nvabs       = N_VAbs_Gkylzero;
+  v->ops->nvinv       = N_VInv_Gkylzero;
+  v->ops->nvmaxnorm   = N_VMaxnorm_Gkylzero;
+  v->ops->nvaddconst  = N_VAddconst_Gkylzero;
 
   /* Create content */
   content = NULL;
@@ -77,15 +72,16 @@ N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx)
   v->content = content;
 
   /* Attach gkyl_array */
-  content->own_vector    = SUNFALSE;
-  content->use_gpu       = SUNFALSE;
-  content->dataptr       = NULL;
+  content->own_vector = SUNFALSE;
+  content->use_gpu    = SUNFALSE;
+  content->dataptr    = NULL;
 
   return (v);
 }
 
 /* Create a Gkylzero N_Vector wrapper around user supplied gkl_array. */
-N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu, SUNContext sunctx)
+N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu,
+                          SUNContext sunctx)
 {
   N_Vector v;
   v = NULL;
@@ -144,8 +140,8 @@ N_Vector N_VCloneEmpty_Gkylzero(N_Vector w)
      Otherwise, use_gpu flag will be false even if it must be true*/
 
   //TO DO: Check to verify if this function is called separately
-  content->use_gpu    = SUNFALSE;
-  content->dataptr    = NULL;
+  content->use_gpu = SUNFALSE;
+  content->dataptr = NULL;
 
   return (v);
 }
@@ -162,8 +158,8 @@ N_Vector N_VClone_Gkylzero(N_Vector w)
 
   vdptr = mkarr(NV_CONTENT_GKZ(w)->use_gpu, wdptr->ncomp, wdptr->size);
 
-  NV_CONTENT_GKZ(v)->dataptr = vdptr;
-  NV_CONTENT_GKZ(v)->use_gpu = NV_CONTENT_GKZ(w)->use_gpu;
+  NV_CONTENT_GKZ(v)->dataptr    = vdptr;
+  NV_CONTENT_GKZ(v)->use_gpu    = NV_CONTENT_GKZ(w)->use_gpu;
   NV_CONTENT_GKZ(v)->own_vector = SUNTRUE;
   return (v);
 }
@@ -196,7 +192,6 @@ void N_VDestroy_Gkylzero(N_Vector v)
 
   return;
 }
-
 
 /* returns z = a*x + b*y */
 void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
@@ -232,14 +227,16 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
   // TODO: change code so these allocations only happen once.
   int ncomp = xdptr->ncomp;
   struct gkyl_array* zdptr; // Temporary buffer. Should change code to avoid this.
-  double *asum_ho = gkyl_malloc(ncomp * sizeof(double));
-  double *asum;
-  if (gkyl_array_is_cu_dev(xdptr)) {
-    asum = gkyl_cu_malloc(ncomp * sizeof(double));
+  double* asum_ho = gkyl_malloc(ncomp * sizeof(double));
+  double* asum;
+  if (gkyl_array_is_cu_dev(xdptr))
+  {
+    asum  = gkyl_cu_malloc(ncomp * sizeof(double));
     zdptr = mkarr(true, ncomp, xdptr->size);
   }
-  else {
-    asum = gkyl_malloc(ncomp * sizeof(double));
+  else
+  {
+    asum  = gkyl_malloc(ncomp * sizeof(double));
     zdptr = mkarr(false, ncomp, xdptr->size);
   }
 
@@ -248,21 +245,17 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
 
   if (gkyl_array_is_cu_dev(xdptr))
     gkyl_cu_memcpy(asum_ho, asum, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
-  else
-    memcpy(asum_ho, asum, ncomp * sizeof(double));
+  else memcpy(asum_ho, asum, ncomp * sizeof(double));
 
   // Sum over compontents, divide by number degrees of freedom and take sqrt.
   sunrealtype asum_out = 0.0;
-  for (int i=0; i<ncomp; i++)
-    asum_out += asum_ho[i];
+  for (int i = 0; i < ncomp; i++) asum_out += asum_ho[i];
 
-  asum_out = SUNRsqrt(asum_out/(xdptr->size*ncomp));
+  asum_out = SUNRsqrt(asum_out / (xdptr->size * ncomp));
 
   gkyl_free(asum_ho);
-  if (gkyl_array_is_cu_dev(xdptr))
-    gkyl_cu_free(asum);
-  else
-    gkyl_free(asum);
+  if (gkyl_array_is_cu_dev(xdptr)) gkyl_cu_free(asum);
+  else gkyl_free(asum);
 
   gkyl_array_release(zdptr);
 
@@ -275,36 +268,46 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
   // TODO: change code so these allocations only happen once.
-  int ncomp = xdptr->ncomp;
-  double *red_ho = gkyl_malloc(ncomp * sizeof(double));
-  double *red;
-  if (gkyl_array_is_cu_dev(xdptr))
-    red = gkyl_cu_malloc(ncomp * sizeof(double));
-  else
-    red = gkyl_malloc(ncomp * sizeof(double));
+  int ncomp      = xdptr->ncomp;
+  double* red_ho = gkyl_malloc(ncomp * sizeof(double));
+  double* red;
+  if (gkyl_array_is_cu_dev(xdptr)) red = gkyl_cu_malloc(ncomp * sizeof(double));
+  else red = gkyl_malloc(ncomp * sizeof(double));
 
   // Reduce over cells.
   gkyl_array_reduce_weighted(red, xdptr, wdptr, GKYL_SQ_SUM);
 
   if (gkyl_array_is_cu_dev(xdptr))
     gkyl_cu_memcpy(red_ho, red, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
-  else
-    memcpy(red_ho, red, ncomp * sizeof(double));
+  else memcpy(red_ho, red, ncomp * sizeof(double));
 
   // Reduce over components.
   sunrealtype red_out = 0.0;
-  for (sunindextype i=0; i<ncomp; ++i) {
-    red_out += red_ho[i];
-  }
-  red_out = SUNRsqrt(red_out/xdptr->size);
+  for (sunindextype i = 0; i < ncomp; ++i) { red_out += red_ho[i]; }
+  red_out = SUNRsqrt(red_out / xdptr->size);
 
   gkyl_free(red_ho);
-  if (gkyl_array_is_cu_dev(xdptr))
-    gkyl_cu_free(red);
-  else
-    gkyl_free(red);
+  if (gkyl_array_is_cu_dev(xdptr)) gkyl_cu_free(red);
+  else gkyl_free(red);
 
   return red_out;
+}
+
+//TODO: update this function to its GPU version
+sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
+{
+  struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
+  struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
+
+  sunrealtype* x_data = xdptr->data;
+  sunrealtype* y_data = ydptr->data;
+
+  sunindextype N       = (xdptr->size * xdptr->ncomp);
+  sunrealtype dot_prod = 0.0;
+
+  for (sunindextype i = 0; i < N; ++i) { dot_prod += x_data[i] * y_data[i]; }
+
+  return dot_prod;
 }
 
 //Will be removed soon. No need to create a new function.
@@ -316,13 +319,13 @@ void N_VSpace_Gkylzero(N_Vector v, sunindextype* x, sunindextype* y)
 
 void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
 {
-
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
   /* SUN_RCONST(1.0) values are unused dummy variables */
-  gkyl_array_comp_op(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
+  gkyl_array_comp_op(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(0.0),
+                     vdptr);
 
   return;
 }
@@ -333,7 +336,8 @@ void N_VAbs_Gkylzero(N_Vector u, N_Vector v)
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
   /* SUN_RCONST(1.0) values and the last vdptr pointer are unused dummy variables */
-  gkyl_array_comp_op(vdptr, GKYL_ABS, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
+  gkyl_array_comp_op(vdptr, GKYL_ABS, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0),
+                     vdptr);
 
   return;
 }
@@ -344,7 +348,8 @@ void N_VInv_Gkylzero(N_Vector u, N_Vector v)
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
 
   /* SUN_RCONST(1.0) values and the last vdptr pointer are unused dummy variables */
-  gkyl_array_comp_op(vdptr, GKYL_INV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0), vdptr);
+  gkyl_array_comp_op(vdptr, GKYL_INV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0),
+                     vdptr);
 
   return;
 }
@@ -355,33 +360,31 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
 
   sunrealtype red_ho[udptr->ncomp];
-  double *red;
+  double* red;
   if (gkyl_array_is_cu_dev(udptr))
     red = gkyl_cu_malloc(udptr->ncomp * sizeof(double));
-  else
-    red = gkyl_malloc(udptr->ncomp * sizeof(double));
+  else red = gkyl_malloc(udptr->ncomp * sizeof(double));
 
   gkyl_array_reduce(red, udptr, GKYL_ABS_MAX);
 
   if (gkyl_array_is_cu_dev(udptr))
-    gkyl_cu_memcpy(red_ho, red, udptr->ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
-  else
-    memcpy(red_ho, red, udptr->ncomp * sizeof(double));
+    gkyl_cu_memcpy(red_ho, red, udptr->ncomp * sizeof(double),
+                   GKYL_CU_MEMCPY_D2H);
+  else memcpy(red_ho, red, udptr->ncomp * sizeof(double));
 
   sunrealtype max = 0.0;
-  for (sunindextype i=0; i<udptr->ncomp; ++i) {
+  for (sunindextype i = 0; i < udptr->ncomp; ++i)
+  {
     max = fmax(max, red_ho[i]);
   }
 
-  if (gkyl_array_is_cu_dev(udptr))
-    gkyl_cu_free(red);
-  else
-    gkyl_free(red);
+  if (gkyl_array_is_cu_dev(udptr)) gkyl_cu_free(red);
+  else gkyl_free(red);
 
   return (max);
 }
 
-void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
+void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x, N_Vector v)
 {
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
@@ -390,9 +393,7 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x ,N_Vector v)
 
   sunindextype N = udptr->ncomp;
 
-  for (sunindextype i=0; i<N; ++i) {
-    gkyl_array_shiftc(vdptr, x, i);
-  }
+  for (sunindextype i = 0; i < N; ++i) { gkyl_array_shiftc(vdptr, x, i); }
 
   return;
 }

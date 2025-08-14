@@ -11,7 +11,7 @@ CUDA_ARCH ?= 70
 # Warning flags: -Wall -Wno-unused-variable -Wno-unused-function -Wno-missing-braces
 CFLAGS ?= -O3 -g -ffast-math -fPIC -MMD -MP -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 LDFLAGS =
-PREFIX = ${PWD}/../deps/gkylsoft
+PREFIX = ${PWD}/../deps/gkyl-install
 SUN_PREFIX = $(shell dirname ${PREFIX})
 
 # determine OS we are running on
@@ -41,7 +41,7 @@ G0_LIB_DIR = ${PREFIX}/gkylzero/lib
 G0_LIB = -lgkylzero
 
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
-SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib64
+SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
 SUNDIALS_LIB = -lsundials_arkode -lsundials_core
 SUNDIALS_RPATH = -Wl,-rpath,${SUNDIALS_LIB_DIR}
 
@@ -143,11 +143,16 @@ EXT_LIBS = ${LAPACK_LIB} ${SUNDIALS_LIB} ${SUNDIALS_RPATH} ${SUPERLU_LIB} ${MPI_
 
 all: gk_diffusion_1x1v_p1
 
-gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o
-	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c -o gk_diffusion_1x1v_p1 -L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS} nvector_gkylzero.o
+gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o test_nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c nvector_gkylzero.o test_nvector_gkylzero.o\
+		-o gk_diffusion_1x1v_p1 \
+		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
+
+test_nvector_gkylzero.o: test_nvector_gkylzero.c nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} -c test_nvector_gkylzero.c -o test_nvector_gkylzero.o nvector_gkylzero.o
 
 nvector_gkylzero.o: nvector_gkylzero.c
-	${CC} ${CFLAGS} -c ${INCLUDES} nvector_gkylzero.c -o nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} -c nvector_gkylzero.c -o nvector_gkylzero.o
 
 clean:
 	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl *.o
