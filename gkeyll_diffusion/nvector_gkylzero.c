@@ -324,7 +324,7 @@ void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
 
   /* SUN_RCONST(1.0) values are unused dummy variables */
-  gkyl_array_comp_op(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(1.0),
+  gkyl_array_comp_op(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(0.0),
                      vdptr);
 
   return;

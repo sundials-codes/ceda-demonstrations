@@ -143,11 +143,16 @@ EXT_LIBS = ${LAPACK_LIB} ${SUNDIALS_LIB} ${SUNDIALS_RPATH} ${SUPERLU_LIB} ${MPI_
 
 all: gk_diffusion_1x1v_p1
 
-gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o
-	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c -o gk_diffusion_1x1v_p1 -L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS} nvector_gkylzero.o
+gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o test_nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c nvector_gkylzero.o test_nvector_gkylzero.o\
+		-o gk_diffusion_1x1v_p1 \
+		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
+
+test_nvector_gkylzero.o: test_nvector_gkylzero.c nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} -c test_nvector_gkylzero.c -o test_nvector_gkylzero.o nvector_gkylzero.o
 
 nvector_gkylzero.o: nvector_gkylzero.c
-	${CC} ${CFLAGS} -c ${INCLUDES} nvector_gkylzero.c -o nvector_gkylzero.o
+	${CC} ${CFLAGS} ${INCLUDES} -c nvector_gkylzero.c -o nvector_gkylzero.o
 
 clean:
 	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl *.o
