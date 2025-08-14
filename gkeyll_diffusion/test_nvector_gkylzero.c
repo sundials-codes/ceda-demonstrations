@@ -1,34 +1,4 @@
-#include <float.h>
-#include <gkyl_array.h>
-#include <gkyl_array_ops.h>
-#include <gkyl_comm_io.h>
-#include <gkyl_dg_bin_ops.h>
-#include <gkyl_dg_updater_diffusion_gyrokinetic.h>
-#include <gkyl_dynvec.h>
-#include <gkyl_eval_on_nodes.h>
-#include <gkyl_gk_geometry.h>
-#include <gkyl_gk_geometry_mapc2p.h>
-#include <gkyl_null_comm.h>
-#include <gkyl_proj_on_basis.h>
-#include <gkyl_range.h>
-#include <gkyl_rect_decomp.h>
-#include <gkyl_rect_grid.h>
-#include <gkyl_util.h>
-#include <gkyl_velocity_map.h>
-#include <mpack.h>
-
-#include "nvector_gkylzero.h"
-
-#include <arkode/arkode_erkstep.h>  /* prototypes for ERKStep fcts., consts */
-#include <arkode/arkode_lsrkstep.h> /* prototypes for LSRKStep fcts., consts */
-#include <math.h>
-#include <nvector/nvector_serial.h> /* serial N_Vector types, fcts., macros */
-#include <stdio.h>
-#include <sundials/sundials_math.h> /* def. of SUNRsqrt, etc. */
-#include <sundials/sundials_types.h> /* definition of type sunrealtype          */
-
-#include <rt_arg_parse.h>
-#include <time.h>
+#include "src/nvector_gkylzero.h"
 
 void test_NVector(bool use_gpu)
 {
@@ -367,4 +337,11 @@ void test_NVector(bool use_gpu)
   N_VDestroy_Gkylzero(Nv1);
   N_VDestroy_Gkylzero(Nv2);
   N_VDestroy_Gkylzero(Nlin_sum);
+}
+
+int main(int argc, char** argv)
+{
+  test_NVector(false);
+
+  return 0;
 }

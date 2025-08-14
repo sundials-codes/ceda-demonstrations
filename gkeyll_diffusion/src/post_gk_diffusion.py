@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 #.
 #...........................................................................#
 
-dataDir = './'  #.Directory where data is located.
-outDir  = './'  #.Directory to place output files.
+dataDir = '../'  #.Directory where data is located.
+outDir  = '../'  #.Directory to place output files.
 
 simName = 'gk_diffusion_1x1v_p1'  #.Simulation name.
 fieldName = 'f'  #.Quantity to plot.

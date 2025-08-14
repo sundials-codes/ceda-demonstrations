@@ -38,6 +38,8 @@ deps/gkyl-install
 *.exe
 *.out
 *.app
+gk_diffusion_1x1v_p1
+test_nvector_gkylzero
 
 # Build folder
 build
@@ -56,3 +58,6 @@ bin/
 
 # Output file
 *.csv
+
+# Local scripts
+local_scripts
