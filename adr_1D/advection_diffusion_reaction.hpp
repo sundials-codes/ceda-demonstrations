@@ -22,6 +22,7 @@
 #include "arkode/arkode_arkstep.h"
 #include "arkode/arkode_lsrkstep.h"
 #include "arkode/arkode_mristep.h"
+#include "arkode/arkode_splittingstep.h"
 #include "nvector/nvector_serial.h"
 #include "sundials/sundials_core.hpp"
 #include "sunlinsol/sunlinsol_spgmr.h"
@@ -112,7 +113,7 @@ UserData::~UserData()
 
 struct UserOptions
 {
-  // Integration method (0 = ERK, 1 = ARK, 2 = ExtSTS)
+  // Integration method (0 = ERK, 1 = ARK, 2 = ExtSTS, 3 = Splitting)
   int integrator = 1;
 
   // Table ID for ARK methods:
@@ -130,16 +131,19 @@ struct UserOptions
 
   // ExtSTS method options
   //   sts_method = 0 (RKC) or 1 (RKL)
-  //   extsts_method = 0 or 1:
+  //   extsts_method:
   //   * advection+diffusion+reaction
   //         0 = ARS(2,2,2)
   //         1 = Giraldo ARK2
   //   * advection+diffusion
-  //         0 = Ralston
-  //         1 = Heun-Euler
+  //         0 = ARS(2,2,2) ERK
+  //         1 = Giraldo ERK2
+  //         2 = Ralston
+  //         3 = Heun-Euler
   //   * diffusion+reaction
-  //         0 = SSP SDIRK 2
+  //         0 = ARS(2,2,2) SDIRK
   //         1 = Giraldo DIRK2
+  //         2 = SSP SDIRK 2
   int sts_method    = 0;
   int extsts_method = 0;
 
@@ -240,6 +244,10 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
                 SUNMatrix* A, SUNLinearSolver* LS, MRIStepInnerStepper* sts_mem,
                 void** arkode_mem);
+
+int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
+                SUNMatrix* A, SUNLinearSolver* LS, SUNStepper steppers[2],
+                void** lsrkstep_mem, void** arkstep_mem, void** arkode_mem);
 
 int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
                    SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem);
@@ -375,6 +383,34 @@ static int OutputStatsExtSTS(void* arkode_mem, MRIStepInnerStepper sts_mem,
   return 0;
 }
 
+// Print Strang integrator statistics
+static int OutputStatsStrang(void* arkode_mem, void* arkstep_mem, void* lsrkstep_mem,
+                             UserData& udata)
+{
+  int flag;
+
+  // Print all SplittingStep integrator stats
+  cout << fixed << setprecision(6);
+  cout << endl << "Strang Integrator:" << endl;
+  flag = ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
+  cout << endl;
+
+  // Print all SplittingStep stats
+  cout << endl << "ARKStep Stepper:" << endl;
+  flag = ARKodePrintAllStats(arkstep_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
+  cout << endl;
+
+  // Print all LSRKStep stats
+  cout << endl << "LSRKStep Stepper:" << endl;
+  flag = ARKodePrintAllStats(lsrkstep_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
+  cout << endl;
+
+  return 0;
+}
+
 // Print command line options
 static void InputHelp()
 {
@@ -391,11 +427,23 @@ static void InputHelp()
   cout << "  --xl <real>              : domain lower boundary\n";
   cout << "  --xu <real>              : domain upper boundary\n";
   cout << "  --nx <int>               : number of mesh points\n";
-  cout << "  --integrator <int>       : integrator option (0=ERK, 1=ARK, 2=ExtSTS)\n";
+  cout << "  --integrator <int>       : integrator option (0=ERK, 1=ARK, 2=ExtSTS, 3=Strang)\n";
   cout << "  --table_id <int>         : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
   cout << "  --order <int>            : method order\n";
   cout << "  --sts_method <int>       : STS method type (0=RKC, 1=RKL)\n";
-  cout << "  --extsts_method <int>    : ExtSTS method type (0=ARS/Ralston/SSPSDIRK2, 1=Giraldo/HeunEuler)\n";
+  cout << "  --extsts_method <int>    : ExtSTS method type\n";
+  cout << "                               advection+diffusion+reaction\n";
+  cout << "                                   0 = ARS(2,2,2)\n";
+  cout << "                                   1 = Giraldo ARK2\n";
+  cout << "                               advection+diffusion\n";
+  cout << "                                   0 = ARS(2,2,2) ERK\n";
+  cout << "                                   1 = Giraldo ERK2\n";
+  cout << "                                   2 = Ralston\n";
+  cout << "                                   3 = Heun-Euler\n";
+  cout << "                               diffusion+reaction\n";
+  cout << "                                   0 = ARS(2,2,2) SDIRK\n";
+  cout << "                                   1 = Giraldo DIRK2\n";
+  cout << "                                   2 = SSP SDIRK 2\n";
   cout << "  --rtol <real>            : relative tolerance\n";
   cout << "  --atol <real>            : absolute tolerance\n";
   cout << "  --fixed_h <real>         : fixed step size\n";
@@ -524,7 +572,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
     return -1;
   }
 
-  if (uopts.integrator < 0 || uopts.integrator > 2)
+  if (uopts.integrator < 0 || uopts.integrator > 3)
   {
     cerr << "ERROR: Invalid integrator option" << endl;
     return -1;
@@ -595,6 +643,15 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     else { cout << "  reaction         = OFF" << endl; }
     cout << "  diffusion        = Explicit" << endl;
   }
+  else if (uopts.integrator == 3)
+  {
+    cout << "  integrator       = Strang" << endl;
+    if (udata.advection) { cout << "  advection        = Explicit" << endl; }
+    else { cout << "  advection        = OFF" << endl; }
+    if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
+    else { cout << "  reaction         = OFF" << endl; }
+    cout << "  diffusion        = Explicit" << endl;
+  }
   else
   {
     cerr << "ERROR: Invalid integrator option" << endl;
@@ -634,35 +691,29 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     if (udata.advection && udata.reaction)  // advection + diffusion + reaction
     {
       if (uopts.extsts_method == 0)
-      {
-        cout << "  ExtSTS method    = ARKS(2,2,2)" << endl;
-      }
+      { cout << "  ExtSTS method    = ARKS(2,2,2)" << endl; }
       else
-      {
-        cout << "  ExtSTS method    = Giraldo ARK2" << endl;
-      }
+      { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
     }
     else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
     {
       if (uopts.extsts_method == 0)
-      {
-        cout << "  ExtSTS method    = Ralston" << endl;
-      }
+      { cout << "  ExtSTS method    = ARS(2,2,2) ERK" << endl; }
+      else if (uopts.extsts_method == 1)
+      { cout << "  ExtSTS method    = Giraldo ERK2" << endl; }
+      else if (uopts.extsts_method == 2)
+      { cout << "  ExtSTS method    = Ralston" << endl; }
       else
-      {
-        cout << "  ExtSTS method    = Heun-Euler" << endl;
-      }
+      { cout << "  ExtSTS method    = Heun-Euler" << endl; }
     }
     else if (!udata.advection && udata.reaction)  // diffusion + reaction
     {
       if (uopts.extsts_method == 0)
-      {
-        cout << "  ExtSTS method    = SSP SDIRK 2" << endl;
-      }
+      { cout << "  ExtSTS method    = ARS(2,2,2) SDIRK" << endl; }
+      else if (uopts.extsts_method == 1)
+      { cout << "  ExtSTS method    = Giraldo DIRK2" << endl; }
       else
-      {
-        cout << "  ExtSTS method    = Giraldo DIRK2" << endl;
-      }
+      { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
     }
     if (uopts.sts_method == 0)
     {
@@ -671,6 +722,24 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     else
     {
       cout << "  STS method       = RKL" << endl;
+    }
+  }
+  if (uopts.integrator == 3)
+  {
+    cout << " --------------------------------- " << endl;
+    cout << "  Strang:" << endl;
+    cout << "     STS diffusion" << endl;
+    if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+    {
+      cout << "     ARS(2,2,2) ARK: implicit reaction + explicit advection" << endl;
+    }
+    else if (!udata.reaction)  // advection + diffusion
+    {
+      cout << "     ARS(2,2,2) ERK: explicit advection" << endl;
+    }
+    else if (!udata.advection && udata.reaction)  // diffusion + reaction
+    {
+      cout << "     ARS(2,2,2) DIRK: implicit reaction" << endl;
     }
   }
   cout << " --------------------------------- " << endl;

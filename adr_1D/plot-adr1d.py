@@ -31,9 +31,7 @@ Plot_Adaptive = True
 # utility functions to generate plots
 def ark_table_name(table_id):
     """Return the name of the ARK table with the given ID."""
-    if (table_id == 0):
-        return 'Default RK'
-    elif (table_id == 1):
+    if (table_id == 1):
         return 'ARS-ARK21'
     elif (table_id == 2):
         return 'Giraldo-ARK21'
@@ -48,6 +46,53 @@ def ark_table_name(table_id):
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
+def rk_line_style(table_id):
+    """Return the marker and color for plotting the ARK table with the given ID."""
+    if (table_id == 1):
+        return 'x', 'C0'
+    elif (table_id == 2):
+        return '+', 'C1'
+    elif (table_id == 5):
+        return 'x', 'C7'
+    elif (table_id == 6):
+        return '+', 'C8'
+    else:
+        raise ValueError('Unknown table ID: %d' % table_id)
+
+def strang_line_style(sts):
+    """Return the marker and color for plotting the Strang + STS
+       method."""
+    if (sts == 'RKL'):
+        return 'x', 'C6'
+    else:
+        return '+', 'C6'
+
+def extsts_line_style(extsts,sts):
+    """Return the marker and color for plotting the extended STS method type and
+       STS method with the given IDs."""
+    if (extsts == 'ARS'):
+        if (sts == 'RKL'):
+            return 'x', 'C2'
+        else:
+            return '+', 'C2'
+    elif (extsts == 'Giraldo'):
+        if (sts == 'RKL'):
+            return 'x', 'C3'
+        else:
+            return '+', 'C3'
+    elif (extsts == 'Ralston'):
+        if (sts == 'RKL'):
+            return 'x', 'C4'
+        else:
+            return '+', 'C4'
+    elif (extsts == 'SSPSDIRK2'):
+        if (sts == 'RKL'):
+            return 'x', 'C5'
+        else:
+            return '+', 'C5'
+    else:
+        raise ValueError('Unknown extsts type: %d' % extsts)
+
 convergence_figsize = (10,4)
 convergence_bbox = (0.55, 0.95)
 #convergence_ylim = (1e-10, 1e-3)
@@ -59,17 +104,7 @@ def make_convergence_comparison_plot(data, titletxt, picname):
     for integrator in data['inttype'].unique():
         intdata = data.groupby(['inttype',]).get_group((integrator,))
 
-        if (integrator != 'ExtSTS'):
-            for table_id in intdata['table_id'].unique():
-                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
-                stepsize = tabledata['fixedh'].to_numpy()
-                accuracy = tabledata['Accuracy'].to_numpy()
-                rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-                medrate = np.median(rates)
-                ltext = '%s (rate = %.2f)' % (ark_table_name(table_id),medrate)
-                ax1.loglog(stepsize, accuracy, label=ltext)
-
-        else:
+        if (integrator == 'ExtSTS'):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
@@ -79,7 +114,30 @@ def make_convergence_comparison_plot(data, titletxt, picname):
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.median(rates)
                     ltext = '%s+%s+%s (rate = %.2f)' % (integrator,extsts,sts,medrate)
-                    ax1.loglog(stepsize, accuracy, label=ltext)
+                    m,c = extsts_line_style(extsts,sts)
+                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
+                stepsize = stsdata['fixedh'].to_numpy()
+                accuracy = stsdata['Accuracy'].to_numpy()
+                rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
+                medrate = np.median(rates)
+                ltext = '%s+%s (rate = %.2f)' % (integrator,sts,medrate)
+                m,c = strang_line_style(sts)
+                ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+
+        else:
+            for table_id in intdata['table_id'].unique():
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                stepsize = tabledata['fixedh'].to_numpy()
+                accuracy = tabledata['Accuracy'].to_numpy()
+                rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
+                medrate = np.median(rates)
+                ltext = '%s (rate = %.2f)' % (ark_table_name(table_id),medrate)
+                m,c = rk_line_style(table_id)
+                ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -94,7 +152,7 @@ def make_convergence_comparison_plot(data, titletxt, picname):
     if (Generate_PDF):
         plt.savefig(picname + '.pdf')
 
-efficiency_figsize = (10,10)
+efficiency_figsize = (10,8)
 efficiency_bbox = (0.55, 0.95)
 def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot_rx=True):
     fig = plt.figure(figsize=efficiency_figsize)
@@ -112,23 +170,7 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
         intdata = data.groupby(['inttype',]).get_group((integrator,))
         ax_diff = ax1
 
-        if (integrator != 'ExtSTS'):
-            for table_id in intdata['table_id'].unique():
-                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
-                accuracy = tabledata['Accuracy'].to_numpy()
-                diffevals = tabledata['DiffEvals'].to_numpy()
-                if (plot_adv):
-                    advevals = tabledata['AdvEvals'].to_numpy()
-                if (plot_rx):
-                    rxevals = tabledata['RxEvals'].to_numpy()
-                ltext = ark_table_name(table_id)
-                ax_diff.loglog(diffevals, accuracy, label=ltext)
-                if (plot_adv):
-                    ax_adv.loglog(advevals, accuracy, label=ltext)
-                if (plot_rx):
-                    ax_rx.loglog(rxevals, accuracy, label=ltext)
-
-        else:
+        if (integrator == 'ExtSTS'):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
@@ -140,11 +182,46 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     if (plot_rx):
                         rxevals = stsdata['RxEvals'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
-                    ax_diff.loglog(diffevals, accuracy, label=ltext)
+                    m,c = extsts_line_style(extsts,sts)
+                    ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
                     if (plot_adv):
-                        ax_adv.loglog(advevals, accuracy, label=ltext)
+                        ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
                     if (plot_rx):
-                        ax_rx.loglog(rxevals, accuracy, label=ltext)
+                        ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
+                accuracy = stsdata['Accuracy'].to_numpy()
+                diffevals = stsdata['DiffEvals'].to_numpy()
+                if (plot_adv):
+                    advevals = stsdata['AdvEvals'].to_numpy()
+                if (plot_rx):
+                    rxevals = stsdata['RxEvals'].to_numpy()
+                ltext = '%s+%s' % (integrator,sts)
+                m,c = strang_line_style(sts)
+                ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
+                if (plot_adv):
+                    ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
+                if (plot_rx):
+                    ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
+
+        else:
+            for table_id in intdata['table_id'].unique():
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                accuracy = tabledata['Accuracy'].to_numpy()
+                diffevals = tabledata['DiffEvals'].to_numpy()
+                if (plot_adv):
+                    advevals = tabledata['AdvEvals'].to_numpy()
+                if (plot_rx):
+                    rxevals = tabledata['RxEvals'].to_numpy()
+                ltext = ark_table_name(table_id)
+                m,c = rk_line_style(table_id)
+                ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
+                if (plot_adv):
+                    ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
+                if (plot_rx):
+                    ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -175,15 +252,7 @@ def make_accuracy_comparison_plot(data, titletxt, picname):
     for integrator in data['inttype'].unique():
         intdata = data.groupby(['inttype',]).get_group((integrator,))
 
-        if (integrator != 'ExtSTS'):
-            for table_id in intdata['table_id'].unique():
-                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
-                rtol = tabledata['rtol'].to_numpy()
-                accuracy = tabledata['Accuracy'].to_numpy()
-                ltext = ark_table_name(table_id)
-                ax1.loglog(rtol, accuracy, label=ltext)
-
-        else:
+        if (integrator == 'ExtSTS'):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
@@ -191,7 +260,26 @@ def make_accuracy_comparison_plot(data, titletxt, picname):
                     rtol = stsdata['rtol'].to_numpy()
                     accuracy = stsdata['Accuracy'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
-                    ax1.loglog(rtol, accuracy, label=ltext)
+                    m,c = extsts_line_style(extsts,sts)
+                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
+                rtol = stsdata['rtol'].to_numpy()
+                accuracy = stsdata['Accuracy'].to_numpy()
+                ltext = '%s+%s' % (integrator,sts)
+                m,c = strang_line_style(sts)
+                ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
+
+        else:
+            for table_id in intdata['table_id'].unique():
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                rtol = tabledata['rtol'].to_numpy()
+                accuracy = tabledata['Accuracy'].to_numpy()
+                ltext = ark_table_name(table_id)
+                m,c = rk_line_style(table_id)
+                ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)

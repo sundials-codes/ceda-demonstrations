@@ -45,6 +45,16 @@
  *      Note: either of the advection and reaction operators can be disabled
  *      using the flags --no-advection and/or --no-reaction.
  *
+ *   3. A second-order Strang operator splitting method that combines LSRKStep and
+ *      ARKStep, where diffusion is treated explicitly using LSRKStep, advection is
+ *      treated explicitly using ARKStep, and reaction is treated implicitly using
+ *      ARKStep. This option must be used with fixed time step sizes.  ARKStep will
+ *      always use the ARS(2,2,2) table (whether it is run in ERK, DIRK, or ARK
+ *      mode).
+ *
+ *      Note: either of the advection and reaction operators can be disabled
+ *      using the flags --no-advection and/or --no-reaction.
+ *
  * Several command line options are available to change the problem parameters
  * and integrator settings. Use the flag --help for more information.
  * ---------------------------------------------------------------------------*/
@@ -113,6 +123,11 @@ int main(int argc, char* argv[])
   // STS integrator for ExtSTS method
   MRIStepInnerStepper sts_mem = nullptr;
 
+  // LSRKStep and ARKStep integrators for Strang splitting method
+  SUNStepper steppers[2];
+  void* lsrkstep_mem = nullptr;
+  void* arkstep_mem = nullptr;
+
   // Create integrator
   switch (uopts.integrator)
   {
@@ -124,6 +139,10 @@ int main(int argc, char* argv[])
     break;
   case (2):
     flag = SetupExtSTS(ctx, udata, uopts, y, &A, &LS, &sts_mem, &arkode_mem);
+    break;
+  case (3):
+    flag = SetupStrang(ctx, udata, uopts, y, &A, &LS, steppers, &lsrkstep_mem,
+                       &arkstep_mem, &arkode_mem);
     break;
   default: flag = -1;
   }
@@ -221,6 +240,7 @@ int main(int argc, char* argv[])
     case (0): flag = OutputStatsERK(arkode_mem, udata); break;
     case (1): flag = OutputStatsARK(arkode_mem, udata); break;
     case (2): flag = OutputStatsExtSTS(arkode_mem, sts_mem, udata); break;
+    case (3): flag = OutputStatsStrang(arkode_mem, arkstep_mem, lsrkstep_mem, udata); break;
     default: flag = -1;
     }
     if (check_flag(flag, "OutputStats")) { return 1; }
@@ -242,6 +262,15 @@ int main(int argc, char* argv[])
     ARKodeFree(&(content->sts_arkode_mem));
     free(content);
     MRIStepInnerStepper_Free(&sts_mem);
+    ARKodeFree(&arkode_mem);
+    break;
+  }
+  case (3):
+  {
+    ARKodeFree(&lsrkstep_mem);
+    ARKodeFree(&arkstep_mem);
+    SUNStepper_Destroy(&steppers[0]);
+    SUNStepper_Destroy(&steppers[1]);
     ARKodeFree(&arkode_mem);
     break;
   }
@@ -422,8 +451,8 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       Be->A[2][1] = SUN_RCONST(1.0)-delta;
       Be->b[0] = delta;
       Be->b[1] = SUN_RCONST(1.0)-delta;
-      Be->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Be->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+      Be->d[1] = SUN_RCONST(3.0)/SUN_RCONST(5.0);
+      Be->d[2] = SUN_RCONST(2.0)/SUN_RCONST(5.0);
       Be->q = 2;
       Be->p = 1;
       Bi = ARKodeButcherTable_Alloc(3, SUNTRUE);
@@ -434,8 +463,8 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       Bi->A[2][2] = gamma;
       Bi->b[1] = SUN_RCONST(1.0)-gamma;
       Bi->b[2] = gamma;
-      Bi->d[1] = SUN_RCONST(2.0)/SUN_RCONST(3.0);
-      Bi->d[2] = SUN_RCONST(1.0)/SUN_RCONST(3.0);
+      Bi->d[1] = SUN_RCONST(3.0)/SUN_RCONST(5.0);
+      Bi->d[2] = SUN_RCONST(2.0)/SUN_RCONST(5.0);
       Bi->q = 2;
       Bi->p = 1;
     }
@@ -887,7 +916,54 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
   else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
   {
-    if (uopts.extsts_method == 0)  // Ralston
+    if (uopts.extsts_method == 0)  // ARS(2,2,2) ERK
+    {
+      C = MRIStepCoupling_Alloc(1, 5, MRISTEP_EXPLICIT);
+      const sunrealtype one = SUN_RCONST(1.0);
+      const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
+      const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
+      const sunrealtype three = SUN_RCONST(3.0);
+      C->q = 2;
+      C->p = 1;
+      C->c[1] = gamma;
+      C->c[2] = gamma;
+      C->c[3] = one;
+      C->c[4] = one;
+      C->W[0][1][0] = gamma;
+      C->W[0][3][0] = delta - gamma;
+      C->W[0][3][2] = one - delta;
+      C->W[0][5][0] = -delta;
+      C->W[0][5][2] = delta - SUN_RCONST(0.4);
+      C->W[0][5][4] = SUN_RCONST(0.4);
+    }
+    else if (uopts.extsts_method == 1)  // Giraldo ERK2
+    {
+      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_EXPLICIT);
+      const sunrealtype one = SUN_RCONST(1.0);
+      const sunrealtype two = SUN_RCONST(2.0);
+      const sunrealtype three = SUN_RCONST(3.0);
+      const sunrealtype four = SUN_RCONST(4.0);
+      const sunrealtype six = SUN_RCONST(6.0);
+      const sunrealtype eight = SUN_RCONST(8.0);
+      const sunrealtype sqrt2 = SUNRsqrt(two);
+      C->q = 2;
+      C->p = 1;
+      C->c[1] = two - sqrt2;
+      C->c[2] = two - sqrt2;
+      C->c[3] = one;
+      C->c[4] = one;
+      C->c[5] = one;
+      C->W[0][1][0] = two - sqrt2;
+      C->W[0][3][0] = (three - two * sqrt2)/six - (two - sqrt2);
+      C->W[0][3][2] = (three + two * sqrt2)/six;
+      C->W[0][5][0] = one/(two * sqrt2) - (three - two * sqrt2)/six;
+      C->W[0][5][2] = one/(two * sqrt2) - (three + two * sqrt2)/six;
+      C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
+      C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2)/six;
+      C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2)/six;
+      C->W[0][6][4] = one / (two * sqrt2);
+    }
+    else if (uopts.extsts_method == 2)  // Ralston
     {
       C = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
@@ -905,7 +981,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->W[0][3][1] = two / three - three / four;
       C->W[0][3][2] = SUN_RCONST(22.0)/SUN_RCONST(111.0);
     }
-    else                           // Heun-Euler -- THE EMBEDDING LOOKS LIKE IT NEEDS WORK
+    else                           // Heun-Euler
     {
       C = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
@@ -922,34 +998,29 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
   else if (!udata.advection && udata.reaction)  // diffusion + reaction
   {
-    if (uopts.extsts_method == 0)  // SSP SDIRK 2
+    if (uopts.extsts_method == 0)  // ARS(2,2,2)
     {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+      C = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
-      const sunrealtype five = SUN_RCONST(5.0);
-      const sunrealtype seven = SUN_RCONST(7.0);
-      const sunrealtype twelve = SUN_RCONST(12.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(two);
+      const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
+      const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
+      const sunrealtype three = SUN_RCONST(3.0);
       C->q = 2;
       C->p = 1;
       C->c[1] = gamma;
       C->c[2] = gamma;
-      C->c[3] = one - gamma;
-      C->c[4] = one - gamma;
-      C->c[5] = one;
-      C->G[0][1][0] = gamma;
+      C->c[3] = one;
+      C->c[4] = one;
+      C->G[0][1][0] =  gamma;
       C->G[0][2][0] = -gamma;
-      C->G[0][2][2] = gamma;
-      C->G[0][3][2] = one - two * gamma;
+      C->G[0][2][2] =  gamma;
+      C->G[0][3][2] =  one - gamma;
       C->G[0][4][2] = -gamma;
-      C->G[0][4][4] = gamma;
-      C->G[0][5][2] = two * gamma - one / two;
-      C->G[0][5][4] = one / two - gamma;
-      C->G[0][6][2] = two*gamma - seven / twelve;
-      C->G[0][6][4] = seven / twelve - gamma;
+      C->G[0][4][4] =  gamma;
+      C->G[0][5][2] = -SUN_RCONST(0.4);
+      C->G[0][5][4] =  SUN_RCONST(0.4);
     }
-    else                           // Giraldo DIRK2
+    else if (uopts.extsts_method == 1)  // Giraldo DIRK2
     {
       C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
       const sunrealtype one = SUN_RCONST(1.0);
@@ -978,6 +1049,33 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
       C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
     }
+    else  // SSP SDIRK 2
+    {
+      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+      const sunrealtype one = SUN_RCONST(1.0);
+      const sunrealtype two = SUN_RCONST(2.0);
+      const sunrealtype five = SUN_RCONST(5.0);
+      const sunrealtype seven = SUN_RCONST(7.0);
+      const sunrealtype twelve = SUN_RCONST(12.0);
+      const sunrealtype gamma = one - one / SUNRsqrt(two);
+      C->q = 2;
+      C->p = 1;
+      C->c[1] = gamma;
+      C->c[2] = gamma;
+      C->c[3] = one - gamma;
+      C->c[4] = one - gamma;
+      C->c[5] = one;
+      C->G[0][1][0] = gamma;
+      C->G[0][2][0] = -gamma;
+      C->G[0][2][2] = gamma;
+      C->G[0][3][2] = one - two * gamma;
+      C->G[0][4][2] = -gamma;
+      C->G[0][4][4] = gamma;
+      C->G[0][5][2] = two * gamma - one / two;
+      C->G[0][5][4] = one / two - gamma;
+      C->G[0][6][2] = two*gamma - seven / twelve;
+      C->G[0][6][4] = seven / twelve - gamma;
+    }
   }
   else   // illegal configuration
   {
@@ -995,6 +1093,212 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Tighten safety factor for time step selection
   flag = ARKodeSetSafetyFactor(*arkode_mem, 0.8);
   if (check_flag(flag, "ARKodeSetSafetyFactor")) { return 1; }
+
+  // Set stopping time
+  flag = ARKodeSetStopTime(*arkode_mem, udata.tf);
+  if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
+
+  return 0;
+}
+
+int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
+                SUNMatrix* A, SUNLinearSolver* LS,  SUNStepper steppers[2],
+                void** lsrkstep_mem, void** arkstep_mem, void** arkode_mem)
+{
+  // Problem configuration
+  ARKRhsFn fe_RHS;     // explicit RHS function
+  ARKRhsFn fi_RHS;     // implicit RHS function
+  ARKLsJacFn Ji_RHS;   // implicit RHS Jacobian function
+
+  fe_RHS = (udata.advection) ? f_advection : nullptr;
+  fi_RHS = (udata.reaction)  ? f_reaction  : nullptr;
+  Ji_RHS = (udata.reaction)  ? J_reaction  : nullptr;
+
+  // -----------------------------
+  // Setup the LSRKStep integrator
+  // -----------------------------
+
+  // Create LSRKStep memory, and attach to steppers[0]
+  *lsrkstep_mem = LSRKStepCreateSTS(f_diffusion, ZERO, y, ctx);
+  if (check_ptr(*lsrkstep_mem, "LSRKStepCreateSTS")) { return 1; }
+
+  // Attach user data
+  int flag = ARKodeSetUserData(*lsrkstep_mem, &udata);
+  if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
+
+  // Select STS method
+  ARKODE_LSRKMethodType ststype = (uopts.sts_method == 0) ? ARKODE_LSRK_RKC_2 : ARKODE_LSRK_RKL_2;
+  flag = LSRKStepSetSTSMethod(*lsrkstep_mem, ststype);
+  if (check_flag(flag, "LSRKStepSetSTSMethod")) { return 1; }
+
+  // Set dominant eigenvalue function and frequency
+  flag = LSRKStepSetDomEigFn(*lsrkstep_mem, diffusion_domeig);
+  if (check_flag(flag, "LSRKStepSetDomEigFn")) { return 1; }
+  flag = LSRKStepSetDomEigFrequency(*lsrkstep_mem, uopts.ls_setup_freq);
+  if (check_flag(flag, "LSRKStepSetDomEigFrequency")) { return 1; }
+
+  // Increase the maximum number of internal STS stages allowed
+  flag = LSRKStepSetMaxNumStages(*lsrkstep_mem, 10000);
+  if (check_flag(flag, "LSRKStepSetMaxNumStages")) { return 1; }
+
+  // Set fixed step size
+  flag = ARKodeSetFixedStep(*lsrkstep_mem, uopts.fixed_h);
+  if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+
+  // Set max steps between outputs
+  flag = ARKodeSetMaxNumSteps(*lsrkstep_mem, uopts.maxsteps);
+  if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
+
+  // Disable temporal interpolation for STS method
+  flag = ARKodeSetInterpolantType(*lsrkstep_mem, ARK_INTERP_NONE);
+  if (check_flag(flag, "ARKodeSetInterpolantType")) { return 1; }
+
+  // Wrap as a SUNStepper
+  flag = ARKodeCreateSUNStepper(*lsrkstep_mem, &steppers[0]);
+  if (check_flag(flag, "ARKodeCreateSUNStepper")) { return 1; }
+
+
+  // ----------------------------
+  // Setup the ARKStep integrator
+  // ----------------------------
+
+  // Create ARKStep memory, and attach to steppers[1]
+  *arkstep_mem = ARKStepCreate(fe_RHS, fi_RHS, ZERO, y, ctx);
+  if (check_ptr(*arkstep_mem, "ARKStepCreate")) { return 1; }
+
+  // Attach user data
+  flag = ARKodeSetUserData(*arkstep_mem, &udata);
+  if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
+
+  // Set fixed step size
+  flag = ARKodeSetFixedStep(*arkstep_mem, uopts.fixed_h);
+  if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+
+  // Set max steps between outputs
+  flag = ARKodeSetMaxNumSteps(*arkstep_mem, uopts.maxsteps);
+  if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
+
+  // If implicit or ImEx, setup solvers
+  if (udata.reaction)
+  {
+    // Specify tolerances (relevant for nonlinear implicit solver)
+    flag = ARKodeSStolerances(*arkstep_mem, uopts.rtol, uopts.atol);
+    if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
+
+    // Create banded matrix
+    *A = SUNBandMatrix(udata.neq, 2, 2, ctx);
+    if (check_ptr(*A, "SUNBandMatrix")) { return 1; }
+
+    // Create linear solver
+    *LS = SUNLinSol_Band(y, *A, ctx);
+    if (check_ptr(*LS, "SUNLinSol_Band")) { return 1; }
+
+    // Attach linear solver
+    flag = ARKodeSetLinearSolver(*arkstep_mem, *LS, *A);
+    if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
+
+    // Attach Jacobian function
+    flag = ARKodeSetJacFn(*arkstep_mem, Ji_RHS);
+    if (check_flag(flag, "ARKodeSetJacFn")) { return 1; }
+
+    // Set linear solver setup frequency
+    flag = ARKodeSetLSetupFrequency(*arkstep_mem, uopts.ls_setup_freq);
+    if (check_flag(flag, "ARKodeSetLSetupFrequency")) { return 1; }
+
+    // Tighten implicit solver tolerances
+    flag = ARKodeSetNonlinConvCoef(*arkstep_mem, 1.e-1);
+    if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
+    flag = ARKodeSetEpsLin(*arkstep_mem, 1.e-1);
+    if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
+
+    // Use "deduce implicit RHS" option
+    flag = ARKodeSetDeduceImplicitRhs(*arkstep_mem, SUNTRUE);
+    if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
+
+    // Set the predictor method
+    flag = ARKodeSetPredictorMethod(*arkstep_mem, uopts.predictor);
+    if (check_flag(flag, "ARKodeSetPredictorMethod")) { return 1; }
+
+  }
+
+  // Set the RK tables (no embeddings needed)
+  ARKodeButcherTable Be = nullptr;
+  ARKodeButcherTable Bi = nullptr;
+  if (udata.reaction)
+  {
+    Bi = ARKodeButcherTable_Alloc(3, SUNFALSE);
+    const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
+    const sunrealtype delta = SUN_RCONST(1.0)-SUN_RCONST(1.0)/(SUN_RCONST(2.0)*gamma);
+    Bi->c[1] = gamma;
+    Bi->c[2] = SUN_RCONST(1.0);;
+    Bi->A[1][1] = gamma;
+    Bi->A[2][1] = SUN_RCONST(1.0)-gamma;
+    Bi->A[2][2] = gamma;
+    Bi->b[1] = SUN_RCONST(1.0)-gamma;
+    Bi->b[2] = gamma;
+    Bi->q = 2;
+  }
+  if (udata.advection)
+  {
+    Be = ARKodeButcherTable_Alloc(3, SUNFALSE);
+    const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
+    const sunrealtype delta = SUN_RCONST(1.0)-SUN_RCONST(1.0)/(SUN_RCONST(2.0)*gamma);
+    Be->c[1] = gamma;
+    Be->c[2] = SUN_RCONST(1.0);;
+    Be->A[1][0] = gamma;
+    Be->A[2][0] = delta;
+    Be->A[2][1] = SUN_RCONST(1.0)-delta;
+    Be->b[0] = delta;
+    Be->b[1] = SUN_RCONST(1.0)-delta;
+    Be->q = 2;
+  }
+
+  flag = ARKStepSetTables(*arkstep_mem, 2, 0, Bi, Be);
+  if (check_flag(flag, "ARKStepSetTables")) { return 1; }
+  if (Be) { ARKodeButcherTable_Free(Be); }
+  if (Bi) { ARKodeButcherTable_Free(Bi); }
+
+  // Wrap as a SUNStepper
+  flag = ARKodeCreateSUNStepper(*arkstep_mem, &steppers[1]);
+  if (check_flag(flag, "ARKodeCreateSUNStepper")) { return 1; }
+
+
+  // ----------------------------
+  // Create the Strang integrator
+  // ----------------------------
+
+  // Create SplittingStep integrator
+  *arkode_mem = SplittingStepCreate(steppers, 2, ZERO, y, ctx);
+  if (check_ptr(*arkode_mem, "SplittingStepCreate")) { return 1; }
+
+  // Set fixed step size
+  if (uopts.fixed_h > ZERO)
+  {
+    flag = ARKodeSetFixedStep(*arkode_mem, uopts.fixed_h);
+    if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+  }
+  else
+  {
+    std::cerr << "ERROR: Fixed step size must be specified for Strang splitting." << std::endl;
+    return 1;
+  }
+
+  // Attach user data
+  flag = ARKodeSetUserData(*arkode_mem, &udata);
+  if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
+
+  // Set Strang coefficients
+  SplittingStepCoefficients coefficients =
+        SplittingStepCoefficients_LoadCoefficientsByName("ARKODE_SPLITTING_STRANG_2_2_2");
+  if (check_ptr(coefficients, "SplittingStepCoefficients_LoadCoefficientsByName"))
+  { return 1;}
+  flag = SplittingStepSetCoefficients(*arkode_mem, coefficients);
+  if (check_flag(flag, "SplittingStepSetCoefficients")) { return 1; }
+  SplittingStepCoefficients_Destroy(&coefficients);
+
+  // Set max steps between outputs
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, uopts.maxsteps);
+  if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
 
   // Set stopping time
   flag = ARKodeSetStopTime(*arkode_mem, udata.tf);
