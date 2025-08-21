@@ -35,6 +35,7 @@ int InitUserData(UserData* udata)
   // Integrator settings
   udata->rtol        = SUN_RCONST(1.e-5);  // relative tolerance
   udata->atol        = SUN_RCONST(1.e-12); // absolute tolerance
+  udata->hfixed      = ZERO;               // using adaptive step sizes
   udata->maxsteps    = 100000;             // max steps between outputs
   udata->wrms_norm_type = 2;               // cellwise wrms norm
 
@@ -78,6 +79,7 @@ int ReadInputs(int argc, char** argv, UserData* udata)
     // Integrator settings
     else if (strcmp(arg, "--rtol") == 0) { udata->rtol = atof(argv[arg_idx++]); }
     else if (strcmp(arg, "--atol") == 0) { udata->atol = atof(argv[arg_idx++]); }
+    else if (strcmp(arg, "--fixedstep") == 0) { udata->hfixed = atof(argv[arg_idx++]); }
     else if (strcmp(arg, "--method") == 0)
     {
       udata->method = (ARKODE_LSRKMethodType)atoi(argv[arg_idx++]);
@@ -109,6 +111,7 @@ int ReadInputs(int argc, char** argv, UserData* udata)
       udata->maxsteps = atoi(argv[arg_idx++]);
     }
     // DEE options
+    else if (strcmp(arg, "--user_dom_eig") == 0) { udata->user_dom_eig = SUNTRUE; }
     else if (strcmp(arg, "--dee_id") == 0) { udata->dee_id = atoi(argv[arg_idx++]); }
     else if (strcmp(arg, "--dee_num_init_wups") == 0)
     {
@@ -157,14 +160,16 @@ void InputHelp(void)
   printf("  --tf <time>                 : final time\n");
   printf("  --rtol <rtol>               : relative tolerance\n");
   printf("  --atol <atol>               : absolute tolerance\n");
+  printf("  --fixedstep <step>          : used fixed step size\n");
   printf("  --wrms_norm_type <type>     : WRMS norm type (componentwise: 1, cellwise norm:2)\n");
-  printf("  --method <mth>              : LSRK method choice\n");
+  printf("  --method <mth>              : LSRK method choice (0:RCK, 1:RKL, 2:SSP2, 3:SSP3, 4:SSP4)\n");
   printf("  --eigfrequency <nst>        : dominant eigenvalue update frequency\n");
   printf("  --stage_max_limit <smax>    : maximum number of stages per step\n");
   printf("  --num_SSP_stages <nstages>  : number of stages in the SSP method\n");
   printf("  --eigsafety <safety>        : dominant eigenvalue safety factor\n");
   printf("  --nout <nout>               : number of outputs\n");
   printf("  --maxsteps <steps>          : max steps between outputs\n");
+  printf("  --user_dom_eig              : use user-provided dominant eigenvalue function\n");
   printf("  --dee_id <id>               : DomEig Estimator (DEE) id (PI: 0, Arnoldi: 1)\n");
   printf("  --dee_num_init_wups <num>   : number of DEE initial warmups\n");
   printf("  --dee_num_succ_wups <num>   : number of DEE succeeding warmups\n");
@@ -185,6 +190,7 @@ int PrintUserData(UserData* udata)
   printf(" ------------------------------------ \n");
   printf(" rtol              = %.2e\n", udata->rtol);
   printf(" atol              = %.2e\n", udata->atol);
+  printf(" hfixed            = %.2e\n", udata->hfixed);
   printf(" method            = %d\n", (int)udata->method);
   printf(" eigfrequency      = %ld\n", udata->eigfrequency);
   printf(" stage_max_limit   = %d\n", udata->stage_max_limit);
@@ -194,6 +200,7 @@ int PrintUserData(UserData* udata)
   printf(" wrms norm type    = %d\n", udata->wrms_norm_type);
   printf(" max steps         = %d\n", udata->maxsteps);
   printf(" ------------------------------------ \n");
+  printf(" dom_eig provided  = %d\n", udata->user_dom_eig);
   printf(" dee ID            = %d\n", udata->dee_id);
   printf(" dee num_init_wups = %d\n", udata->dee_num_init_wups);
   printf(" dee num_succ_wups = %d\n", udata->dee_num_succ_wups);

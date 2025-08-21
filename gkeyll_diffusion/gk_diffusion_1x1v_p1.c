@@ -830,10 +830,6 @@ int STS_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
   flag = LSRKStepSetDomEigSafetyFactor(*arkode_mem, udata->eigsafety);
   if (check_flag(&flag, "LSRKStepSetDomEigSafetyFactor", 1)) { return 1; }
 
-  /* Specify the Runge--Kutta--Legendre LSRK method */
-  flag = LSRKStepSetSTSMethod(*arkode_mem, udata->method);
-  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
-
   return 0;
 }
 
@@ -867,14 +863,6 @@ int SSP_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
   /* Specify max number of steps allowed */
   flag = ARKodeSetMaxNumSteps(*arkode_mem, udata->maxsteps);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
-
-  /* Specify the Runge--Kutta--Legendre LSRK method */
-  flag = LSRKStepSetSSPMethod(*arkode_mem, udata->method);
-  if (check_flag(&flag, "LSRKStepSetSSPMethod", 1)) { return 1; }
-
-  /* Specify the number of SSP stages */
-  flag = LSRKStepSetNumSSPStages(*arkode_mem, udata->num_SSP_stages);
-  if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
 
   return 0;
 }
@@ -934,8 +922,7 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype  t_curr, struct gky
   return error;
 }
 
-bool is_STS        = true;
-bool is_SSP        = true;
+sunbooleantype is_SSP = SUNFALSE;
 
 clock_t start, end, ref_start, ref_end;
 double ref_time = 0.0;
@@ -963,10 +950,6 @@ int main(int argc, char* argv[])
   flag = ReadInputs(argc, argv, udata);
   if (flag != 0) { return 1; }
 
-  // Output problem setup/options
-  flag = PrintUserData(udata);
-  if (check_flag(&flag, "PrintUserData", 1)) { return 1; }
-
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
   // Create the context struct.
@@ -977,6 +960,31 @@ int main(int argc, char* argv[])
   ctx.t_end = udata->tf;
   reltol = udata->rtol;
   abstol = udata->atol;
+
+  if(udata->method == ARKODE_LSRK_RKC_2 || udata->method == ARKODE_LSRK_RKL_2)
+  {
+    is_SSP = SUNFALSE;
+  }
+  else if(udata->method == ARKODE_LSRK_SSP_S_2 ||
+          udata->method == ARKODE_LSRK_SSP_S_3 ||
+          udata->method == ARKODE_LSRK_SSP_10_4)
+  {
+    is_SSP = SUNTRUE;
+    if(udata->method == ARKODE_LSRK_SSP_10_4 && udata->num_SSP_stages != 10)
+    {
+      udata->num_SSP_stages = 10; // Set to 10 for ARKODE_LSRK_SSP_10_
+      fprintf(stderr, "\nWARNING: num_SSP_stages reset to default 10 for ARKODE_LSRK_SSP_10_4\n");
+    }
+  }
+  else
+  {
+    fprintf(stderr, "ERROR: Invalid method %d\n", udata->method);
+    return 1;
+  }
+
+  // Output problem setup/options
+  flag = PrintUserData(udata);
+  if (check_flag(&flag, "PrintUserData", 1)) { return 1; }
 
   // Create the struct of app inputs.
   struct gkyl_diffusion_app_inp app_inp = {
@@ -1057,21 +1065,44 @@ int main(int argc, char* argv[])
   flag                 = STS_init(app, udata, &yref, &arkode_mem_ref);
   if (check_flag(&flag, "SSP_init", 1)) { return 1; }
 
+  /* Specify the Runge--Kutta--Legendre LSRK method */
+  flag = LSRKStepSetSTSMethod(arkode_mem_ref, ARKODE_LSRK_RKL_2);
+  if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
+
   /* Specify the fixed step size for the reference STS solution */
   flag = ARKodeSetFixedStep(arkode_mem_ref, 1.0e-5);
   if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
 
-  if (is_STS)
+  if (!is_SSP)
   {
     int flag;
     flag = STS_init(app, udata, &y, &arkode_mem);
     if (check_flag(&flag, "STS_init", 1)) { return 1; }
+
+    /* Specify the STS method */
+    flag = LSRKStepSetSTSMethod(arkode_mem, udata->method);
+    if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
   }
   else if (is_SSP)
   {
     int flag;
     flag = SSP_init(app, udata, &y, &arkode_mem);
     if (check_flag(&flag, "SSP_init", 1)) { return 1; }
+
+    /* Specify the SSP method */
+    flag = LSRKStepSetSSPMethod(arkode_mem, udata->method);
+    if (check_flag(&flag, "LSRKStepSetSSPMethod", 1)) { return 1; }
+
+    /* Specify the number of SSP stages */
+    flag = LSRKStepSetNumSSPStages(arkode_mem, udata->num_SSP_stages);
+    if (check_flag(&flag, "LSRKStepSetNumSSPStages", 1)) { return 1; }
+  }
+
+  // Set fixed step size or adaptivity method
+  if (udata->hfixed > ZERO)
+  {
+    flag = ARKodeSetFixedStep(arkode_mem, udata->hfixed);
+    if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
   }
 
   /* Specify the Ewt function */
@@ -1141,8 +1172,8 @@ int main(int argc, char* argv[])
     step++;
   }
 
-  printf("\nReference Solution Stats\n");
-  ARKodePrintAllStats(arkode_mem_ref, stdout, SUN_OUTPUTFORMAT_TABLE);
+  // printf("\nReference Solution Stats\n");
+  // ARKodePrintAllStats(arkode_mem_ref, stdout, SUN_OUTPUTFORMAT_TABLE);
   printf("\nComputed Solution Stats\n");
   ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
 
