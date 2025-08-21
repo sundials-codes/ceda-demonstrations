@@ -21,10 +21,14 @@ plt.rcParams['figure.constrained_layout.use'] = True
 
 # method name-mangling function, to convert between "internal" names and official method names
 def mname(method):
-    if (method == 'dirk-Jacobi'):
+    if (method == 'dirk2-Jacobi'):
         return 'DIRK2 + Jacobi'
-    if (method == 'dirk-hypre'):
+    if (method == 'dirk2-hypre'):
         return 'DIRK2 + hypre'
+    if (method == 'dirk3-Jacobi'):
+        return 'DIRK3 + Jacobi'
+    if (method == 'dirk3-hypre'):
+        return 'DIRK3 + hypre'
     if (method == 'erk2'):
         return 'SSP-RK-2'
     if (method == 'erk3'):
@@ -113,18 +117,23 @@ def print_failed_tests(fname):
     if (len(failed) > 0):
         print(failed)
 
+fname = "results_diffusion_2D.xlsx"
+kxvals = [0.1, 1.0, 10.0]
+tolvals = [1.e-3, 1.e-5]
+grids = [32, 64, 128, 256]
+
 # generate comparison plots for each (kx,tol) pair
-for kx in [0.1, 1.0, 10.0]:
-    for tol in [1.e-3, 1.e-5]:
-        comparison_plot('results_diffusion_2D.xlsx', kx, tol, 'comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.png')
+for kx in kxvals:
+    for tol in tolvals:
+        comparison_plot(fname, kx, tol, 'comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.png')
 
 # generate efficiency plots for each (kx,grid) pair
-for kx in [0.1, 1.0, 10.0]:
-    for grid in [32, 64, 128]:
-        efficiency_plot('results_diffusion_2D.xlsx', kx, grid, 'efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
+for kx in kxvals:
+    for grid in grids:
+        efficiency_plot(fname, kx, grid, 'efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
 
 # print a list of all failed tests to stdout
-print_failed_tests('results_diffusion_2D.xlsx')
+print_failed_tests(fname)
 
 # display plots
 plt.show()
