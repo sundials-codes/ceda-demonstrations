@@ -19,6 +19,7 @@
 #include "diffusion_2D.hpp"
 #include "sunadaptcontroller/sunadaptcontroller_imexgus.h"
 #include "sunadaptcontroller/sunadaptcontroller_soderlind.h"
+#include <sundomeigest/sundomeigest_power.h>
 
 struct UserOptions
 {
@@ -33,7 +34,7 @@ struct UserOptions
   int onestep            = 0;     // one step mode, number of steps
   bool error             = false; // compute reference solution to compare error
 
-  // Implicit solver and preconditioner settings
+  // Solver and preconditioner settings
   bool linear          = true;  // linearly implicit RHS
   std::string ls       = "cg";  // linear solver to use
   bool preconditioning = true;  // preconditioner on/off
@@ -41,6 +42,7 @@ struct UserOptions
   int liniters         = 20;    // number of linear iterations
   int msbp             = 0;     // preconditioner setup frequency
   sunrealtype epslin   = ZERO;  // linear solver tolerance factor
+  bool internaleig     = false; // internal eigenvalue estimation on/off
 
   // Helper functions
   int parse_args(vector<string>& args, bool outproc);
@@ -363,7 +365,8 @@ int main(int argc, char* argv[])
     }
 
     // Configure expl STS solver
-    if ((uopts.integrator == "rkc") || (uopts.integrator == "rkl"))
+    SUNDomEigEstimator DEE = nullptr;
+    if (sts)
     {
       // Select LSRK method
       ARKODE_LSRKMethodType type =
@@ -371,9 +374,20 @@ int main(int argc, char* argv[])
       flag = LSRKStepSetSTSMethod(arkode_mem, type);
       if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
-      // Provide dominant eigenvalue function
-      flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
-      if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+      // Dominant eigenvalue estimation
+      if (uopts.internaleig)
+      {
+        DEE = SUNDomEigEst_Power(u, 100, 0, 0.01, ctx);
+        if (check_flag(DEE, "SUNDomEigEst_Power", 0)) { return 1; }
+
+        flag = LSRKStepSetDomEigEstimator(arkode_mem, DEE);
+        if (check_flag(&flag, "LSRKStepSetDomEigEstimator", 1)) { return 1; }
+      }
+      else
+      {
+        flag = LSRKStepSetDomEigFn(arkode_mem, dom_eig);
+        if (check_flag(&flag, "LSRKStepSetDomEigFn", 1)) { return 1; }
+      }
     }
 
     // Set fixed step size or adaptivity method
@@ -698,6 +712,13 @@ int UserOptions::parse_args(vector<string>& args, bool outproc)
     args.erase(it);
   }
 
+  it = find(args.begin(), args.end(), "--internaleig");
+  if (it != args.end())
+  {
+    internaleig = true;
+    args.erase(it);
+  }
+
   return 0;
 }
 
@@ -734,6 +755,9 @@ void UserOptions::help()
   cout << "  --epslin <factor>    : linear tolerance factor" << endl;
   cout << "  --noprec             : disable preconditioner" << endl;
   cout << "  --msbp <steps>       : max steps between prec setups" << endl;
+  cout << "RKC/RKL solver command line options:" << endl;
+  cout << "  --internaleig        : estimate dominant eigenvalue internally" << endl;
+  cout << endl;
   cout << endl;
 }
 
@@ -752,6 +776,11 @@ void UserOptions::print()
   cout << " controller  = " << controller << endl;
   cout << " hfixed      = " << hfixed << endl;
   cout << " max steps   = " << maxsteps << endl;
+  if (sts)
+  {
+    if (internaleig)  cout << " internal eigenvalue estimation" << endl;
+    else              cout << " user-provided dominant eigenvalue" << endl;
+  }
   if (impl || expl)
   {
     cout << " order       = " << order << endl;

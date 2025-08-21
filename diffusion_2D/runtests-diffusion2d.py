@@ -20,6 +20,8 @@ def runtest(solver, pg, rtol, kxy, commonargs, showcommand=False):
              'ReturnCode': 0, 'Steps': 0, 'Fails': 0, 'Accuracy': 0.0,
              'FEvals': 0, 'Runtime': 0.0, 'args': commonargs}
     runcommand = "mpiexec -n %i %s --nx %i --ny %i --rtol %e --kx %e --ky %e %s" % (pg['np'], solver['exe'], pg['grid'], pg['grid'], rtol, kxy['kx'], kxy['ky'], commonargs)
+    if (solver['name'] == 'dirk-hypre'):
+        runcommand += " --pfmg_nrelax %i" % (pg['nrelax'])
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
     stats['ReturnCode'] = result.returncode
     if (result.returncode != 0):
@@ -50,15 +52,20 @@ def runtest(solver, pg, rtol, kxy, commonargs, showcommand=False):
     return stats
 
 # filename to hold run statistics
-fname = "results_diffusion_2D"
+fname = "results_diffusion_2D.xlsx"
+
+# path to executables
+bindir = "./bin/"
 
 # shortcuts to executable/configuration of different solver types
-DIRKSolver = "./diffusion_2D_mpi --integrator dirk --order 2"
-DIRKSolverHypre = "./diffusion_2D_mpi_hypre --integrator dirk --order 2"
-ERK2Solver = "./diffusion_2D_mpi --integrator erk --order -2"
-ERK3Solver = "./diffusion_2D_mpi --integrator erk --order -3"
-RKCSolver = "./diffusion_2D_mpi --integrator rkc"
-RKLSolver = "./diffusion_2D_mpi --integrator rkl"
+DIRK2Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 2"
+DIRK2SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 2 --pfmg_relax 3"
+DIRK3Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 3"
+DIRK3SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 3 --pfmg_relax 3"
+ERK2Solver = bindir + "diffusion_2D_mpi --integrator erk --order -2"
+ERK3Solver = bindir + "diffusion_2D_mpi --integrator erk --order -3"
+RKCSolver = bindir + "diffusion_2D_mpi --integrator rkc"
+RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
 # common testing parameters
 homo = " --inhomogeneous"
@@ -73,12 +80,15 @@ common = homo + atol + controller + calcerror + precsetup + maxsteps
 kxky = [{'kx': 0.1,  'ky': 0.0},
         {'kx': 1.0,  'ky': 0.0},
         {'kx': 10.0, 'ky': 0.0}]
-procgrids = [{'np': 1,   'grid': 32},
-             {'np': 4,   'grid': 64},
-             {'np': 16,  'grid': 128}]
+procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
+             {'np': 4,   'grid': 64,  'nrelax': 8},
+             {'np': 16,  'grid': 128, 'nrelax': 20},
+             {'np': 64,  'grid': 256, 'nrelax': 75}]
 rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
-solvertype = [{'name': 'dirk-Jacobi', 'exe': DIRKSolver},
-              {'name': 'dirk-hypre', 'exe': DIRKSolverHypre},
+solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
+              {'name': 'dirk2-hypre', 'exe': DIRK2SolverHypre},
+              {'name': 'dirk3-Jacobi', 'exe': DIRK3Solver},
+              {'name': 'dirk3-hypre', 'exe': DIRK3SolverHypre},
               {'name': 'erk2', 'exe': ERK2Solver},
               {'name': 'erk3', 'exe': ERK3Solver},
               {'name': 'rkc', 'exe': RKCSolver},
@@ -98,4 +108,4 @@ RunStatsDf = pd.DataFrame.from_records(RunStats)
 print("RunStatsDf object:")
 print(RunStatsDf)
 print("Saving as Excel")
-RunStatsDf.to_excel(fname + '.xlsx', index=False)
+RunStatsDf.to_excel(fname, index=False)
