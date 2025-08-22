@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #------------------------------------------------------------
-# Programmer(s):  Daniel R. Reynolds @ SMU
+# Programmer(s):  Daniel R. Reynolds @ UMBC
 #------------------------------------------------------------
 # Copyright (c) 2025, Southern Methodist University.
 # All rights reserved.

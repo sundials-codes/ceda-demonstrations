@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds and Mustafa Aggul @ SMU
+ * Programmer(s): Daniel R. Reynolds and Mustafa Aggul @ UMBC
  * -----------------------------------------------------------------
  * This is the main header file for an NVECTOR wrapper of the
  * Gkylzero data structure.

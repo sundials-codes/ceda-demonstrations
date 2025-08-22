@@ -1,6 +1,6 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): David J. Gardner @ LLNL
- *                Major revisions by Daniel R. Reynolds @ SMU
+ *                Major revisions by Daniel R. Reynolds @ UMBC
  * ---------------------------------------------------------------------------*/
 
 #include "diffusion_2D.hpp"

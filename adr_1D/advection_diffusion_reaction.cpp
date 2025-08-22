@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  * Based on the SUNDIALS example ark_advection_diffusion_reaction.cpp by
  * David J. Gardner @ LLNL
  * -----------------------------------------------------------------------------
