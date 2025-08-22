@@ -40,8 +40,6 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
         runcommand += " --user_dom_eig"
     if (methodnum > 1):
         runcommand += " --num_SSP_stages %i" % (method['stages'])
-    print("Run command: " + runcommand)
-    return stats
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
     stats['ReturnCode'] = result.returncode
     if (result.returncode != 0):
