@@ -6,7 +6,7 @@ set(standard_sources ${sources} preconditioner_jacobi.cpp)
 set(target diffusion_2D_mpi)
 add_executable(${target} ${standard_sources})
 target_link_libraries(${target} PRIVATE
-  SUNDIALS::arkode SUNDIALS::nvecparallel MPI::MPI_CXX)
+  SUNDIALS::arkode SUNDIALS::nvecparallel SUNDIALS::sundomeigestpower MPI::MPI_CXX)
 install(TARGETS ${target} DESTINATION ${demonstration_bin})
 
 # install plotting and testing scripts
@@ -19,6 +19,6 @@ if(USE_HYPRE)
   add_executable(${target} ${hypre_sources})
   target_compile_definitions(${target} PRIVATE USE_HYPRE)
   target_link_libraries(${target} PRIVATE
-    SUNDIALS::arkode SUNDIALS::nvecparallel MPI::MPI_CXX SUNDIALS::HYPRE)
+    SUNDIALS::arkode SUNDIALS::nvecparallel SUNDIALS::sundomeigestpower MPI::MPI_CXX SUNDIALS::HYPRE)
   install(TARGETS ${target} DESTINATION ${demonstration_bin})
 endif()

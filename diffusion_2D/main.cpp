@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
       // Dominant eigenvalue estimation
       if (uopts.internaleig)
       {
-        DEE = SUNDomEigEst_Power(u, 100, 0, 0.01, ctx);
+        DEE = SUNDomEigEst_Power(u, 100, 0.01, ctx);
         if (check_flag(DEE, "SUNDomEigEst_Power", 0)) { return 1; }
 
         flag = LSRKStepSetDomEigEstimator(arkode_mem, DEE);
