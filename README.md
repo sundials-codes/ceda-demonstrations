@@ -55,49 +55,6 @@ We note that a particular benefit of retrieving these dependencies using the sub
 
 We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll.
 
-#### SUNDIALS
-
-[The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
-
-* MPI (**required**) -- note that if building with either CUDA or HIP GPU support then the MPI implementation is assumed to be GPU-aware
-
-* *[HYPRE](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
-
-* *CUDA Toolkit >=12.0* (**optional**, for building with NVIDIA GPU support)
-
-* *HIP >=5.0.0* (**optional**, for building with AMD GPU support)
-
-The following steps can be used to build SUNDIALS using a minimal configuration (without the optional features above):
-
-```bash
-mkdir deps/sundials/build
-cd deps/sundials/build
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 ..
-make -j install
-```
-
-Alternately, if CMake is able to find both *hypre* and CUDA automatically (e.g., these were enabled via `module load` or `spack load` on a system where [Linux environment modules](https://modules.readthedocs.io/en/latest/) and/or [Spack](https://spack.readthedocs.io/en/latest/) are available), a build that enables both *hypre* and CUDA may be possible via the steps:
-
-```bash
-mkdir deps/sundials/build
-cd deps/sundials/build
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
-make -j install
-```
-
-The following steps will build SUNDIALS on Perlmutter with *hypre* (but not CUDA)
-
-```bash
-module load spack
-spack env activate gcc
-spack load hypre
-mkdir deps/sundials/build
-cd deps/sundials/build
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DENABLE_HYPRE=ON ..
-make -j install
-```
-
-Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
 
 #### GkeyllZero
 
@@ -107,7 +64,7 @@ GkeyllZero uses a Makefile-based build system, that relies on "machine files" fo
 
 The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkyl-install` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
 
-We assume that SUNDIALS was already installed with MPI support, using the `mpicc` and `mpicxx` compiler wrappers that are already in the user's current `$PATH`.
+We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.  We also assume that LAPACKE is already installed on the current system.
 
 To install GkeyllZero and its dependencies (without CUDA), from the top-level folder for this repository,
 
@@ -115,9 +72,9 @@ To install GkeyllZero and its dependencies (without CUDA), from the top-level fo
 cd deps
 export GKYLSOFT=$PWD/gkyl-install
 cd gkylzero/install-deps
-./mkdeps.sh CC=mpicc CXX=mpicxx FC=mpif90 MPICC=mpicc MPICXX=mpicxx --prefix=$GKYLSOFT --build-openblas=yes --build-superlu=yes
+./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes
 cd ..
-./configure CC=mpicc --prefix=$GKYLSOFT
+./configure CC=gcc prefix=$GKYLSOFT --usempi=yes --lapack-lib=<full-path-to-liblapacke.a> --lapack-inc=<full-path-to-folder-containing-lapacke.h>
 make -j install
 ```
 
@@ -150,6 +107,39 @@ and in the future you can "reactivate" the python environment in your shell by r
 source .venv/bin/activate
 ```
 
+#### SUNDIALS
+
+[The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
+
+* MPI (**required**) -- note that if building with either CUDA or HIP GPU support then the MPI implementation is assumed to be GPU-aware
+
+* *[HYPRE](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
+
+* *CUDA Toolkit >=12.0* (**optional**, for building with NVIDIA GPU support)
+
+* *HIP >=5.0.0* (**optional**, for building with AMD GPU support)
+
+The following steps can be used to build SUNDIALS using a minimal configuration that leverages the dependencies that were already installed by Gkeyll (but without the other optional features above):
+
+```bash
+mkdir deps/sundials/build
+cd deps/sundials/build
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
+make -j install
+```
+
+Alternately, if CMake is able to find both *hypre* and CUDA automatically (e.g., these were enabled via `module load` or `spack load` on a system where [Linux environment modules](https://modules.readthedocs.io/en/latest/) and/or [Spack](https://spack.readthedocs.io/en/latest/) are available), a build that enables both *hypre* and CUDA may be possible via the steps:
+
+```bash
+mkdir deps/sundials/build
+cd deps/sundials/build
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
+make -j install
+```
+
+Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
+
+
 
 ### Building the CMake-based tests (`diffusion_2D` and `adr_1D`)
 
@@ -169,7 +159,7 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx ..
   make -j install
 ```
 
@@ -178,7 +168,7 @@ If SUNDIALS was installed with *hypre* support, then the configuration above sho
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DUSE_HYPRE=ON ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DUSE_HYPRE=ON ..
   make -j install
 ```
 
@@ -191,6 +181,6 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
 
 ```bash
   cd ceda-demonstrations/gkeyll_diffusion
-  export CC=mpicc
+  export CC=$GKYLSOFT/openmpi/bin/mpicc
   make
 ```
