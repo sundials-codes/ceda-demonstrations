@@ -74,7 +74,7 @@ export GKYLSOFT=$PWD/gkyl-install
 cd gkylzero/install-deps
 ./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes
 cd ..
-./configure CC=gcc prefix=$GKYLSOFT --usempi=yes --lapack-lib=<full-path-to-liblapacke.a> --lapack-inc=<full-path-to-folder-containing-lapacke.h>
+./configure CC=gcc --prefix=$GKYLSOFT --use-mpi=yes --lapack-lib=<full-path-to-liblapacke.a> --lapack-inc=<full-path-to-folder-containing-lapacke.h>
 make -j install
 ```
 
