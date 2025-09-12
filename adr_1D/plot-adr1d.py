@@ -97,11 +97,12 @@ convergence_figsize = (10,4)
 convergence_bbox = (0.55, 0.95)
 #convergence_ylim = (1e-10, 1e-3)
 convergence_ylim = None
-def make_convergence_comparison_plot(data, titletxt, picname):
+def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
     fig = plt.figure(figsize=convergence_figsize)
     gs = GridSpec(1, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0,0])
     for integrator in data['inttype'].unique():
+
         intdata = data.groupby(['inttype',]).get_group((integrator,))
 
         if (integrator == 'ExtSTS'):
@@ -115,7 +116,12 @@ def make_convergence_comparison_plot(data, titletxt, picname):
                     medrate = np.median(rates)
                     ltext = '%s+%s+%s (rate = %.2f)' % (integrator,extsts,sts,medrate)
                     m,c = extsts_line_style(extsts,sts)
-                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                    DoPlot = True
+                    if (integrators is not None):
+                        if ltext not in integrators:
+                            DoPlot = False
+                    if DoPlot:
+                        ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -126,7 +132,12 @@ def make_convergence_comparison_plot(data, titletxt, picname):
                 medrate = np.median(rates)
                 ltext = '%s+%s (rate = %.2f)' % (integrator,sts,medrate)
                 m,c = strang_line_style(sts)
-                ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -137,7 +148,12 @@ def make_convergence_comparison_plot(data, titletxt, picname):
                 medrate = np.median(rates)
                 ltext = '%s (rate = %.2f)' % (ark_table_name(table_id),medrate)
                 m,c = rk_line_style(table_id)
-                ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -154,7 +170,7 @@ def make_convergence_comparison_plot(data, titletxt, picname):
 
 efficiency_figsize = (10,8)
 efficiency_bbox = (0.55, 0.95)
-def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot_rx=True):
+def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot_rx=True, integrators=None):
     fig = plt.figure(figsize=efficiency_figsize)
     gs = GridSpec(2, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0,0])
@@ -183,11 +199,16 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         rxevals = stsdata['RxEvals'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
                     m,c = extsts_line_style(extsts,sts)
-                    ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
-                    if (plot_adv):
-                        ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
-                    if (plot_rx):
-                        ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
+                    DoPlot = True
+                    if (integrators is not None):
+                        if ltext not in integrators:
+                            DoPlot = False
+                    if DoPlot:
+                        ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
+                        if (plot_adv):
+                            ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
+                        if (plot_rx):
+                            ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -200,11 +221,16 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     rxevals = stsdata['RxEvals'].to_numpy()
                 ltext = '%s+%s' % (integrator,sts)
                 m,c = strang_line_style(sts)
-                ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
-                if (plot_adv):
-                    ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
-                if (plot_rx):
-                    ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
+                    if (plot_adv):
+                        ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
+                    if (plot_rx):
+                        ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -217,11 +243,16 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     rxevals = tabledata['RxEvals'].to_numpy()
                 ltext = ark_table_name(table_id)
                 m,c = rk_line_style(table_id)
-                ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
-                if (plot_adv):
-                    ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
-                if (plot_rx):
-                    ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax_diff.loglog(diffevals, accuracy, marker=m, color=c, label=ltext)
+                    if (plot_adv):
+                        ax_adv.loglog(advevals, accuracy, marker=m, color=c, label=ltext)
+                    if (plot_rx):
+                        ax_rx.loglog(rxevals, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -245,7 +276,7 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
 accuracy_figsize = (10,4)
 accuracy_bbox = (0.55, 0.95)
 accuracy_ylim = None
-def make_accuracy_comparison_plot(data, titletxt, picname):
+def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
     fig = plt.figure(figsize=accuracy_figsize)
     gs = GridSpec(1, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0,0])
@@ -261,7 +292,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname):
                     accuracy = stsdata['Accuracy'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
                     m,c = extsts_line_style(extsts,sts)
-                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
+                    DoPlot = True
+                    if (integrators is not None):
+                        if ltext not in integrators:
+                            DoPlot = False
+                    if DoPlot:
+                        ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -270,7 +306,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname):
                 accuracy = stsdata['Accuracy'].to_numpy()
                 ltext = '%s+%s' % (integrator,sts)
                 m,c = strang_line_style(sts)
-                ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -279,7 +320,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname):
                 accuracy = tabledata['Accuracy'].to_numpy()
                 ltext = ark_table_name(table_id)
                 m,c = rk_line_style(table_id)
-                ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
