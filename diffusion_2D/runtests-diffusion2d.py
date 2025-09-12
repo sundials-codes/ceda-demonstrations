@@ -64,6 +64,7 @@ DIRK3Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 3"
 DIRK3SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 3 --pfmg_relax 3"
 ERK2Solver = bindir + "diffusion_2D_mpi --integrator erk --order -2"
 ERK3Solver = bindir + "diffusion_2D_mpi --integrator erk --order -3"
+ERK4Solver = bindir + "diffusion_2D_mpi --integrator erk --order -4"
 RKCSolver = bindir + "diffusion_2D_mpi --integrator rkc"
 RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
@@ -91,6 +92,7 @@ solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
               {'name': 'dirk3-hypre', 'exe': DIRK3SolverHypre},
               {'name': 'erk2', 'exe': ERK2Solver},
               {'name': 'erk3', 'exe': ERK3Solver},
+              {'name': 'erk4', 'exe': ERK4Solver},
               {'name': 'rkc', 'exe': RKCSolver},
               {'name': 'rkl', 'exe': RKLSolver}]
 
