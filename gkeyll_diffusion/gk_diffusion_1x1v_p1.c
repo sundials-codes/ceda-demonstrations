@@ -96,7 +96,10 @@ struct gkyl_diffusion_app_inp
   double lower[GKYL_MAX_DIM], upper[GKYL_MAX_DIM]; // Grid extents.
   int cells[GKYL_MAX_DIM];                         // Number of cells.
   int poly_order; // Polynomial order of the basis.
+
   bool use_gpu;   // Whether to run on GPU.
+  int cuts[3]; // Number of subdomain in each dimension.
+  struct gkyl_comm *comm; // Communicator to use.
 
   double cfl_frac; // Factor on RHS of the CFL constraint.
 
@@ -161,10 +164,8 @@ void init_distf_1x1v(double t, const double* xn, double* restrict fout, void* ct
   int vdim                   = dctx->vdim;
   double Lx                  = dctx->x_max - dctx->x_min;
 
-  double den =
-    n0 *
-    (1.0 + 0.3 * sin(2 * (2.0 * PI / Lx) *
-                     x)); //change the initial condition to see if the error localizes somewhere else
+  // change the initial condition to see if the error localizes somewhere else
+  double den = n0 * (1.0 + 0.3 * sin(2 * (2.0 * PI / Lx) * x));
 
   fout[0] = (den / pow(2.0 * PI * vtsq, vdim / 2.0)) *
             exp(-(pow(vpar - upar, 2)) / (2.0 * vtsq));
@@ -178,17 +179,22 @@ struct gkyl_diffusion_app
 
   int cdim, vdim; // Conf- and vel-space dimensions.
 
-  struct gkyl_rect_grid grid, grid_conf,
-    grid_vel; // Phase-, conf- and vel-space grids.
+  struct gkyl_rect_grid grid, grid_conf, grid_vel; // Phase-, conf- and vel-space grids.
 
   struct gkyl_basis basis, basis_conf; // Phase- and conf-space bases.
 
-  struct gkyl_range local_conf, local_conf_ext; // Conf-space ranges.
-  struct gkyl_range local_vel, local_vel_ext;   // Vel-space ranges.
-  struct gkyl_range local, local_ext;           // Phase-space ranges.
+  struct gkyl_range global_conf, global_ext_conf; // Local conf-space ranges.
+  struct gkyl_range global_vel, global_ext_vel;   // Local vel-space ranges.
+  struct gkyl_range global, global_ext;           // Local phase-space ranges.
 
-  struct gkyl_comm* comm;          // Communicator object.
-  struct gkyl_rect_decomp* decomp; // Decomposition object.
+  struct gkyl_range local_conf, local_ext_conf; // Local conf-space ranges.
+  struct gkyl_range local_vel, local_ext_vel;   // Local vel-space ranges.
+  struct gkyl_range local, local_ext;           // Local phase-space ranges.
+
+  struct gkyl_comm *comm; // Phase-space communicator.
+  struct gkyl_comm *comm_conf; // Conf-space communicator.
+  struct gkyl_rect_decomp* decomp; // Phase-space decomposition object.
+  struct gkyl_rect_decomp* decomp_conf; // Conf-space decomposition object.
 
   struct gkyl_array* bmag;     // Magnetic field magnitude.
   struct gk_geometry* gk_geom; // Gyrokinetic geometry.
@@ -257,43 +263,58 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
     cells_vel[d] = inp->cells[cdim + d];
   }
 
-  // Grids.
-  gkyl_rect_grid_init(&app->grid, cdim + vdim, inp->lower, inp->upper,
-                      inp->cells);
+  // Conf-space grid.
   gkyl_rect_grid_init(&app->grid_conf, cdim, lower_conf, upper_conf, cells_conf);
-  gkyl_rect_grid_init(&app->grid_vel, vdim, lower_vel, upper_vel, cells_vel);
 
-  // Basis functions.
-  if (inp->poly_order == 1) gkyl_cart_modal_gkhybrid(&app->basis, cdim, vdim);
-  else gkyl_cart_modal_serendip(&app->basis, cdim + vdim, inp->poly_order);
+  // Conf-space basis.
   gkyl_cart_modal_serendip(&app->basis_conf, cdim, inp->poly_order);
 
-  // Ranges
+  // Global conf-space range.
   int ghost_conf[GKYL_MAX_CDIM]; // Number of ghost cells in conf-space.
+  for (int d = 0; d < cdim; d++) ghost_conf[d] = 1;
+  gkyl_create_grid_ranges(&app->grid_conf, ghost_conf, &app->global_ext_conf, &app->global_conf);
+
+  // Conf-space communicator object.
+  int cuts_conf[GKYL_MAX_DIM];
+  for (int d = 0; d < cdim; d++) cuts_conf[d] = inp->cuts[d];
+  app->decomp_conf = gkyl_rect_decomp_new_from_cuts(cdim, cuts_conf, &app->global_conf);
+  app->comm_conf = gkyl_comm_split_comm(inp->comm, 0, app->decomp_conf);
+
+  // Local conf-space range.
+  int rank;
+  gkyl_comm_get_rank(app->comm_conf, &rank);
+  gkyl_create_ranges(&app->decomp_conf->ranges[rank], ghost_conf, &app->local_ext_conf, &app->local_conf);
+
+  // Phase-space grid.
+  gkyl_rect_grid_init(&app->grid_vel, vdim, lower_vel, upper_vel, cells_vel);
+  gkyl_rect_grid_init(&app->grid, cdim+vdim, inp->lower, inp->upper, inp->cells);
+
+  // Basis functions.
+  if (inp->poly_order == 1)
+    gkyl_cart_modal_gkhybrid(&app->basis, cdim, vdim);
+  else
+    gkyl_cart_modal_serendip(&app->basis, cdim + vdim, inp->poly_order);
+
+  // Global phase-space range.
   int ghost_vel[3]        = {0}; // Number of ghost cells in vel-space.
   int ghost[GKYL_MAX_DIM] = {0}; // Number of ghost cells in phase-space.
-  for (int d = 0; d < cdim; d++) ghost_conf[d] = 1;
-  for (int d = 0; d < vdim; d++) ghost_vel[d] = 0;
   for (int d = 0; d < cdim; d++) ghost[d] = ghost_conf[d];
-  gkyl_create_grid_ranges(&app->grid_conf, ghost_conf, &app->local_conf_ext,
-                          &app->local_conf);
-  gkyl_create_grid_ranges(&app->grid_vel, ghost_vel, &app->local_vel_ext,
-                          &app->local_vel);
-  gkyl_create_grid_ranges(&app->grid, ghost, &app->local_ext, &app->local);
+  gkyl_create_grid_ranges(&app->grid_vel, ghost_vel, &app->global_ext_vel, &app->global_vel);
+  gkyl_create_grid_ranges(&app->grid, ghost, &app->global_ext, &app->global);
 
-  // Communicator object.
-  int cuts[GKYL_MAX_DIM];
-  for (int d = 0; d < cdim + vdim; d++) cuts[d] = 1;
-  app->decomp = gkyl_rect_decomp_new_from_cuts(cdim + vdim, cuts, &app->local);
-  app->comm   = gkyl_null_comm_inew(&(
-    struct gkyl_null_comm_inp){.decomp = app->decomp, .use_gpu = app->use_gpu});
+  // Phase-space communicator object.
+  app->comm = gkyl_comm_extend_comm(app->comm_conf, &app->local_vel);
+
+  // Create local and local_ext.
+  struct gkyl_range local;
+  // Local = conf-local X local_vel.
+  gkyl_range_ten_prod(&local, &app->local_conf, &app->local_vel);
+  gkyl_create_ranges(&local, ghost, &app->local_ext, &app->local);
 
   // Create bmag arrays.
-  app->bmag                  = mkarr(use_gpu, app->basis_conf.num_basis,
-                                     app->local_conf_ext.volume);
-  struct gkyl_array* bmag_ho = use_gpu
-                                 ? mkarr(false, app->bmag->ncomp, app->bmag->size)
-                                 : gkyl_array_acquire(app->bmag);
+  app->bmag = mkarr(use_gpu, app->basis_conf.num_basis, app->local_ext_conf.volume);
+  struct gkyl_array* bmag_ho = use_gpu? mkarr(false, app->bmag->ncomp, app->bmag->size)
+                                      : gkyl_array_acquire(app->bmag);
   gkyl_proj_on_basis* proj_bmag =
     gkyl_proj_on_basis_new(&app->grid_conf, &app->basis_conf,
                            inp->poly_order + 1, 1, inp->bmag_func, inp->bmag_ctx);
@@ -313,9 +334,9 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
     .basis       = app->basis_conf,
     .grid        = app->grid_conf,
     .local       = app->local_conf,
-    .local_ext   = app->local_conf_ext,
-    .global      = app->local_conf,
-    .global_ext  = app->local_conf_ext,
+    .local_ext   = app->local_ext_conf,
+    .global      = app->global_conf,
+    .global_ext  = app->global_ext_conf,
   };
   int geo_ghost[3]        = {1, 1, 1};
   geometry_input.geo_grid = gkyl_gk_geometry_augment_grid(app->grid_conf,
@@ -332,8 +353,7 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   struct gk_geometry* gk_geom_3d = gkyl_gk_geometry_mapc2p_new(&geometry_input);
   app->gk_geom = gkyl_gk_geometry_deflate(gk_geom_3d, &geometry_input);
   gkyl_gk_geometry_release(gk_geom_3d);
-  if (use_gpu)
-  {
+  if (use_gpu) {
     // Copy geometry from host to device.
     struct gk_geometry* gk_geom_dev =
       gkyl_gk_geometry_new(app->gk_geom, &geometry_input, use_gpu);
@@ -345,15 +365,14 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   // Velocity space mapping.
   struct gkyl_mapc2p_inp c2p_in = {};
   app->gvm = gkyl_velocity_map_new(c2p_in, app->grid, app->grid_vel, app->local,
-                                   app->local_ext, app->local_vel,
-                                   app->local_vel_ext, use_gpu);
+    app->local_ext, app->local_vel, app->local_ext_vel, use_gpu);
 
   // Create distribution function arrays (3 for SSP-RK3).
   app->f    = mkarr(use_gpu, app->basis.num_basis, app->local_ext.volume);
   app->f1   = mkarr(use_gpu, app->basis.num_basis, app->local_ext.volume);
   app->fnew = mkarr(use_gpu, app->basis.num_basis, app->local_ext.volume);
-  app->f_ho = use_gpu ? mkarr(false, app->f->ncomp, app->f->size)
-                      : gkyl_array_acquire(app->f);
+  app->f_ho = use_gpu? mkarr(false, app->f->ncomp, app->f->size)
+                     : gkyl_array_acquire(app->f);
   gkyl_proj_on_basis* proj_distf =
     gkyl_proj_on_basis_new(&app->grid, &app->basis, inp->poly_order + 1, 1,
                            inp->initial_f_func, inp->initial_f_ctx);
@@ -374,8 +393,10 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   // CFL frequency in phase-space.
   app->cflrate = mkarr(use_gpu, 1, app->local_ext.volume);
 
-  if (use_gpu) app->omega_cfl = gkyl_cu_malloc(sizeof(double));
-  else app->omega_cfl = gkyl_malloc(sizeof(double));
+  if (use_gpu)
+    app->omega_cfl = gkyl_cu_malloc(sizeof(double));
+  else
+    app->omega_cfl = gkyl_malloc(sizeof(double));
 
   // Create the diffusion coefficient array.
   // For now assume 2nd order diffusion in x only.
@@ -386,7 +407,7 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   bool is_zero_flux[2 * GKYL_MAX_DIM] = {false}; // Whether to use zero-flux BCs.
 
   int szD                     = cdim * app->basis_conf.num_basis;
-  app->diffD                  = mkarr(use_gpu, szD, app->local_conf_ext.volume);
+  app->diffD                  = mkarr(use_gpu, szD, app->local_ext_conf.volume);
   struct gkyl_array* diffD_ho = use_gpu ? mkarr(false, app->diffD->ncomp,
                                                 app->diffD->size)
                                         : gkyl_array_acquire(app->diffD);
@@ -425,30 +446,27 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
 }
 
 // Compute out = c1*arr1 + c2*arr2
-static inline struct gkyl_array* array_combine(struct gkyl_array* out, double c1,
-                                               const struct gkyl_array* arr1,
-                                               double c2,
-                                               const struct gkyl_array* arr2,
-                                               const struct gkyl_range* rng)
+static inline struct gkyl_array* array_combine(struct gkyl_array* out, double c1, const struct gkyl_array* arr1,
+                                               double c2, const struct gkyl_array* arr2, const struct gkyl_range* rng)
 {
   return gkyl_array_accumulate_range(gkyl_array_set_range(out, c1, arr1, rng),
                                      c2, arr2, rng);
 }
 
-void gkyl_diffusion_app_calc_integrated_L2_f(struct gkyl_diffusion_app* app,
-                                             double tm)
+void gkyl_diffusion_app_calc_integrated_L2_f(struct gkyl_diffusion_app* app, double tm)
 {
   // Calculate the L2 norm of f.
   gkyl_dg_calc_l2_range(app->basis, 0, app->L2_f, 0, app->f, app->local);
   gkyl_array_scale_range(app->L2_f, app->grid.cellVolume, &app->local);
 
   double L2[1] = {0.0};
-  if (app->use_gpu)
-  {
+  if (app->use_gpu) {
     gkyl_array_reduce_range(app->red_L2_f, app->L2_f, GKYL_SUM, &app->local);
     gkyl_cu_memcpy(L2, app->red_L2_f, sizeof(double), GKYL_CU_MEMCPY_D2H);
   }
-  else { gkyl_array_reduce_range(L2, app->L2_f, GKYL_SUM, &app->local); }
+  else
+    gkyl_array_reduce_range(L2, app->L2_f, GKYL_SUM, &app->local);
+
   double L2_global[1] = {0.0};
   gkyl_comm_allreduce_host(app->comm, GKYL_DOUBLE, GKYL_SUM, 1, L2, L2_global);
 
@@ -468,17 +486,14 @@ void gkyl_diffusion_app_write_integrated_L2_f(struct gkyl_diffusion_app* app)
     char fileNm[sz + 1]; // ensures no buffer overflow
     snprintf(fileNm, sizeof fileNm, fmt, app->name, "L2");
 
-    if (app->is_first_integ_L2_write_call)
-    {
+    if (app->is_first_integ_L2_write_call) {
       // Write to a new file (this ensure previous output is removed).
       gkyl_dynvec_write(app->integ_L2_f, fileNm);
       app->is_first_integ_L2_write_call = false;
     }
     else
-    {
       // Append to existing file.
       gkyl_dynvec_awrite(app->integ_L2_f, fileNm);
-    }
   }
   gkyl_dynvec_clear(app->integ_L2_f);
 }
@@ -572,12 +587,16 @@ void gkyl_diffusion_app_release(struct gkyl_diffusion_app* app)
   // Free memory associated with the app.
   gkyl_array_release(app->L2_f);
   gkyl_dynvec_release(app->integ_L2_f);
-  if (app->use_gpu) { gkyl_cu_free(app->red_L2_f); }
+  if (app->use_gpu)
+    gkyl_cu_free(app->red_L2_f);
 
   gkyl_dg_updater_diffusion_gyrokinetic_release(app->diff_slvr);
   gkyl_array_release(app->diffD);
-  if (app->use_gpu) { gkyl_cu_free(app->omega_cfl); }
-  else { gkyl_free(app->omega_cfl); }
+  if (app->use_gpu)
+    gkyl_cu_free(app->omega_cfl);
+  else
+    gkyl_free(app->omega_cfl);
+
   gkyl_array_release(app->cflrate);
   gkyl_array_release(app->f);
   gkyl_array_release(app->f1);
@@ -587,7 +606,8 @@ void gkyl_diffusion_app_release(struct gkyl_diffusion_app* app)
   gkyl_gk_geometry_release(app->gk_geom);
   gkyl_velocity_map_release(app->gvm);
   gkyl_comm_release(app->comm);
-  gkyl_rect_decomp_release(app->decomp);
+  gkyl_comm_release(app->comm_conf);
+  gkyl_rect_decomp_release(app->decomp_conf);
   gkyl_free(app);
 }
 
@@ -709,13 +729,17 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
 
   gkyl_array_reduce_range(app->omega_cfl, app->cflrate, GKYL_MAX, &app->local);
 
-  double omega_cfl_ho[1];
+  double omega_cfl_ho;
   if (app->use_gpu)
-    gkyl_cu_memcpy(omega_cfl_ho, app->omega_cfl, sizeof(double),
+    gkyl_cu_memcpy(&omega_cfl_ho, app->omega_cfl, sizeof(double),
                    GKYL_CU_MEMCPY_D2H);
-  else omega_cfl_ho[0] = app->omega_cfl[0];
+  else
+    omega_cfl_ho = app->omega_cfl[0];
 
-  *lambdaR = -omega_cfl_ho[0];
+  double omega_cfl_global_ho;
+  gkyl_comm_allreduce_host(app->comm_conf, GKYL_DOUBLE, GKYL_MAX, 1, &omega_cfl_ho, &omega_cfl_global_ho);
+
+  *lambdaR = -omega_cfl_global_ho;
   *lambdaI = SUN_RCONST(0.0);
   return 0; /* return with success */
 }
@@ -888,38 +912,85 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype  t_curr, struct gky
   int ncomp = udptr->ncomp;
   struct gkyl_array* wdptr; // Temporary buffer. Should change code to avoid this.
   double* red_ho = gkyl_malloc(ncomp * sizeof(double));
-  double* red;
-  if (app->use_gpu)
-  {
-    red   = gkyl_cu_malloc(ncomp * sizeof(double));
+  double *red_local, *red_global;
+  if (app->use_gpu) {
+    red_local  = gkyl_cu_malloc(ncomp * sizeof(double));
+    red_global = gkyl_cu_malloc(ncomp * sizeof(double));
     wdptr = mkarr(true, ncomp, udptr->size);
   }
-  else
-  {
-    red   = gkyl_malloc(ncomp * sizeof(double));
+  else {
+    red_local  = gkyl_malloc(ncomp * sizeof(double));
+    red_global = gkyl_malloc(ncomp * sizeof(double));
     wdptr = mkarr(false, ncomp, udptr->size);
   }
 
   gkyl_array_set(wdptr, 1.0, udptr);
   gkyl_array_accumulate(wdptr, -1.0, vdptr);
-  gkyl_array_reduce(red, wdptr, GKYL_ABS_MAX);
+
+  gkyl_array_reduce(red_local, wdptr, GKYL_ABS_MAX);
+  gkyl_comm_allreduce(app->comm, GKYL_DOUBLE, GKYL_MAX, 1, red_local, red_global);
 
   if (app->use_gpu)
-    gkyl_cu_memcpy(red_ho, red, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
-  else memcpy(red_ho, red, ncomp * sizeof(double));
+    gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
+  else
+    memcpy(red_ho, red_global, ncomp * sizeof(double));
 
   // Reduce over components.
   for (int i = 0; i < ncomp; i++) error = fmax(error, fabs(red_ho[i]));
 
   gkyl_free(red_ho);
-  if (app->use_gpu) gkyl_cu_free(red);
-  else gkyl_free(red);
+  if (app->use_gpu) {
+    gkyl_cu_free(red_local );
+    gkyl_cu_free(red_global);
+  }
+  else {
+    gkyl_free(red_local );
+    gkyl_free(red_global);
+  }
 
   gkyl_array_release(wdptr);
 
   printf("\nmax error is %e at t = %g over the whole domain\n", error, t_curr);
 
   return error;
+}
+
+static inline struct gkyl_comm*
+gkyl_diffusion_create_comm(struct gkyl_app_args app_args)
+{
+  // Construct communicator for use in app.
+  struct gkyl_comm *comm;
+#ifdef GKYL_HAVE_MPI
+  if (app_args.use_gpu && app_args.use_mpi) {
+#ifdef GKYL_HAVE_NCCL
+    comm = gkyl_nccl_comm_new( &(struct gkyl_nccl_comm_inp) {
+        .mpi_comm = MPI_COMM_WORLD,
+      }
+    );
+#else
+    printf(" Using -g and -M together requires NCCL.\n");
+    assert(0 == 1);
+#endif
+  }
+  else if (app_args.use_mpi) {
+    comm = gkyl_mpi_comm_new( &(struct gkyl_mpi_comm_inp) {
+        .mpi_comm = MPI_COMM_WORLD,
+      }
+    );
+  }
+  else {
+    comm = gkyl_null_comm_inew( &(struct gkyl_null_comm_inp) {
+        .use_gpu = app_args.use_gpu
+      }
+    );
+  }
+#else
+  comm = gkyl_null_comm_inew( &(struct gkyl_null_comm_inp) {
+      .use_gpu = app_args.use_gpu
+    }
+  );
+#endif
+  return comm;
 }
 
 sunbooleantype is_SSP = SUNFALSE;
@@ -952,8 +1023,17 @@ int main(int argc, char* argv[])
 
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
+#ifdef GKYL_HAVE_MPI
+  if (app_args.use_mpi) {
+    MPI_Init(&argc, &argv);
+  }
+#endif
+
   // Create the context struct.
   struct diffusion_ctx ctx = create_diffusion_ctx();
+
+  // Construct communicator for use in app.
+  struct gkyl_comm *comm = gkyl_diffusion_create_comm(app_args);
 
   // Update the context with user inputs.
   ctx.diffD0 = udata->k;
@@ -1014,6 +1094,8 @@ int main(int argc, char* argv[])
     .initial_f_ctx  = &ctx,
 
     .use_gpu = app_args.use_gpu, // Whether to run on GPU.
+    .cuts = { app_args.cuts[0] },
+    .comm = comm,
   };
   strcpy(app_inp.name, ctx.name);
 
