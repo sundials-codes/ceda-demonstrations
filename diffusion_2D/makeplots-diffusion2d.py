@@ -40,7 +40,7 @@ def mname(method):
     if (method == 'rkl'):
         return 'RKL-2'
 
-def comparison_plot(fname, kx, tol, picname):
+def comparison_plot(fname, kx, tol, titleprefix, picname):
     """
     Generates a plot to compare all possible methods (as different curves) versus grid size, for a given diffusion coefficient and a given relative tolerance.  Saves the graphic to the requested filename.
     """
@@ -71,7 +71,7 @@ def comparison_plot(fname, kx, tol, picname):
         ax2.loglog(grid, relerr, marker='o', ls='-', label=mname(method))
         ax3.loglog(grid, runtime, marker='o', ls='-', label=mname(method))
 
-    fig.suptitle("Method comparisons, kx = " + repr(kx) + ', tol = ' + repr(tol))
+    fig.suptitle(titleprefix + " comparisons, kx = " + repr(kx) + ', tol = ' + repr(tol))
     handles, labels = ax0.get_legend_handles_labels()
     ax0.set_title('Time steps')
     ax1.set_title('RHS evals')
@@ -86,7 +86,7 @@ def comparison_plot(fname, kx, tol, picname):
     fig.legend(handles, labels, loc='upper left', bbox_to_anchor=[0.725, 0.92])
     plt.savefig(picname)
 
-def efficiency_plot(fname, kx, grid, picname):
+def efficiency_plot(fname, kx, grid, titleprefix, picname):
     """
     Generates an "efficiency plot" that shows the relative solution error versus runtime for all methods at a given spatial grid size, for a given diffusion coefficient and a given relative tolerance.  Saves the graphic to the requested filename.
     """
@@ -105,9 +105,10 @@ def efficiency_plot(fname, kx, grid, picname):
         # add data to plot
         plt.loglog(runtime, relerr, marker='o', ls='-', label=mname(method))
 
-    plt.title('Computational efficiency (kx = ' + repr(kx) + ', grid = ' + repr(grid) + ')')
+    plt.title(titleprefix + ' computational efficiency (kx = ' + repr(kx) + ', grid = ' + repr(grid) + ')')
     plt.xlabel('runtime (sec)')
     plt.ylabel('temporal relative error')
+    plt.ylim([None, 1.0])
     plt.grid(linestyle='--', linewidth=0.5)
     plt.legend()
     plt.savefig(picname)
@@ -119,22 +120,38 @@ def print_failed_tests(fname):
     if (len(failed) > 0):
         print(failed)
 
-fname = "results_diffusion_2D.xlsx"
 kxvals = [0.1, 1.0, 10.0]
-tolvals = [1.e-3, 1.e-5]
-grids = [32, 64, 128, 256]
+#grids = [32, 64, 128, 256]
+grids = [32, 64]
+
+## Adaptive test results
+fname = "results_diffusion_2D.xlsx"
+tolvals = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
 
 # generate comparison plots for each (kx,tol) pair
 for kx in kxvals:
     for tol in tolvals:
-        comparison_plot(fname, kx, tol, 'comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.png')
+        comparison_plot(fname, kx, tol, 'Adaptive', 'adaptive_comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.png')
 
 # generate efficiency plots for each (kx,grid) pair
 for kx in kxvals:
     for grid in grids:
-        efficiency_plot(fname, kx, grid, 'efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
+        efficiency_plot(fname, kx, grid, 'Adaptive', 'adaptive_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
 
 # print a list of all failed tests to stdout
+print("Adaptive step failed tests:")
+print_failed_tests(fname)
+
+## Adaptive test results
+fname = "results_diffusion_2D_fixedstep.xlsx"
+
+# generate efficiency plots for each (kx,grid) pair
+for kx in kxvals:
+    for grid in grids:
+        efficiency_plot(fname, kx, grid, 'Fixed step', 'fixed_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
+
+# print a list of all failed tests to stdout
+print("Fixed step failed tests:")
 print_failed_tests(fname)
 
 # display plots

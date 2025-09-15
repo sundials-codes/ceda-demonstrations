@@ -476,7 +476,7 @@ int main(int argc, char* argv[])
         if (check_flag(&flag, "ARKodeSetStopTime", 1)) { break; }
       }
       flag = ARKodeEvolve(arkode_mem, tout, u, &t, stepmode);
-      if (check_flag(&flag, "ARKodeEvolve", 1)) { break; }
+      if (check_flag(&flag, "ARKodeEvolve", 1)) { return 1; }
       simtime += MPI_Wtime() - tstart;
       SUNDIALS_MARK_END(prof, "Evolve");
 
