@@ -425,7 +425,7 @@ int main(int argc, char* argv[])
     {
       arkref_mem = LSRKStepCreateSTS(diffusion, ZERO, u, ctx);
       if (check_flag((void*)arkref_mem, "LSRKStepCreateSTS", 0)) { return 1; }
-      flag = ARKodeSStolerances(arkref_mem, 1.e-8, uopts.atol);
+      flag = ARKodeSStolerances(arkref_mem, 1.e-11, uopts.atol);
       if (check_flag(&flag, "ARKodeSStolerances", 1)) { return 1; }
       flag = ARKodeSetUserData(arkref_mem, (void*)&udata);
       if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
@@ -476,7 +476,7 @@ int main(int argc, char* argv[])
         if (check_flag(&flag, "ARKodeSetStopTime", 1)) { break; }
       }
       flag = ARKodeEvolve(arkode_mem, tout, u, &t, stepmode);
-      if (check_flag(&flag, "ARKodeEvolve", 1)) { break; }
+      if (check_flag(&flag, "ARKodeEvolve", 1)) { return 1; }
       simtime += MPI_Wtime() - tstart;
       SUNDIALS_MARK_END(prof, "Evolve");
 

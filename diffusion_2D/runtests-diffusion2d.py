@@ -9,17 +9,20 @@
 
 # imports
 import pandas as pd
+import numpy as np
 import subprocess
 import shlex
 import sys
 
 # utility routine to run a test, storing the run options and solver statistics
-def runtest(solver, pg, rtol, kxy, commonargs, showcommand=False):
+def runtest(solver, pg, rtol, h, kxy, commonargs, showcommand=False):
     stats = {'method': solver['name'], 'procs': pg['np'], 'grid': pg['grid'], 'rtol': rtol,
-             'kx': kxy['kx'], 'ky': kxy['ky'],
-             'ReturnCode': 0, 'Steps': 0, 'Fails': 0, 'Accuracy': 0.0,
-             'FEvals': 0, 'Runtime': 0.0, 'args': commonargs}
+             'h': h, 'kx': kxy['kx'], 'ky': kxy['ky'],
+             'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10,
+             'FEvals': 0, 'Runtime': 1e10, 'args': commonargs}
     runcommand = "mpiexec -n %i %s --nx %i --ny %i --rtol %e --kx %e --ky %e %s" % (pg['np'], solver['exe'], pg['grid'], pg['grid'], rtol, kxy['kx'], kxy['ky'], commonargs)
+    if (h > 0):
+        runcommand += " --fixedstep %e" %(h)
     if (solver['name'] == 'dirk-hypre'):
         runcommand += " --pfmg_nrelax %i" % (pg['nrelax'])
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
@@ -51,9 +54,6 @@ def runtest(solver, pg, rtol, kxy, commonargs, showcommand=False):
                 stats['Runtime'] = float(txt[4])
     return stats
 
-# filename to hold run statistics
-fname = "results_diffusion_2D.xlsx"
-
 # path to executables
 bindir = "./bin/"
 
@@ -69,7 +69,7 @@ RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
 # common testing parameters
 homo = " --inhomogeneous"
-atol = " --atol 1.e-8"
+atol = " --atol 1.e-11"
 controller = " --controller 2"
 calcerror = " --error"
 precsetup = " --nonlinear --msbp 1"
@@ -80,11 +80,14 @@ common = homo + atol + controller + calcerror + precsetup + maxsteps
 kxky = [{'kx': 0.1,  'ky': 0.0},
         {'kx': 1.0,  'ky': 0.0},
         {'kx': 10.0, 'ky': 0.0}]
+# procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
+#              {'np': 4,   'grid': 64,  'nrelax': 8},
+#              {'np': 16,  'grid': 128, 'nrelax': 20},
+#              {'np': 64,  'grid': 256, 'nrelax': 75}]
 procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
-             {'np': 4,   'grid': 64,  'nrelax': 8},
-             {'np': 16,  'grid': 128, 'nrelax': 20},
-             {'np': 64,  'grid': 256, 'nrelax': 75}]
+             {'np': 4,   'grid': 64,  'nrelax': 8}]
 rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
+hvals = 1.e-2 / np.array([2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
 solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
               {'name': 'dirk2-hypre', 'exe': DIRK2SolverHypre},
               {'name': 'dirk3-Jacobi', 'exe': DIRK3Solver},
@@ -94,18 +97,36 @@ solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
               {'name': 'rkc', 'exe': RKCSolver},
               {'name': 'rkl', 'exe': RKLSolver}]
 
-# run tests and collect results as a pandas data frame
+# run adaptive tests and collect results as a pandas data frame
+fname = "results_diffusion_2D.xlsx"
 RunStats = []
 for kxy in kxky:
     for rtol in rtols:
         for pg in procgrids:
             for solver in solvertype:
-                stat = runtest(solver, pg, rtol, kxy, common)
+                stat = runtest(solver, pg, rtol, 0.0, kxy, common)
                 RunStats.append(stat)
 RunStatsDf = pd.DataFrame.from_records(RunStats)
 
 # save dataframe as Excel file
-print("RunStatsDf object:")
+print("RunStatsDf object (adaptive step):")
+print(RunStatsDf)
+print("Saving as Excel")
+RunStatsDf.to_excel(fname, index=False)
+
+# run fixed-step tests and collect results as a pandas data frame
+fname = "results_diffusion_2D_fixedstep.xlsx"
+RunStats = []
+for kxy in kxky:
+    for h in hvals:
+        for pg in procgrids:
+            for solver in solvertype:
+                stat = runtest(solver, pg, 1.e-9, h, kxy, common)
+                RunStats.append(stat)
+RunStatsDf = pd.DataFrame.from_records(RunStats)
+
+# save dataframe as Excel file
+print("RunStatsDf object (fixed step):")
 print(RunStatsDf)
 print("Saving as Excel")
 RunStatsDf.to_excel(fname, index=False)
