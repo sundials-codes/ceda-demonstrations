@@ -33,6 +33,8 @@ def mname(method):
         return 'SSP-RK-2'
     if (method == 'erk3'):
         return 'SSP-RK-3'
+    if (method == 'erk4'):
+        return 'SSP-RK-4'
     if (method == 'rkc'):
         return 'RKC-2'
     if (method == 'rkl'):
@@ -153,4 +155,4 @@ print("Fixed step failed tests:")
 print_failed_tests(fname)
 
 # display plots
-plt.show()
+#plt.show()

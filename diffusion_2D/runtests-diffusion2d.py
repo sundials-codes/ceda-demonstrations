@@ -64,6 +64,7 @@ DIRK3Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 3"
 DIRK3SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 3 --pfmg_relax 3"
 ERK2Solver = bindir + "diffusion_2D_mpi --integrator erk --order -2"
 ERK3Solver = bindir + "diffusion_2D_mpi --integrator erk --order -3"
+ERK4Solver = bindir + "diffusion_2D_mpi --integrator erk --order -4"
 RKCSolver = bindir + "diffusion_2D_mpi --integrator rkc"
 RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
@@ -80,12 +81,10 @@ common = homo + atol + controller + calcerror + precsetup + maxsteps
 kxky = [{'kx': 0.1,  'ky': 0.0},
         {'kx': 1.0,  'ky': 0.0},
         {'kx': 10.0, 'ky': 0.0}]
-# procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
-#              {'np': 4,   'grid': 64,  'nrelax': 8},
-#              {'np': 16,  'grid': 128, 'nrelax': 20},
-#              {'np': 64,  'grid': 256, 'nrelax': 75}]
 procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
-             {'np': 4,   'grid': 64,  'nrelax': 8}]
+             {'np': 4,   'grid': 64,  'nrelax': 8},
+             {'np': 16,  'grid': 128, 'nrelax': 20},
+             {'np': 64,  'grid': 256, 'nrelax': 75}]
 rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
 hvals = 1.e-2 / np.array([2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
 solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
@@ -94,6 +93,7 @@ solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
               {'name': 'dirk3-hypre', 'exe': DIRK3SolverHypre},
               {'name': 'erk2', 'exe': ERK2Solver},
               {'name': 'erk3', 'exe': ERK3Solver},
+              {'name': 'erk4', 'exe': ERK4Solver},
               {'name': 'rkc', 'exe': RKCSolver},
               {'name': 'rkl', 'exe': RKLSolver}]
 
