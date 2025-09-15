@@ -151,23 +151,17 @@ EXT_LIBS = ${LAPACK_LIB} ${BLAS_LIB} ${SUNDIALS_LIB} ${SUNDIALS_RPATH} ${SUPERLU
 
 all: gk_diffusion_1x1v_p1 test_nvector_gkylzero
 
-gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o input_handler.o
-	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c nvector_gkylzero.o input_handler.o \
+gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c src/nvector_gkylzero.c src/input_handler.c
+	${CC} ${CFLAGS} ${INCLUDES} \
+		gk_diffusion_1x1v_p1.c src/nvector_gkylzero.c src/input_handler.c \
 		-o gk_diffusion_1x1v_p1 \
 		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
 
-test_nvector_gkylzero: test_nvector_gkylzero.c nvector_gkylzero.o
-	${CC} ${CFLAGS} ${INCLUDES} test_nvector_gkylzero.c nvector_gkylzero.o \
+test_nvector_gkylzero: test_nvector_gkylzero.c src/nvector_gkylzero.c
+	${CC} ${CFLAGS} ${INCLUDES} \
+		test_nvector_gkylzero.c src/nvector_gkylzero.c \
 		-o test_nvector_gkylzero \
 		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
 
-
-
-nvector_gkylzero.o: src/nvector_gkylzero.c
-	${CC} ${CFLAGS} ${INCLUDES} -c src/nvector_gkylzero.c -o nvector_gkylzero.o
-
-input_handler.o: src/input_handler.c
-	${CC} ${CFLAGS} ${INCLUDES} -c src/input_handler.c -o input_handler.o
-
 clean:
-	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl *.o
+	rm -rf gk_diffusion_1x1v_p1 test_nvector_gkylzero gk_diffusion_1x1v_p1.dSYM *.gkyl *.o *.pdf

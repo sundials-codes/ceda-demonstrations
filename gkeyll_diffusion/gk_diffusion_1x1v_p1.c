@@ -789,13 +789,13 @@ int STS_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
 
     if(udata->dee_id == 0)
     {
-      DEE = SUNDomEigEst_Power(*y, udata->dee_max_iters, udata->dee_reltol, sunctx);
-      if (check_flag(DEE, "SUNDomEigEst_Power", 0)) { return 1; }
+      DEE = SUNDomEigEstimator_Power(*y, udata->dee_max_iters, udata->dee_reltol, sunctx);
+      if (check_flag(DEE, "SUNDomEigEstimator_Power", 0)) { return 1; }
     }
     else if(udata->dee_id == 1)
     {
-      DEE = SUNDomEigEst_Arnoldi(*y, udata->dee_krylov_dim, sunctx);
-      if (check_flag(DEE, "SUNDomEigEst_Arnoldi", 0)) { return 1; }
+      DEE = SUNDomEigEstimator_Arnoldi(*y, udata->dee_krylov_dim, sunctx);
+      if (check_flag(DEE, "SUNDomEigEstimator_Arnoldi", 0)) { return 1; }
     }
     else
     {

@@ -61,8 +61,10 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
                 stats['RHSEvals'] += int(txt[4])
             elif (("fe" in txt) and ("DEE" in txt)):
                 stats['RHSEvalsDEE'] += int(txt[7])
-            elif (("stages" in txt) and ("used" in txt)):
+            elif (("stages" in txt) and ("used" in txt) and ("Max." in txt)):
                 stats['MaxStages'] += int(txt[6])
+            elif (("stages" in txt) and ("used" in txt) and ("Number" in txt)):
+                stats['MaxStages'] += int(txt[5])
             elif (("Max." in txt) and ("spectral" in txt)):
                 stats['MaxSpectralRadius'] += float(txt[4])
             elif (("Computed" in txt) and ("CPU" in txt)):
@@ -74,7 +76,7 @@ fname_fixed = "results_gk_diffusion_1x1v_p1_fixed.xlsx"
 fname_adaptive = "results_gk_diffusion_1x1v_p1_adaptive.xlsx"
 
 # executable
-exe = "./bin/gk_diffusion_1x1v_p1"
+exe = "./gk_diffusion_1x1v_p1"
 
 # common testing parameters
 tf = " --tf 1.0"
@@ -94,13 +96,13 @@ STSSolvers = [{'name': 'RKC', 'stages': 0},
 SSPSolvers = [{'name': 'SSP2', 'stages': 2},
               {'name': 'SSP3', 'stages': 4},
               {'name': 'SSP4', 'stages': 10}]
-eigfreq = 1
+eigfreq = 0
 eigsafety = [1.01, 1.05, 1.1, 1.2]
 user_dom_eig = [False, True]
 dee_id = 0
 dee_init_wups = 0
 dee_succ_wups = 0
-dee_maxiters = 100
+dee_maxiters_val = [100]
 dee_reltol = 1e-1
 
 # flags to enable/disable classes of tests
@@ -115,24 +117,25 @@ if (DoFixedTests):
             # STS methods
             for method in STSSolvers:
                 for eigsafety_val in eigsafety:
-                    # automatic eigenvalue computation
-                    stat = runtest(exe, k, 1e-4, atol, h, 1, method,
-                                   eigfreq, eigsafety_val, False,
-                                   dee_id, dee_init_wups, dee_succ_wups,
-                                   dee_maxiters, dee_reltol, common)
-                    FixedStats.append(stat)
-                    # user supplied eigenvalue
-                    stat = runtest(exe, k, 1e-4, atol, h, 1, method,
-                                   eigfreq, eigsafety_val, True,
-                                   dee_id, dee_init_wups, dee_succ_wups,
-                                   dee_maxiters, dee_reltol, common)
-                    FixedStats.append(stat)
+                    for dee_maxiters in dee_maxiters_val:
+                        # automatic eigenvalue computation
+                        stat = runtest(exe, k, 1e-4, atol, h, 1, method,
+                                    eigfreq, eigsafety_val, False,
+                                    dee_id, dee_init_wups, dee_succ_wups,
+                                    dee_maxiters, dee_reltol, common)
+                        FixedStats.append(stat)
+                        # user supplied eigenvalue
+                        stat = runtest(exe, k, 1e-4, atol, h, 1, method,
+                                    eigfreq, eigsafety_val, True,
+                                    dee_id, dee_init_wups, dee_succ_wups,
+                                    dee_maxiters, dee_reltol, common)
+                        FixedStats.append(stat)
             # SSP methods
             for method in SSPSolvers:
                 stat = runtest(exe, k, 1e-4, atol, h, 1, method,
                                eigfreq, 1.01, False,
                                dee_id, dee_init_wups, dee_succ_wups,
-                               dee_maxiters, dee_reltol, common)
+                               100, dee_reltol, common)
                 FixedStats.append(stat)
     FixedStatsDf = pd.DataFrame.from_records(FixedStats)
 
@@ -151,24 +154,25 @@ if (DoAdaptiveTests):
                 # STS methods
                 for method in STSSolvers:
                     for eigsafety_val in eigsafety:
-                        # automatic eigenvalue computation
-                        stat = runtest(exe, k, rtol, atol, 0.0, normtype,
-                                       method, eigfreq, eigsafety_val, False,
-                                       dee_id, dee_init_wups, dee_succ_wups,
-                                       dee_maxiters, dee_reltol, common)
-                        AdaptiveStats.append(stat)
-                        # user supplied eigenvalue
-                        stat = runtest(exe, k, rtol, atol, 0.0, normtype,
-                                       method, eigfreq, eigsafety_val, True,
-                                       dee_id, dee_init_wups, dee_succ_wups,
-                                       dee_maxiters, dee_reltol, common)
-                        AdaptiveStats.append(stat)
+                        for dee_maxiters in dee_maxiters_val:
+                            # automatic eigenvalue computation
+                            stat = runtest(exe, k, rtol, atol, 0.0, normtype,
+                                        method, eigfreq, eigsafety_val, False,
+                                        dee_id, dee_init_wups, dee_succ_wups,
+                                        dee_maxiters, dee_reltol, common)
+                            AdaptiveStats.append(stat)
+                            # user supplied eigenvalue
+                            stat = runtest(exe, k, rtol, atol, 0.0, normtype,
+                                        method, eigfreq, eigsafety_val, True,
+                                        dee_id, dee_init_wups, dee_succ_wups,
+                                        dee_maxiters, dee_reltol, common)
+                            AdaptiveStats.append(stat)
                 # SSP methods
                 for method in SSPSolvers:
                     stat = runtest(exe, k, rtol, atol, 0.0, normtype,
                                    method, eigfreq, 1.01, False,
                                    dee_id, dee_init_wups, dee_succ_wups,
-                                   dee_maxiters, dee_reltol, common)
+                                   100, dee_reltol, common)
                     AdaptiveStats.append(stat)
     AdaptiveStatsDf = pd.DataFrame.from_records(AdaptiveStats)
 
