@@ -238,21 +238,21 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
   struct gkyl_array* wdptr       = NV_CONTENT_GKZ(w)->dataptr;
   struct gkyl_comm* comm         = NV_CONTENT_GKZ(w)->comm;
   struct gkyl_range* local_range = NV_CONTENT_GKZ(w)->local_range;
+  bool use_gpu                   = NV_CONTENT_GKZ(w)->use_gpu;
 
   // TODO: change code so these allocations only happen once.
   int ncomp = xdptr->ncomp;
   struct gkyl_array* zdptr; // Temporary buffer. Should change code to avoid this.
+  zdptr = mkarr(use_gpu, ncomp, xdptr->size);
   double* asum_ho = gkyl_malloc(ncomp * sizeof(double));
   double *asum_local, *asum_global;
   if (gkyl_array_is_cu_dev(xdptr)) {
     asum_local  = gkyl_cu_malloc(ncomp * sizeof(double));
     asum_global = gkyl_cu_malloc(ncomp * sizeof(double));
-    zdptr = mkarr(true, ncomp, xdptr->size);
   }
   else {
     asum_local  = gkyl_malloc(ncomp * sizeof(double));
     asum_global = gkyl_malloc(ncomp * sizeof(double));
-    zdptr = mkarr(false, ncomp, xdptr->size);
   }
 
   gkyl_array_comp_op_range(zdptr, GKYL_PROD, 1.0, xdptr, 0.0, wdptr, local_range);
@@ -335,19 +335,18 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   return red_out;
 }
 
-//NOTE: The way this is implemented below it overwrites x.
 sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
 {
   struct gkyl_array* xdptr       = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* ydptr       = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_comm* comm         = NV_CONTENT_GKZ(y)->comm;
   struct gkyl_range* local_range = NV_CONTENT_GKZ(y)->local_range;
-  bool use_gpu = NV_CONTENT_GKZ(y)->use_gpu;
+  bool use_gpu                   = NV_CONTENT_GKZ(y)->use_gpu;
 
   struct gkyl_array* ztmp; // Temporary buffer. Should change code to avoid this.
   ztmp = mkarr(use_gpu, xdptr->ncomp, xdptr->size);
 
-  // Overwrite x with x_i^{(k)} = x_i^{(k)} * y_i^{(k)}  
+  // z_i^{(k)} = x_i^{(k)} * y_i^{(k)}  
   gkyl_array_comp_op_range(ztmp, GKYL_PROD, SUN_RCONST(1.0), ydptr, SUN_RCONST(0.0), xdptr, local_range);
 
   // Sum reduce x (component-wise).
@@ -355,7 +354,7 @@ sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
   int ncomp = xdptr->ncomp;
   sunrealtype red_ho[ncomp];
   double *red_local, *red_global;
-  if (gkyl_array_is_cu_dev(xdptr)) {
+  if (use_gpu) {
     red_local  = gkyl_cu_malloc(ncomp * sizeof(double));
     red_global = gkyl_cu_malloc(ncomp * sizeof(double));
   }
@@ -376,7 +375,7 @@ sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
   for (sunindextype i = 0; i < ncomp; ++i)
     dot_prod += red_ho[i];
 
-  if (gkyl_array_is_cu_dev(xdptr)) {
+  if (use_gpu) {
     gkyl_cu_free(red_local );
     gkyl_cu_free(red_global);
   }
@@ -487,9 +486,9 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x, N_Vector v)
 
   gkyl_array_copy_range(vdptr, udptr, local_range);
 
-  sunindextype N = udptr->ncomp;
+  sunindextype ncomp = udptr->ncomp;
 
-  for (sunindextype i = 0; i < N; ++i)
+  for (sunindextype i = 0; i < ncomp; ++i)
     gkyl_array_shiftc_range(vdptr, x, i, local_range);
 
   return;

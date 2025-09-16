@@ -107,8 +107,6 @@ int ReadInputs(int argc, char** argv, UserData* udata)
     else if (strcmp(arg, "-r") == 0) { }
     else if (strcmp(arg, "-o") == 0) { }
     else if (strcmp(arg, "-c") == 0) { }
-    else if (strcmp(arg, "-d") == 0) { }
-    else if (strcmp(arg, "-e") == 0) { }
     // Diffusion parameters
     else if (strcmp(arg, "--k") == 0) { udata->k = atof(argv[arg_idx++]); }
     // Temporal domain settings
@@ -196,14 +194,12 @@ void InputHelp(void)
 {
   printf("\n");
   printf("Command line options:\n");
-  printf("  -g     Run on GPUs if GPUs are present and code built for GPUs\n");
-  printf("  -M     Run with MPI if code built with MPI\n");
-  printf("  -sN    Only run N steps of simulation\n");
-  printf("  -rN    Restart the simulation from frame N\n");
-  printf("  -o     Optional arguments (as string, requires parsing)\n");
-  printf("  -cPX Domain decomposition in x\n");
-  printf("  -dPY Domain decomposition in y\n");
-  printf("  -ePZ Domain decomposition in z\n");
+  printf("  -g   Run on GPUs if GPUs are present and code built for GPUs\n");
+  printf("  -M   Run with MPI if code built with MPI\n");
+  printf("  -s N Only run N steps of simulation\n");
+  printf("  -r N Restart the simulation from frame N\n");
+  printf("  -o   Optional arguments (as string, requires parsing)\n");
+  printf("  -c N Domain decomposition in x\n");
 
   printf("  --k <amplitude>             : diffusion amplitude\n");
   printf("  --tf <time>                 : final time\n");

@@ -763,8 +763,9 @@ int efun_cell_norm(N_Vector x, N_Vector w, void* user_data)
 {
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(w)->local_range;
 
-  gkyl_array_error_denom_fac(wdptr, reltol, abstol, xdptr);
+  gkyl_array_error_denom_fac_range(wdptr, reltol, abstol, xdptr, local_range);
 
   return 0;
 }
