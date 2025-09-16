@@ -45,6 +45,7 @@ struct _N_VectorContent_Gkylzero
   sunbooleantype use_gpu;     /* where to reside */
   // Gkeyll pointers.
   struct gkyl_comm *comm; // Communicator.
+  struct gkyl_range *local_range; // Local range.
   struct gkyl_array *dataptr; // Data of this array/vector.
 };
 
@@ -57,7 +58,7 @@ struct gkyl_array* mkarr(bool on_gpu, long nc, long size);
 
 N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx);
 N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu, struct gkyl_comm *comm,
-                          SUNContext sunctx);
+                          struct gkyl_range *local_range, SUNContext sunctx);
 struct gkyl_array* N_VGetVector_Gkylzero(N_Vector v);
 
 N_Vector N_VCloneEmpty_Gkylzero(N_Vector w);
