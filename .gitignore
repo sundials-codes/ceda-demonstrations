@@ -39,6 +39,7 @@ deps/gkyl-install
 *.out
 *.app
 gk_diffusion_1x1v_p1
+analytic_CR_test
 test_nvector_gkylzero
 
 # Build folder

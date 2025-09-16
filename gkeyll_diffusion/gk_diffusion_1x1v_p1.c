@@ -639,11 +639,11 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
     return 1;
   }
 
-  /* Check if flag < 0 */
+  /* Check if flag != 0 */
   else if (opt == 1)
   {
     errflag = (int*)flagvalue;
-    if (*errflag < 0)
+    if (*errflag != 0)
     {
       fprintf(stderr, "\nERROR: %s() failed with flag = %d\n\n", funcname,
               *errflag);
