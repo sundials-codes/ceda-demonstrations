@@ -43,8 +43,9 @@ struct _N_VectorContent_Gkylzero
 {
   sunbooleantype own_vector;  /* ownership Gkylzero vector */
   sunbooleantype use_gpu;     /* where to reside */
-  struct gkyl_array* dataptr; /* the actual Gkylzero object pointer */
-  /* TODO: ADD GKYL COMMUNICATOR */
+  // Gkeyll pointers.
+  struct gkyl_comm *comm; // Communicator.
+  struct gkyl_array *dataptr; // Data of this array/vector.
 };
 
 typedef struct _N_VectorContent_Gkylzero* N_VectorContent_Gkylzero;
@@ -55,7 +56,7 @@ typedef struct _N_VectorContent_Gkylzero* N_VectorContent_Gkylzero;
 struct gkyl_array* mkarr(bool on_gpu, long nc, long size);
 
 N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx);
-N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu,
+N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu, struct gkyl_comm *comm,
                           SUNContext sunctx);
 struct gkyl_array* N_VGetVector_Gkylzero(N_Vector v);
 

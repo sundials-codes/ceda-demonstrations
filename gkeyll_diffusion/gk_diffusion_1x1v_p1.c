@@ -8,7 +8,17 @@
 #include <gkyl_eval_on_nodes.h>
 #include <gkyl_gk_geometry.h>
 #include <gkyl_gk_geometry_mapc2p.h>
+
 #include <gkyl_null_comm.h>
+#ifdef GKYL_HAVE_MPI
+#include <mpi.h>
+#include <gkyl_mpi_comm.h>
+#ifdef GKYL_HAVE_NCCL
+#include <gkyl_nccl_comm.h>
+#endif
+#else
+#endif
+
 #include <gkyl_proj_on_basis.h>
 #include <gkyl_range.h>
 #include <gkyl_rect_decomp.h>
@@ -28,6 +38,20 @@
 
 #include <sundomeigest/sundomeigest_power.h> /* access to Power Iteration module */
 #include <sundomeigest/sundomeigest_arnoldi.h> /* access to Arnoldi Iteration module */
+
+static inline void
+gkyl_diffusion_printf(struct gkyl_comm *comm, const char* format, ...)
+{
+  int rank;
+  gkyl_comm_get_rank(comm, &rank);
+
+  if (rank == 0) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+  }
+}
 
 // Struct with context parameters.
 struct diffusion_ctx
@@ -183,9 +207,8 @@ struct gkyl_diffusion_app
 
   struct gkyl_basis basis, basis_conf; // Phase- and conf-space bases.
 
-  struct gkyl_range global_conf, global_ext_conf; // Local conf-space ranges.
-  struct gkyl_range global_vel, global_ext_vel;   // Local vel-space ranges.
-  struct gkyl_range global, global_ext;           // Local phase-space ranges.
+  struct gkyl_range global_conf, global_ext_conf; // Global conf-space ranges.
+  struct gkyl_range global, global_ext;           // Global phase-space ranges.
 
   struct gkyl_range local_conf, local_ext_conf; // Local conf-space ranges.
   struct gkyl_range local_vel, local_ext_vel;   // Local vel-space ranges.
@@ -299,7 +322,7 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   int ghost_vel[3]        = {0}; // Number of ghost cells in vel-space.
   int ghost[GKYL_MAX_DIM] = {0}; // Number of ghost cells in phase-space.
   for (int d = 0; d < cdim; d++) ghost[d] = ghost_conf[d];
-  gkyl_create_grid_ranges(&app->grid_vel, ghost_vel, &app->global_ext_vel, &app->global_vel);
+  gkyl_create_grid_ranges(&app->grid_vel, ghost_vel, &app->local_ext_vel, &app->local_vel);
   gkyl_create_grid_ranges(&app->grid, ghost, &app->global_ext, &app->global);
 
   // Phase-space communicator object.
@@ -364,8 +387,8 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
 
   // Velocity space mapping.
   struct gkyl_mapc2p_inp c2p_in = {};
-  app->gvm = gkyl_velocity_map_new(c2p_in, app->grid, app->grid_vel, app->local,
-    app->local_ext, app->local_vel, app->local_ext_vel, use_gpu);
+  app->gvm = gkyl_velocity_map_new(c2p_in, app->grid, app->grid_vel,
+    app->local, app->local_ext, app->local_vel, app->local_ext_vel, use_gpu);
 
   // Create distribution function arrays (3 for SSP-RK3).
   app->f    = mkarr(use_gpu, app->basis.num_basis, app->local_ext.volume);
@@ -379,14 +402,6 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   gkyl_proj_on_basis_advance(proj_distf, 0.0, &app->local, app->f_ho);
   gkyl_proj_on_basis_release(proj_distf);
   gkyl_array_copy(app->f, app->f_ho);
-
-  // Things needed in ARKODE vector:
-  //   1. cloning = mkarr & gkyl_array_copy
-  //   2. g = a*f + b*f1 + c*fnew = wrap gkyl_array_accumulate(g, a, f)
-  //   3. scale = gkyl_array_scale(f, a)
-  //   4. dot/inner product: gkyl has an l2 norm operation
-  //   5. weighted MRS norm
-  //   6. set f = 1 (const) = gkyl_array_set(f, 1.0);
 
   app->cfl = inp->cfl_frac == 0 ? 1.0 : inp->cfl_frac; // CFL factor.
 
@@ -781,7 +796,7 @@ int STS_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
   /* Check if *y is NULL */
   if (*y == NULL)
   {
-    fprintf(stderr, "*y is NULL\n");
+    fprintf(stderr, "\nERROR: *y is NULL\n");
     return 1;
   }
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
@@ -823,7 +838,7 @@ int STS_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
     }
     else
     {
-      fprintf(stderr, "ERROR: Invalid DEE id %d\n", udata->dee_id);
+      fprintf(stderr, "\nERROR: Invalid DEE id %d\n", udata->dee_id);
       return 1;
     }
 
@@ -867,7 +882,7 @@ int SSP_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y, void*
   /* Check if *y is NULL */
   if (*y == NULL)
   {
-    fprintf(stderr, "*y is NULL\n");
+    fprintf(stderr, "\nERROR: *y is NULL\n");
     return 1;
   }
   /* Call LSRKStepCreateSTS to initialize the ARK timestepper module and
@@ -928,7 +943,7 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype  t_curr, struct gky
   gkyl_array_accumulate(wdptr, -1.0, vdptr);
 
   gkyl_array_reduce(red_local, wdptr, GKYL_ABS_MAX);
-  gkyl_comm_allreduce(app->comm, GKYL_DOUBLE, GKYL_MAX, 1, red_local, red_global);
+  gkyl_comm_allreduce(app->comm, GKYL_DOUBLE, GKYL_MAX, ncomp, red_local, red_global);
 
   if (app->use_gpu)
     gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
@@ -950,7 +965,7 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype  t_curr, struct gky
 
   gkyl_array_release(wdptr);
 
-  printf("\nmax error is %e at t = %g over the whole domain\n", error, t_curr);
+  gkyl_diffusion_printf(app->comm, "\nmax error is %e at t = %g over the whole domain\n", error, t_curr);
 
   return error;
 }
@@ -968,7 +983,7 @@ gkyl_diffusion_create_comm(struct gkyl_app_args app_args)
       }
     );
 #else
-    printf(" Using -g and -M together requires NCCL.\n");
+    fprintf(stderr, "\nERROR: Using -g and -M together requires NCCL.\n");
     assert(0 == 1);
 #endif
   }
@@ -1007,7 +1022,7 @@ int main(int argc, char* argv[])
   // defaults may be overwritten by command line inputs in ReadInputs below.
   udata = (UserData*) malloc(sizeof(UserData));
   if (udata == NULL) {
-    fprintf(stderr, "ERROR: failed to allocate memory for UserData\n");
+    fprintf(stderr, "\nERROR: failed to allocate memory for UserData\n");
     return 1;
   }
 
@@ -1034,6 +1049,8 @@ int main(int argc, char* argv[])
 
   // Construct communicator for use in app.
   struct gkyl_comm *comm = gkyl_diffusion_create_comm(app_args);
+  int my_rank;
+  gkyl_comm_get_rank(comm, &my_rank);
 
   // Update the context with user inputs.
   ctx.diffD0 = udata->k;
@@ -1058,12 +1075,12 @@ int main(int argc, char* argv[])
   }
   else
   {
-    fprintf(stderr, "ERROR: Invalid method %d\n", udata->method);
+    fprintf(stderr, "\nERROR: Invalid method %d\n", udata->method);
     return 1;
   }
 
   // Output problem setup/options
-  flag = PrintUserData(udata);
+  flag = PrintUserData(udata, my_rank);
   if (check_flag(&flag, "PrintUserData", 1)) { return 1; }
 
   // Create the struct of app inputs.
@@ -1139,8 +1156,8 @@ int main(int argc, char* argv[])
   flag = SUNContext_Create(SUN_COMM_NULL, &sunctx);
   if (check_flag(&flag, "SUNContext_Create", 1)) { return 1; }
 
-  y    = N_VMake_Gkylzero(app->f, app->use_gpu, sunctx);
-  yref = N_VMake_Gkylzero(fref, app->use_gpu, sunctx);
+  y    = N_VMake_Gkylzero(app->f, app->use_gpu, app->comm, sunctx);
+  yref = N_VMake_Gkylzero(fref, app->use_gpu, app->comm, sunctx);
 
   /* Create the reference solution memory*/
   void* arkode_mem_ref = NULL;
@@ -1192,20 +1209,20 @@ int main(int argc, char* argv[])
   {
   case 1:
     y->ops->nvwrmsnorm = N_VWrmsNorm_abs_comp_Gkylzero;
-    printf("\nUsing WRMSNorm with componentwise absolute values\n");
+    gkyl_diffusion_printf(comm, "\nUsing WRMSNorm with componentwise absolute values\n");
     break;
 
   case 2:
     flag = ARKodeWFtolerances(arkode_mem, efun_cell_norm);
     if (check_flag(&flag, "ARKodeWFtolerances", 1)) { return 1; }
     y->ops->nvwrmsnorm = N_VWrmsNorm_cell_norm_Gkylzero;
-    printf("\nUsing WRMSNorm with cellwise norm values\n");
+    gkyl_diffusion_printf(comm, "\nUsing WRMSNorm with cellwise norm values\n");
     break;
   }
 
-  printf("\nNumber of cells             = %ld", app->f->size);
-  printf("\nNumber of DoFs in each cell = %ld", app->f->ncomp);
-  printf("\nNumber of DoFs              = %ld\n", app->f->size * app->f->ncomp);
+  gkyl_diffusion_printf(comm, "\nNumber of cells             = %ld", app->f->size);
+  gkyl_diffusion_printf(comm, "\nNumber of DoFs in each cell = %ld", app->f->ncomp);
+  gkyl_diffusion_printf(comm, "\nNumber of DoFs              = %ld\n", app->f->size * app->f->ncomp);
 
   double tout      = 0;
   double max_error = 0.0;
@@ -1221,14 +1238,14 @@ int main(int argc, char* argv[])
     }
     tout += dt;
 
-    fprintf(stdout, "\nTaking time-step %ld at t = %g ...", step, t_curr);
+    gkyl_diffusion_printf(comm, "\nTaking time-step %ld at t = %g ...", step, t_curr);
 
     // Update the reference solution
     ref_start = clock();
     flag      = gkyl_diffusion_update(app, arkode_mem_ref, tout, yref, &t_curr);
     if (check_flag(&flag, "gkyl_diffusion_update", 1)) 
     {
-      fprintf(stdout, "** Update method failed! Aborting reference simulation ....\n");
+      gkyl_diffusion_printf(comm, "** Update method failed! Aborting reference simulation ....\n");
       break;
     }
     ref_end   = clock();
@@ -1239,7 +1256,7 @@ int main(int argc, char* argv[])
     flag  = gkyl_diffusion_update(app, arkode_mem, tout, y, &t_curr);
     if (check_flag(&flag, "gkyl_diffusion_update", 1)) 
     {
-      fprintf(stdout, "** Update method failed! Aborting simulation ....\n");
+      gkyl_diffusion_printf(comm, "** Update method failed! Aborting simulation ....\n");
       break;
     }
     end = clock();
@@ -1254,19 +1271,26 @@ int main(int argc, char* argv[])
     step++;
   }
 
-  // printf("\nReference Solution Stats\n");
+  // gkyl_diffusion_printf(comm, "\nReference Solution Stats\n");
   // ARKodePrintAllStats(arkode_mem_ref, stdout, SUN_OUTPUTFORMAT_TABLE);
-  printf("\nComputed Solution Stats\n");
-  ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  gkyl_diffusion_printf(comm, "\nComputed Solution Stats\n");
+  if (my_rank == 0)
+    ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
 
-  printf("\nmax-in-space and max-in-time error is %e over D x [%g, %g]\n\n", max_error, T0, t_curr);
+  gkyl_diffusion_printf(comm, "\nmax-in-space and max-in-time error is %e over D x [%g, %g]\n\n", max_error, T0, t_curr);
 
-  printf("Reference solution CPU time: %f seconds\n", ref_time);
-  printf(" Computed solution CPU time: %f seconds\n", sol_time);
+  gkyl_diffusion_printf(comm, "Reference solution CPU time: %f seconds\n", ref_time);
+  gkyl_diffusion_printf(comm, " Computed solution CPU time: %f seconds\n", sol_time);
 
   // Free the app.
   gkyl_array_release(fref);
   gkyl_diffusion_app_release(app);
+
+#ifdef GKYL_HAVE_MPI
+  if (app_args.use_mpi) {
+    MPI_Finalize();
+  }
+#endif
 
   return 0;
 }

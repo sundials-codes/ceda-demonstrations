@@ -18,6 +18,8 @@
 #define INPUT_HANDLER_H
 
 #include "input_handler.h"
+#include <ctype.h>
+#include <stdbool.h>
 
 // -----------------------------------------------------------------------------
 // UserData and input functions
@@ -62,6 +64,32 @@ int InitUserData(UserData* udata)
   return 0;
 }
 
+// Function to check if a string is a valid integer
+bool isInteger(const char *str) {
+    if (str == NULL || *str == '\0') { // Handle empty or NULL strings
+        return false;
+    }
+
+    // Handle optional leading sign
+    int i = 0;
+    if (str[0] == '-' || str[0] == '+') {
+        i = 1;
+    }
+
+    // Check if there are any digits after the sign (if present)
+    if (str[i] == '\0') {
+        return false; // Only a sign, no digits
+    }
+
+    // Iterate through the rest of the string
+    for (; str[i] != '\0'; i++) {
+        if (!isdigit(str[i])) {
+            return false; // Found a non-digit character
+        }
+    }
+    return true; // All characters are digits (or a valid sign followed by digits)
+}
+
 // Read command line inputs
 int ReadInputs(int argc, char** argv, UserData* udata)
 {
@@ -72,8 +100,17 @@ int ReadInputs(int argc, char** argv, UserData* udata)
   {
     char* arg = argv[arg_idx++];
 
+    // Gkeyll runtime arguments.
+    if (strcmp(arg, "-g") == 0) { }
+    else if (strcmp(arg, "-M") == 0) { }
+    else if (strcmp(arg, "-s") == 0) { }
+    else if (strcmp(arg, "-r") == 0) { }
+    else if (strcmp(arg, "-o") == 0) { }
+    else if (strcmp(arg, "-c") == 0) { }
+    else if (strcmp(arg, "-d") == 0) { }
+    else if (strcmp(arg, "-e") == 0) { }
     // Diffusion parameters
-    if (strcmp(arg, "--k") == 0) { udata->k = atof(argv[arg_idx++]); }
+    else if (strcmp(arg, "--k") == 0) { udata->k = atof(argv[arg_idx++]); }
     // Temporal domain settings
     else if (strcmp(arg, "--tf") == 0) { udata->tf = atof(argv[arg_idx++]); }
     // Integrator settings
@@ -142,9 +179,12 @@ int ReadInputs(int argc, char** argv, UserData* udata)
     // Unknown input
     else
     {
-      fprintf(stderr, "ERROR: Invalid input %s\n", arg);
-      InputHelp();
-      return -1;
+      int isnum = isInteger(arg);
+      if (isnum == 0) {
+        fprintf(stderr, "ERROR: Invalid input %s\n", arg);
+        InputHelp();
+        return -1;
+      }
     }
   }
 
@@ -156,6 +196,15 @@ void InputHelp(void)
 {
   printf("\n");
   printf("Command line options:\n");
+  printf("  -g     Run on GPUs if GPUs are present and code built for GPUs\n");
+  printf("  -M     Run with MPI if code built with MPI\n");
+  printf("  -sN    Only run N steps of simulation\n");
+  printf("  -rN    Restart the simulation from frame N\n");
+  printf("  -o     Optional arguments (as string, requires parsing)\n");
+  printf("  -cPX Domain decomposition in x\n");
+  printf("  -dPY Domain decomposition in y\n");
+  printf("  -ePZ Domain decomposition in z\n");
+
   printf("  --k <amplitude>             : diffusion amplitude\n");
   printf("  --tf <time>                 : final time\n");
   printf("  --rtol <rtol>               : relative tolerance\n");
@@ -180,34 +229,36 @@ void InputHelp(void)
 }
 
 // Print user data
-int PrintUserData(UserData* udata)
+int PrintUserData(UserData* udata, int rank)
 {
-  printf("\n");
-  printf("gkeyll diffusion test problem:\n");
-  printf(" ------------------------------------ \n");
-  printf(" k                 = %g\n", udata->k);
-  printf(" tf                = %g\n", udata->tf);
-  printf(" ------------------------------------ \n");
-  printf(" rtol              = %.2e\n", udata->rtol);
-  printf(" atol              = %.2e\n", udata->atol);
-  printf(" hfixed            = %.2e\n", udata->hfixed);
-  printf(" method            = %d\n", (int)udata->method);
-  printf(" eigfrequency      = %ld\n", udata->eigfrequency);
-  printf(" stage_max_limit   = %d\n", udata->stage_max_limit);
-  printf(" num SSP stages    = %d\n", udata->num_SSP_stages);
-  printf(" eigsafety         = %g\n", udata->eigsafety);
-  printf(" ------------------------------------ \n");
-  printf(" wrms norm type    = %d\n", udata->wrms_norm_type);
-  printf(" max steps         = %d\n", udata->maxsteps);
-  printf(" ------------------------------------ \n");
-  printf(" dom_eig provided  = %d\n", udata->user_dom_eig);
-  printf(" dee ID            = %d\n", udata->dee_id);
-  printf(" dee num_init_wups = %d\n", udata->dee_num_init_wups);
-  printf(" dee num_succ_wups = %d\n", udata->dee_num_succ_wups);
-  printf(" dee_max_iters     = %d\n", udata->dee_max_iters);
-  printf(" dee_krylov_dim    = %d\n", udata->dee_krylov_dim);
-  printf(" dee_reltol        = %g\n", udata->dee_reltol);
-  printf(" ------------------------------------ \n\n");
+  if (rank == 0) {
+    printf("\n");
+    printf("gkeyll diffusion test problem:\n");
+    printf(" ------------------------------------ \n");
+    printf(" k                 = %g\n", udata->k);
+    printf(" tf                = %g\n", udata->tf);
+    printf(" ------------------------------------ \n");
+    printf(" rtol              = %.2e\n", udata->rtol);
+    printf(" atol              = %.2e\n", udata->atol);
+    printf(" hfixed            = %.2e\n", udata->hfixed);
+    printf(" method            = %d\n", (int)udata->method);
+    printf(" eigfrequency      = %ld\n", udata->eigfrequency);
+    printf(" stage_max_limit   = %d\n", udata->stage_max_limit);
+    printf(" num SSP stages    = %d\n", udata->num_SSP_stages);
+    printf(" eigsafety         = %g\n", udata->eigsafety);
+    printf(" ------------------------------------ \n");
+    printf(" wrms norm type    = %d\n", udata->wrms_norm_type);
+    printf(" max steps         = %d\n", udata->maxsteps);
+    printf(" ------------------------------------ \n");
+    printf(" dom_eig provided  = %d\n", udata->user_dom_eig);
+    printf(" dee ID            = %d\n", udata->dee_id);
+    printf(" dee num_init_wups = %d\n", udata->dee_num_init_wups);
+    printf(" dee num_succ_wups = %d\n", udata->dee_num_succ_wups);
+    printf(" dee_max_iters     = %d\n", udata->dee_max_iters);
+    printf(" dee_krylov_dim    = %d\n", udata->dee_krylov_dim);
+    printf(" dee_reltol        = %g\n", udata->dee_reltol);
+    printf(" ------------------------------------ \n\n");
+  }
 
   return 0;
 }

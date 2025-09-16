@@ -87,7 +87,7 @@ int ReadInputs(int argc, char** argv, UserData* udata);
 void InputHelp();
 
 // Print some UserData information
-int PrintUserData(UserData* udata);
+int PrintUserData(UserData* udata, int rank);
 
 // Print integration timing
 int OutputTiming(UserData* udata);
