@@ -62,7 +62,7 @@ We recommend that users follow the posted instructions for installing both SUNDI
 
 GkeyllZero uses a Makefile-based build system, that relies on "machine files" for configuration.  For systems where existing machine files can be used, we recommend that users follow the "Gkeyll build instructions" linked above.  We recommend that the same MPI library is used when building SUNDIALS, GkeyllZero's dependencies, GkeyllZero, and this repository, so it may be necessary to rebuild SUNDIALS above using the same MPI compiler wrappers as are used in the Gkeyll machine files.
 
-The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkyl-install` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
+The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkylsoft` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
 
 We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.  We also assume that LAPACKE is already installed on the current system.
 
@@ -70,11 +70,11 @@ To install GkeyllZero and its dependencies (without CUDA), from the top-level fo
 
 ```bash
 cd deps
-export GKYLSOFT=$PWD/gkyl-install
+export GKYLSOFT=$PWD/gkylsoft
 cd gkylzero/install-deps
-./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes
+./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes --build-openblas=yes
 cd ..
-./configure CC=gcc --prefix=$GKYLSOFT --use-mpi=yes --lapack-lib=<full-path-to-liblapacke.a> --lapack-inc=<full-path-to-folder-containing-lapacke.h>
+./configure CC=gcc --prefix=$GKYLSOFT --use-mpi=yes
 make -j install
 ```
 
@@ -124,7 +124,10 @@ The following steps can be used to build SUNDIALS using a minimal configuration 
 ```bash
 mkdir deps/sundials/build
 cd deps/sundials/build
+# To install with LAPACK -- Needs to be fixed
 cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
+# To install without LAPACK -- deactivate spack environment
+ccmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
 make -j install
 ```
 

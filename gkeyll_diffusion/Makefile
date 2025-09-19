@@ -11,7 +11,7 @@ CUDA_ARCH ?= 70
 # Warning flags: -Wall -Wno-unused-variable -Wno-unused-function -Wno-missing-braces
 CFLAGS ?= -O3 -g -ffast-math -fPIC -MMD -MP -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 LDFLAGS =
-PREFIX = ${PWD}/../deps/gkyl-install
+PREFIX = ${PWD}/../deps/gkylsoft
 SUN_PREFIX = $(shell dirname ${PREFIX})
 
 # determine OS we are running on
@@ -48,7 +48,7 @@ G0_LIB = -lgkylzero
 
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
 SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
-SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower -lsundials_sundomeigestarnoldi
+SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower # -lsundials_sundomeigestarnoldi
 SUNDIALS_RPATH = -Wl,-rpath,${SUNDIALS_LIB_DIR}
 
 USING_NVCC =

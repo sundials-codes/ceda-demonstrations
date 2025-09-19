@@ -26,7 +26,7 @@
 #include <arkode/arkode_lsrkstep.h> /* prototypes for LSRKStep fcts., consts */
 
 #include <sundomeigest/sundomeigest_power.h> /* access to Power Iteration module */
-#include <sundomeigest/sundomeigest_arnoldi.h> /* access to Arnoldi Iteration module */
+// #include <sundomeigest/sundomeigest_arnoldi.h> /* access to Arnoldi Iteration module */
 
 // Struct with context parameters.
 struct analytic_ctx
@@ -283,8 +283,9 @@ int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
     }
     else if(udata->dee_id == 1)
     {
-      DEE = SUNDomEigEstimator_Arnoldi(ydde_init, udata->dee_krylov_dim, sunctx);
-      if (check_flag(DEE, "SUNDomEigEstimator_Arnoldi", 0)) { return 1; }
+      // DEE = SUNDomEigEstimator_Arnoldi(ydde_init, udata->dee_krylov_dim, sunctx);
+      DEE = NULL;
+      if (check_flag(DEE, "SUNDomEigEstimator_Arnoldi will be implemented in the future", 0)) { return 1; }
     }
     else
     {
