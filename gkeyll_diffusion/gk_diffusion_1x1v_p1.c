@@ -693,9 +693,6 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
    ----------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------- */
 
-// Test the NVector interface
-void test_NVector(bool use_gpu);
-
 sunbooleantype first_RHS_call = SUNTRUE;
 
 /* f routine to compute the ODE RHS function f(t,y). */

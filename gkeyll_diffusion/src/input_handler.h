@@ -79,6 +79,9 @@ int FreeUserData(UserData* udata);
 // Read the command line inputs and set UserData values
 int ReadInputs(int argc, char** argv, UserData* udata);
 
+// Function to check if an input string is a valid integer
+sunbooleantype isInteger(const char *str);
+
 // -----------------------------------------------------------------------------
 // Output and utility functions
 // -----------------------------------------------------------------------------

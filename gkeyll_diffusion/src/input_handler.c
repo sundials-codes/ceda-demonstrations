@@ -19,7 +19,6 @@
 
 #include "input_handler.h"
 #include <ctype.h>
-#include <stdbool.h>
 
 // -----------------------------------------------------------------------------
 // UserData and input functions
@@ -65,9 +64,9 @@ int InitUserData(UserData* udata)
 }
 
 // Function to check if a string is a valid integer
-bool isInteger(const char *str) {
+sunbooleantype isInteger(const char *str) {
     if (str == NULL || *str == '\0') { // Handle empty or NULL strings
-        return false;
+        return SUNFALSE;
     }
 
     // Handle optional leading sign
@@ -78,16 +77,16 @@ bool isInteger(const char *str) {
 
     // Check if there are any digits after the sign (if present)
     if (str[i] == '\0') {
-        return false; // Only a sign, no digits
+        return SUNFALSE; // Only a sign, no digits
     }
 
     // Iterate through the rest of the string
     for (; str[i] != '\0'; i++) {
         if (!isdigit(str[i])) {
-            return false; // Found a non-digit character
+            return SUNFALSE; // Found a non-digit character
         }
     }
-    return true; // All characters are digits (or a valid sign followed by digits)
+    return SUNTRUE; // All characters are digits (or a valid sign followed by digits)
 }
 
 // Read command line inputs
@@ -194,13 +193,12 @@ void InputHelp(void)
 {
   printf("\n");
   printf("Command line options:\n");
-  printf("  -g   Run on GPUs if GPUs are present and code built for GPUs\n");
-  printf("  -M   Run with MPI if code built with MPI\n");
-  printf("  -s N Only run N steps of simulation\n");
-  printf("  -r N Restart the simulation from frame N\n");
-  printf("  -o   Optional arguments (as string, requires parsing)\n");
-  printf("  -c N Domain decomposition in x\n");
-
+  printf("   -g                         : Run on GPUs if GPUs are present and code built for GPUs\n");
+  printf("   -M                         : Run with MPI if code built with MPI\n");
+  printf("   -s <N>                     : Only run N steps of simulation\n");
+  printf("   -r <N>                     : Restart the simulation from frame N\n");
+  printf("   -o                         : Optional arguments (as string, requires parsing)\n");
+  printf("   -c <N>                     : Domain decomposition in x\n");
   printf("  --k <amplitude>             : diffusion amplitude\n");
   printf("  --tf <time>                 : final time\n");
   printf("  --rtol <rtol>               : relative tolerance\n");
@@ -233,6 +231,7 @@ int PrintUserData(UserData* udata, int rank)
     printf(" ------------------------------------ \n");
     printf(" k                 = %g\n", udata->k);
     printf(" tf                = %g\n", udata->tf);
+    printf(" nout              = %d\n", udata->nout);
     printf(" ------------------------------------ \n");
     printf(" rtol              = %.2e\n", udata->rtol);
     printf(" atol              = %.2e\n", udata->atol);

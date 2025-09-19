@@ -164,9 +164,6 @@ static int check_flag(void* flagvalue, const char* funcname, int opt)
    ----------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------- */
 
-// Test the NVector interface
-void test_NVector(bool use_gpu);
-
 /* f routine to compute the ODE RHS function f(t,y). */
 static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
 {
