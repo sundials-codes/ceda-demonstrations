@@ -126,7 +126,9 @@ mkdir deps/sundials/build
 cd deps/sundials/build
 # To install with LAPACK -- Needs to be fixed
 cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
+
 # To install without LAPACK -- deactivate the spack environment for possible conflicts
+
 ccmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
 make -j install
 ```
