@@ -3,7 +3,7 @@
 
 # Submodule builds
 deps/sundials-install
-deps/gkyl-install
+deps/gkylsoft
 
 # Prerequisites
 *.d
