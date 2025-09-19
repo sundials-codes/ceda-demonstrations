@@ -19,13 +19,14 @@
 #include <rt_arg_parse.h>
 #include <time.h>
 
-#include "src/nvector_gkylzero.h"
 #include "src/input_handler.h"
+#include "src/nvector_gkylzero.h"
 
 #include <arkode/arkode_erkstep.h>  /* prototypes for ERKStep fcts., consts */
 #include <arkode/arkode_lsrkstep.h> /* prototypes for LSRKStep fcts., consts */
 
 #include <sundomeigest/sundomeigest_power.h> /* access to Power Iteration module */
+
 // #include <sundomeigest/sundomeigest_arnoldi.h> /* access to Arnoldi Iteration module */
 
 // Struct with context parameters.
@@ -34,7 +35,7 @@ struct analytic_ctx
   char name[128]; // Simulation name.
 
   int cells[1]; // Number of cells.
-  double t_end;   // Final simulation time.
+  double t_end; // Final simulation time.
 };
 
 struct analytic_ctx create_analytic_ctx(void)
@@ -42,7 +43,7 @@ struct analytic_ctx create_analytic_ctx(void)
   // Create the context with all the inputs for this simulation.
   struct analytic_ctx ctx = {
     .name  = "analytic_CR_test", // App name.
-    .t_end = 10.0, // Final simulation time.
+    .t_end = 10.0,               // Final simulation time.
   };
   return ctx;
 }
@@ -50,18 +51,17 @@ struct analytic_ctx create_analytic_ctx(void)
 // Struct with inputs to our app.
 struct gkyl_analytic_app_inp
 {
-  char name[128]; // Name of the app.
-  bool use_gpu;   // Whether to run on GPU.
-  struct gkyl_comm *comm; // Communicator to use.
+  char name[128];         // Name of the app.
+  bool use_gpu;           // Whether to run on GPU.
+  struct gkyl_comm* comm; // Communicator to use.
 
-  int cells[1]; // Number of cells.
+  int cells[1];       // Number of cells.
   sunrealtype lambda; // Stiffness parameter.
 
   // Initial condition.
   void (*initial_f_func)(double t, const double* xn, double* fout, void* ctx);
   void* initial_f_ctx; // Context.
 };
-
 
 void init_distf_1x1v(double t, const double* xn, double* restrict fout, void* ctx)
 {
@@ -79,12 +79,12 @@ struct gkyl_analytic_app
   char name[128]; // Name of the app.
   bool use_gpu;   // Whether to run on the GPU.
 
-  sunrealtype lambda; // Stiffness parameter.
-  struct gkyl_comm* comm;          // Communicator object.
+  sunrealtype lambda;     // Stiffness parameter.
+  struct gkyl_comm* comm; // Communicator object.
 
-  struct gkyl_range local; // Local range. 
-  struct gkyl_array *f;
-  
+  struct gkyl_range local; // Local range.
+  struct gkyl_array* f;
+
   double tcurr; // Current simulation time.
 };
 
@@ -96,13 +96,13 @@ struct gkyl_analytic_app* gkyl_analytic_app_new(struct gkyl_analytic_app_inp* in
   strcpy(app->name, inp->name);
 
   app->use_gpu = inp->use_gpu;
-  app->comm = inp->comm;
+  app->comm    = inp->comm;
 
   app->lambda = inp->lambda;
 
   int lower[] = {1}, upper[] = {2};
   gkyl_range_init(&app->local, 1, lower, upper);
-  printf("vol = %ld\n",app->local.volume);
+  printf("vol = %ld\n", app->local.volume);
 
   app->f = mkarr(app->use_gpu, 1, app->local.volume);
 
@@ -177,7 +177,9 @@ static int f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data)
   sunrealtype lambda = app->lambda;
 
   gkyl_array_set(fout, lambda, fin);
-  gkyl_array_shiftc(fout, SUN_RCONST(1.0) / (SUN_RCONST(1.0) + t * t) - lambda * atan(t), 0);
+  gkyl_array_shiftc(fout,
+                    SUN_RCONST(1.0) / (SUN_RCONST(1.0) + t * t) - lambda * atan(t),
+                    0);
 
   return 0; /* return with success */
 }
@@ -187,7 +189,7 @@ static int true_sol(sunrealtype t, N_Vector y, void* user_data)
 {
   struct gkyl_analytic_app* app = (struct gkyl_analytic_app*)user_data;
 
-  struct gkyl_array* f  = N_VGetVector_Gkylzero(y);
+  struct gkyl_array* f = N_VGetVector_Gkylzero(y);
 
   gkyl_array_clear(f, 0.0);
 
@@ -227,7 +229,8 @@ int efun_cell_norm(N_Vector x, N_Vector w, void* user_data)
 /* general problem parameters */
 sunrealtype T0 = 0.0; /* initial time */
 
-int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void** arkode_mem)
+int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y,
+             void** arkode_mem)
 {
   /* Create the SUNDIALS context object for this simulation */
   SUNContext sunctx;
@@ -254,7 +257,7 @@ int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
   flag = ARKodeSStolerances(*arkode_mem, udata->rtol, udata->atol);
   if (check_flag(&flag, "ARKStepSStolerances", 1)) { return 1; }
 
-  SUNDomEigEstimator DEE     = NULL; /* domeig estimator object */
+  SUNDomEigEstimator DEE = NULL; /* domeig estimator object */
 
   if (udata->user_dom_eig)
   {
@@ -267,20 +270,26 @@ int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
     /* Set the initial random eigenvector for the DEE */
     struct gkyl_array* fdde_init = mkarr(app->use_gpu, 1, 1);
     gkyl_array_shiftc(fdde_init, 1.0, 0);
-    
-    N_Vector ydde_init    = NULL;
-    ydde_init = N_VMake_Gkylzero(fdde_init, app->use_gpu, app->comm, &app->local, sunctx);
 
-    if(udata->dee_id == 0)
+    N_Vector ydde_init = NULL;
+    ydde_init          = N_VMake_Gkylzero(fdde_init, app->use_gpu, app->comm,
+                                          &app->local, sunctx);
+
+    if (udata->dee_id == 0)
     {
-      DEE = SUNDomEigEstimator_Power(ydde_init, udata->dee_max_iters, udata->dee_reltol, sunctx);
+      DEE = SUNDomEigEstimator_Power(ydde_init, udata->dee_max_iters,
+                                     udata->dee_reltol, sunctx);
       if (check_flag(DEE, "SUNDomEigEstimator_Power", 0)) { return 1; }
     }
-    else if(udata->dee_id == 1)
+    else if (udata->dee_id == 1)
     {
       // DEE = SUNDomEigEstimator_Arnoldi(ydde_init, udata->dee_krylov_dim, sunctx);
       DEE = NULL;
-      if (check_flag(DEE, "SUNDomEigEstimator_Arnoldi will be implemented in the future", 0)) { return 1; }
+      if (check_flag(DEE, "SUNDomEigEstimator_Arnoldi will be implemented in the future",
+                     0))
+      {
+        return 1;
+      }
     }
     else
     {
@@ -291,11 +300,19 @@ int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
     flag = LSRKStepSetDomEigEstimator(*arkode_mem, DEE);
     if (check_flag(&flag, "LSRKStepSetDomEigEstimator", 1)) { return 1; }
 
-    flag = LSRKStepSetNumDomEigEstInitPreprocessIters(*arkode_mem, udata->dee_num_init_wups);
-    if (check_flag(&flag, "LSRKStepSetNumDomEigEstInitPreprocessIters", 1)) { return 1; }
+    flag = LSRKStepSetNumDomEigEstInitPreprocessIters(*arkode_mem,
+                                                      udata->dee_num_init_wups);
+    if (check_flag(&flag, "LSRKStepSetNumDomEigEstInitPreprocessIters", 1))
+    {
+      return 1;
+    }
 
-    flag = LSRKStepSetNumDomEigEstPreprocessIters(*arkode_mem, udata->dee_num_succ_wups);
-    if (check_flag(&flag, "LSRKStepSetNumDomEigEstPreprocessIters", 1)) { return 1; }
+    flag = LSRKStepSetNumDomEigEstPreprocessIters(*arkode_mem,
+                                                  udata->dee_num_succ_wups);
+    if (check_flag(&flag, "LSRKStepSetNumDomEigEstPreprocessIters", 1))
+    {
+      return 1;
+    }
   }
 
   /* Specify after how many successful steps dom_eig is recomputed
@@ -318,7 +335,8 @@ int STS_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
   return 0;
 }
 
-int SSP_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void** arkode_mem)
+int SSP_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y,
+             void** arkode_mem)
 {
   /* Create the SUNDIALS context object for this simulation */
   SUNContext sunctx;
@@ -352,7 +370,8 @@ int SSP_init(struct gkyl_analytic_app* app, UserData* udata, N_Vector* y, void**
   return 0;
 }
 
-int gkyl_analytic_update(struct gkyl_analytic_app* app, void* arkode_mem, double tout, N_Vector y, sunrealtype* tcurr)
+int gkyl_analytic_update(struct gkyl_analytic_app* app, void* arkode_mem,
+                         double tout, N_Vector y, sunrealtype* tcurr)
 {
   // Call integrator to evolve the solution to time tout
   int flag = ARKodeEvolve(arkode_mem, tout, y, tcurr, ARK_NORMAL);
@@ -363,7 +382,8 @@ int gkyl_analytic_update(struct gkyl_analytic_app* app, void* arkode_mem, double
   return 0;
 }
 
-double compute_max_error(N_Vector u, N_Vector v, sunrealtype  t_curr, struct gkyl_analytic_app* app)
+double compute_max_error(N_Vector u, N_Vector v, sunrealtype t_curr,
+                         struct gkyl_analytic_app* app)
 {
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
@@ -415,18 +435,20 @@ double sol_time = 0.0;
 
 int main(int argc, char* argv[])
 {
-  UserData* udata  = NULL; // user data structure
+  UserData* udata = NULL; // user data structure
 
   // Allocate and initialize user data structure with default values. The
   // defaults may be overwritten by command line inputs in ReadInputs below.
-  udata = (UserData*) malloc(sizeof(UserData));
-  if (udata == NULL) {
+  udata = (UserData*)malloc(sizeof(UserData));
+  if (udata == NULL)
+  {
     fprintf(stderr, "ERROR: failed to allocate memory for UserData\n");
     return 1;
   }
 
   flag = InitUserData(udata);
-  if (check_flag(&flag, "InitUserData", 1)) { 
+  if (check_flag(&flag, "InitUserData", 1))
+  {
     free(udata);
     return 1;
   }
@@ -438,32 +460,31 @@ int main(int argc, char* argv[])
   struct gkyl_app_args app_args = parse_app_args(argc, argv);
 
   // Construct communicator for use in app.
-  struct gkyl_comm *comm = gkyl_null_comm_inew( &(struct gkyl_null_comm_inp) {
-      .use_gpu = app_args.use_gpu
-    }
-  );
-   
+  struct gkyl_comm* comm = gkyl_null_comm_inew(
+    &(struct gkyl_null_comm_inp){.use_gpu = app_args.use_gpu});
+
   // Create the context struct.
-  struct analytic_ctx ctx = create_analytic_ctx(); 
+  struct analytic_ctx ctx = create_analytic_ctx();
 
   // Update the context with user inputs.
   ctx.t_end = udata->tf;
-  reltol = udata->rtol;
-  abstol = udata->atol;
+  reltol    = udata->rtol;
+  abstol    = udata->atol;
 
-  if(udata->method == ARKODE_LSRK_RKC_2 || udata->method == ARKODE_LSRK_RKL_2)
+  if (udata->method == ARKODE_LSRK_RKC_2 || udata->method == ARKODE_LSRK_RKL_2)
   {
     is_SSP = SUNFALSE;
   }
-  else if(udata->method == ARKODE_LSRK_SSP_S_2 ||
-          udata->method == ARKODE_LSRK_SSP_S_3 ||
-          udata->method == ARKODE_LSRK_SSP_10_4)
+  else if (udata->method == ARKODE_LSRK_SSP_S_2 ||
+           udata->method == ARKODE_LSRK_SSP_S_3 ||
+           udata->method == ARKODE_LSRK_SSP_10_4)
   {
     is_SSP = SUNTRUE;
-    if(udata->method == ARKODE_LSRK_SSP_10_4 && udata->num_SSP_stages != 10)
+    if (udata->method == ARKODE_LSRK_SSP_10_4 && udata->num_SSP_stages != 10)
     {
       udata->num_SSP_stages = 10; // Set to 10 for ARKODE_LSRK_SSP_10_
-      fprintf(stderr, "\nWARNING: num_SSP_stages reset to default 10 for ARKODE_LSRK_SSP_10_4\n");
+      fprintf(stderr, "\nWARNING: num_SSP_stages reset to default 10 for "
+                      "ARKODE_LSRK_SSP_10_4\n");
     }
   }
   else
@@ -476,15 +497,15 @@ int main(int argc, char* argv[])
   flag = PrintUserData(udata, 0);
   if (check_flag(&flag, "PrintUserData", 1)) { return 1; }
 
-  // Create the struct of app inputs. 
+  // Create the struct of app inputs.
   struct gkyl_analytic_app_inp app_inp = {
     // Initial condition.
     .initial_f_func = init_distf_1x1v,
     .initial_f_ctx  = &ctx,
-    .lambda = -10.0, // Stiffness parameter.
-    
+    .lambda         = -10.0, // Stiffness parameter.
+
     .use_gpu = app_args.use_gpu, // Whether to run on GPU.
-    .comm = comm,
+    .comm    = comm,
   };
   strcpy(app_inp.name, ctx.name);
 
@@ -503,7 +524,7 @@ int main(int argc, char* argv[])
   app->use_gpu = SUNFALSE; // For now, run everything on CPU.
   printf("Hardcoded app->use_gpu = false for now\n");
 
-  struct gkyl_array*    f = mkarr(app->use_gpu, 1, 1);
+  struct gkyl_array* f    = mkarr(app->use_gpu, 1, 1);
   struct gkyl_array* fref = mkarr(app->use_gpu, 1, 1);
 
   // compute the reference solution and the error
@@ -514,7 +535,7 @@ int main(int argc, char* argv[])
   app->f = gkyl_array_clone(f);
   y    = N_VMake_Gkylzero(app->f, app->use_gpu, app->comm, &app->local, sunctx);
   yref = N_VMake_Gkylzero(fref, app->use_gpu, app->comm, &app->local, sunctx);
-  
+
   true_sol(ZERO, y, (void*)app); // Compute initial condition.
 
   if (!is_SSP)
@@ -588,13 +609,13 @@ int main(int argc, char* argv[])
     // Update the reference solution
     ref_start = clock();
     true_sol(tout, yref, (void*)app);
-    ref_end   = clock();
+    ref_end = clock();
     ref_time += ((double)(ref_end - ref_start)) / CLOCKS_PER_SEC;
 
     // Update the computed solution
     start = clock();
     flag  = gkyl_analytic_update(app, arkode_mem, tout, y, &t_curr);
-    if (check_flag(&flag, "gkyl_analytic_update", 1)) 
+    if (check_flag(&flag, "gkyl_analytic_update", 1))
     {
       fprintf(stdout, "** Update method failed! Aborting simulation ....\n");
       break;
@@ -613,7 +634,8 @@ int main(int argc, char* argv[])
   printf("\nComputed Solution Stats\n");
   ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
 
-  printf("\nmax-in-space and max-in-time error is %e over D x [%g, %g]\n\n", max_error, T0, t_curr);
+  printf("\nmax-in-space and max-in-time error is %e over D x [%g, %g]\n\n",
+         max_error, T0, t_curr);
 
   printf("Reference solution CPU time: %f seconds\n", ref_time);
   printf(" Computed solution CPU time: %f seconds\n", sol_time);
