@@ -210,7 +210,7 @@ void N_VLinearSum_Gkylzero(sunrealtype a, N_Vector x, sunrealtype b, N_Vector y,
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* ydptr = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(z)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(x)->local_range;
 
   gkyl_array_comp_op_range(zdptr, GKYL_AXPBY, a, xdptr, b, ydptr, local_range);
 }
@@ -227,7 +227,7 @@ void N_VScale_Gkylzero(sunrealtype c, N_Vector x, N_Vector z)
 {
   struct gkyl_array* xdptr = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* zdptr = NV_CONTENT_GKZ(z)->dataptr;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(z)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(x)->local_range;
 
   gkyl_array_set_range(zdptr, c, xdptr, local_range);
 }
@@ -237,7 +237,7 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
   struct gkyl_array* xdptr       = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr       = NV_CONTENT_GKZ(w)->dataptr;
   struct gkyl_comm* comm         = NV_CONTENT_GKZ(w)->comm;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(w)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(x)->local_range;
   bool use_gpu                   = NV_CONTENT_GKZ(w)->use_gpu;
 
   // TODO: change code so these allocations only happen once.
@@ -291,7 +291,7 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   struct gkyl_array* xdptr       = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* wdptr       = NV_CONTENT_GKZ(w)->dataptr;
   struct gkyl_comm* comm         = NV_CONTENT_GKZ(w)->comm;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(w)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(x)->local_range;
 
   // TODO: change code so these allocations only happen once.
   int ncomp      = xdptr->ncomp;
@@ -340,7 +340,7 @@ sunrealtype N_VDotProd_Gkylzero(N_Vector x, N_Vector y)
   struct gkyl_array* xdptr       = NV_CONTENT_GKZ(x)->dataptr;
   struct gkyl_array* ydptr       = NV_CONTENT_GKZ(y)->dataptr;
   struct gkyl_comm* comm         = NV_CONTENT_GKZ(y)->comm;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(y)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(x)->local_range;
   bool use_gpu                   = NV_CONTENT_GKZ(y)->use_gpu;
 
   struct gkyl_array* ztmp; // Temporary buffer. Should change code to avoid this.
@@ -400,7 +400,7 @@ void N_VDiv_Gkylzero(N_Vector u, N_Vector v, N_Vector w)
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
   struct gkyl_array* wdptr = NV_CONTENT_GKZ(w)->dataptr;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(w)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(u)->local_range;
 
   /* SUN_RCONST(1.0) values are unused dummy variables */
   gkyl_array_comp_op_range(wdptr, GKYL_DIV, SUN_RCONST(1.0), udptr, SUN_RCONST(0.0),
@@ -482,7 +482,7 @@ void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x, N_Vector v)
 {
   struct gkyl_array* udptr = NV_CONTENT_GKZ(u)->dataptr;
   struct gkyl_array* vdptr = NV_CONTENT_GKZ(v)->dataptr;
-  struct gkyl_range* local_range = NV_CONTENT_GKZ(v)->local_range;
+  struct gkyl_range* local_range = NV_CONTENT_GKZ(u)->local_range;
 
   gkyl_array_copy_range(vdptr, udptr, local_range);
 

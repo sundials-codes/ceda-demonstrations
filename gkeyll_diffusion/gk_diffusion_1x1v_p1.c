@@ -24,6 +24,7 @@
 #include <gkyl_rect_decomp.h>
 #include <gkyl_rect_grid.h>
 #include <gkyl_util.h>
+#include <gkyl_position_map.h>
 #include <gkyl_velocity_map.h>
 #include <mpack.h>
 
@@ -224,6 +225,7 @@ struct gkyl_diffusion_app
 
   struct gk_geometry* gk_geom; // Gyrokinetic geometry.
 
+  struct gkyl_position_map* position_map; // Gyrokinetic velocity map.
   struct gkyl_velocity_map* gvm; // Gyrokinetic velocity map.
 
   struct gkyl_array *f, *f1, *fnew; // Distribution functions (3 for ssp-rk3).
@@ -254,6 +256,7 @@ static void apply_bc(struct gkyl_diffusion_app* app, double tcurr,
   int num_periodic_dir = app->num_periodic_dir, cdim = app->cdim;
   gkyl_comm_array_per_sync(app->comm, &app->local, &app->local_ext,
     num_periodic_dir, app->periodic_dirs, distf);
+  gkyl_comm_array_sync(app->comm, &app->local, &app->local_ext, distf);
 }
 
 struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp* inp)
@@ -342,21 +345,27 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   int comm_sz;
   gkyl_comm_get_size(app->comm_conf, &comm_sz);
 
+  // Configuration space geometry initialization
+  struct gkyl_position_map_inp pos_map_inp = { };
+  app->position_map = gkyl_position_map_new(pos_map_inp, app->grid_conf, app->local_conf,
+    app->local_ext_conf, app->global_conf, app->global_ext_conf, app->basis_conf);
+
   // Initialize geometry
   struct gkyl_gk_geometry_inp geometry_inp = {
-    .geometry_id = GKYL_MAPC2P,
-    .world       = {0.0, 0.0},
-    .c2p_ctx     = inp->mapc2p_ctx,
-    .mapc2p      = inp->mapc2p_func,
-    .bmag_ctx    = inp->bmag_ctx,
-    .bmag_func   = inp->bmag_func,
-    .grid        = app->grid_conf,
-    .local       = app->local_conf,
-    .local_ext   = app->local_ext_conf,
-    .global      = app->global_conf,
-    .global_ext  = app->global_ext_conf,
-    .basis       = app->basis_conf,
-    .comm        = app->comm_conf,
+    .geometry_id  = GKYL_MAPC2P,
+    .world        = {0.0, 0.0},
+    .c2p_ctx      = inp->mapc2p_ctx,
+    .mapc2p       = inp->mapc2p_func,
+    .bmag_ctx     = inp->bmag_ctx,
+    .bmag_func    = inp->bmag_func,
+    .position_map = app->position_map,
+    .grid         = app->grid_conf,
+    .local        = app->local_conf,
+    .local_ext    = app->local_ext_conf,
+    .global       = app->global_conf,
+    .global_ext   = app->global_ext_conf,
+    .basis        = app->basis_conf,
+    .comm         = app->comm_conf,
   };
   geometry_inp.geo_grid = gkyl_gk_geometry_augment_grid(app->grid_conf, geometry_inp);
   gkyl_cart_modal_serendip(&geometry_inp.geo_basis, 3, inp->poly_order);
@@ -377,6 +386,9 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   // Deflate geometry if necessary.
   app->gk_geom = gkyl_gk_geometry_deflate(gk_geom_3d, &geometry_inp);
   gkyl_gk_geometry_release(gk_geom_3d);
+
+  gkyl_position_map_set(app->position_map, app->gk_geom->mc2nu_pos);
+
   if (use_gpu) {
     // Copy geometry from host to device.
     struct gk_geometry* gk_geom_dev = gkyl_gk_geometry_new(app->gk_geom, &geometry_inp, use_gpu);
@@ -440,6 +452,7 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
   int num_periodic_dir = app->num_periodic_dir;
   gkyl_comm_array_per_sync(app->comm_conf, &app->local_conf, &app->local_ext_conf,
                            num_periodic_dir, app->periodic_dirs, app->diffD);
+  gkyl_comm_array_sync(app->comm_conf, &app->local_conf, &app->local_ext_conf, app->diffD);
 
   // Diffusion solver.
   app->diff_slvr = gkyl_dg_updater_diffusion_gyrokinetic_new(&app->grid, &app->basis, &app->basis_conf,
@@ -608,6 +621,7 @@ void gkyl_diffusion_app_release(struct gkyl_diffusion_app* app)
   gkyl_array_release(app->f_ho);
   gkyl_gk_geometry_release(app->gk_geom);
   gkyl_velocity_map_release(app->gvm);
+  gkyl_position_map_release(app->position_map);
   gkyl_comm_release(app->comm);
   gkyl_comm_release(app->comm_conf);
   gkyl_rect_decomp_release(app->decomp_conf);
@@ -742,16 +756,6 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
 
   *lambdaR = -omega_cfl_global_ho;
   *lambdaI = SUN_RCONST(0.0);
-  return 0; /* return with success */
-}
-
-static int apply_bc_in_LSRK(sunrealtype t, N_Vector y, void* user_data)
-{
-  struct gkyl_diffusion_app* app = (struct gkyl_diffusion_app*)user_data;
-  struct gkyl_array* f           = N_VGetVector_Gkylzero(y);
-
-  apply_bc(app, t, f);
-
   return 0; /* return with success */
 }
 
@@ -1139,8 +1143,7 @@ int main(int argc, char* argv[])
   N_Vector y       = NULL; /* empty vector for storing solution */
   N_Vector yref    = NULL; /* empty vector for storing solution */
 
-  struct gkyl_array* fref = mkarr(app->use_gpu, app->basis.num_basis,
-                                  app->local_ext.volume);
+  struct gkyl_array* fref = mkarr(app->use_gpu, app->f->ncomp, app->f->size);
   gkyl_array_set(fref, 1.0, app->f);
 
   // compute the reference solution and the error
