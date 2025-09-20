@@ -1,3 +1,4 @@
+#include <gkyl_null_comm.h>
 #include "src/nvector_gkylzero.h"
 
 void test_NVector(bool use_gpu)
@@ -7,6 +8,14 @@ void test_NVector(bool use_gpu)
   long int size       = 100;
   double eq_check_tol = 1e-10;
 
+  struct gkyl_range local;
+  int lower[] = {1}, upper[] = {size};
+  gkyl_range_init(&local, 1, lower, upper);
+
+  // Construct communicator for use in app.
+  struct gkyl_comm* comm =
+    gkyl_null_comm_inew(&(struct gkyl_null_comm_inp){.use_gpu = use_gpu});
+
   printf("\nTESTING nvector_gkylzero:\n");
 
   /* Create the SUNDIALS context object for this simulation */
@@ -15,7 +24,7 @@ void test_NVector(bool use_gpu)
 
   struct gkyl_array* testarray;
 
-  testarray = mkarr(use_gpu, num_basis, size);
+  testarray = mkarr(use_gpu, num_basis, local.volume);
 
   double* ta_data = testarray->data;
 
@@ -24,7 +33,7 @@ void test_NVector(bool use_gpu)
     ta_data[i] = (double)i;
   }
 
-  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, sunctx);
+  N_Vector NV_test = N_VMake_Gkylzero(testarray, use_gpu, comm, &local, sunctx);
 
   struct gkyl_array* testarrayreturn;
 
@@ -138,13 +147,13 @@ void test_NVector(bool use_gpu)
   double c = 1.75;
   double d = 2.89;
 
-  struct gkyl_array* v1      = mkarr(use_gpu, num_basis, size);
-  struct gkyl_array* v2      = mkarr(use_gpu, num_basis, size);
-  struct gkyl_array* lin_sum = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* v1      = mkarr(use_gpu, num_basis, local.volume);
+  struct gkyl_array* v2      = mkarr(use_gpu, num_basis, local.volume);
+  struct gkyl_array* lin_sum = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, sunctx);
-  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, sunctx);
-  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, sunctx);
+  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, comm, &local, sunctx);
+  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, comm, &local, sunctx);
+  N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
   N_VConst_Gkylzero(d, Nv2);
@@ -192,9 +201,9 @@ void test_NVector(bool use_gpu)
   * N_VDiv_Gkylzero Test
   * --------------------------------------------------------------------*/
 
-  struct gkyl_array* nvdiv = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* nvdiv = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, sunctx);
+  N_Vector Nvdiv = N_VMake_Gkylzero(nvdiv, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
   N_VConst_Gkylzero(d, Nv2);
@@ -222,9 +231,9 @@ void test_NVector(bool use_gpu)
   * N_VAbs_Gkylzero Test
   * --------------------------------------------------------------------*/
 
-  struct gkyl_array* nvabs = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* nvabs = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, sunctx);
+  N_Vector Nvabs = N_VMake_Gkylzero(nvabs, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(-1.0, Nv1);
 
@@ -251,9 +260,9 @@ void test_NVector(bool use_gpu)
   * N_VInv_Gkylzero Test
   * --------------------------------------------------------------------*/
 
-  struct gkyl_array* nvinv = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* nvinv = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, sunctx);
+  N_Vector Nvinv = N_VMake_Gkylzero(nvinv, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
 
@@ -297,9 +306,9 @@ void test_NVector(bool use_gpu)
   * N_VAddconst_Gkylzero Test
   * --------------------------------------------------------------------*/
 
-  struct gkyl_array* nvadd = mkarr(use_gpu, num_basis, size);
+  struct gkyl_array* nvadd = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, sunctx);
+  N_Vector Nvadd = N_VMake_Gkylzero(nvadd, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
 
@@ -337,6 +346,20 @@ void test_NVector(bool use_gpu)
   N_VDestroy_Gkylzero(Nv1);
   N_VDestroy_Gkylzero(Nv2);
   N_VDestroy_Gkylzero(Nlin_sum);
+  N_VDestroy_Gkylzero(Nvdiv);
+  N_VDestroy_Gkylzero(Nvabs);
+  N_VDestroy_Gkylzero(Nvinv);
+  N_VDestroy_Gkylzero(Nvadd);
+
+  gkyl_array_release(testarray);
+  gkyl_array_release(v1);
+  gkyl_array_release(v2);
+  gkyl_array_release(lin_sum);
+  gkyl_array_release(nvdiv);
+  gkyl_array_release(nvabs);
+  gkyl_array_release(nvinv);
+  gkyl_array_release(nvadd);
+  gkyl_comm_release(comm);
 }
 
 int main(int argc, char** argv)
