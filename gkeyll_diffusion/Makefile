@@ -47,8 +47,8 @@ G0_LIB_DIR = ${PREFIX}/gkylzero/lib
 G0_LIB = -lgkylzero
 
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
-SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib64
-SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower -lsundials_sundomeigestarnoldi
+SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
+SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower # -lsundials_sundomeigestarnoldi
 SUNDIALS_RPATH = -Wl,-rpath,${SUNDIALS_LIB_DIR}
 
 USING_NVCC =

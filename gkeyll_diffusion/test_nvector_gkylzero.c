@@ -1,5 +1,5 @@
-#include "src/nvector_gkylzero.h"
 #include <gkyl_null_comm.h>
+#include "src/nvector_gkylzero.h"
 
 void test_NVector(bool use_gpu)
 {
@@ -13,10 +13,8 @@ void test_NVector(bool use_gpu)
   gkyl_range_init(&local, 1, lower, upper);
 
   // Construct communicator for use in app.
-  struct gkyl_comm *comm = gkyl_null_comm_inew( &(struct gkyl_null_comm_inp) {
-      .use_gpu = use_gpu
-    }
-  );
+  struct gkyl_comm* comm =
+    gkyl_null_comm_inew(&(struct gkyl_null_comm_inp){.use_gpu = use_gpu});
 
   printf("\nTESTING nvector_gkylzero:\n");
 
@@ -153,8 +151,8 @@ void test_NVector(bool use_gpu)
   struct gkyl_array* v2      = mkarr(use_gpu, num_basis, local.volume);
   struct gkyl_array* lin_sum = mkarr(use_gpu, num_basis, local.volume);
 
-  N_Vector Nv1      = N_VMake_Gkylzero(v1     , use_gpu, comm, &local, sunctx);
-  N_Vector Nv2      = N_VMake_Gkylzero(v2     , use_gpu, comm, &local, sunctx);
+  N_Vector Nv1      = N_VMake_Gkylzero(v1, use_gpu, comm, &local, sunctx);
+  N_Vector Nv2      = N_VMake_Gkylzero(v2, use_gpu, comm, &local, sunctx);
   N_Vector Nlin_sum = N_VMake_Gkylzero(lin_sum, use_gpu, comm, &local, sunctx);
 
   N_VConst_Gkylzero(c, Nv1);
