@@ -24,6 +24,9 @@
 #ifdef GKYL_HAVE_MPI
 #include <gkyl_mpi_comm.h>
 #include <mpi.h>
+#ifdef GKYL_HAVE_NCCL
+#include <gkyl_nccl_comm.h>
+#endif
 #endif
 
 #define NV_CONTENT_GKZ(v) ((N_VectorContent_Gkylzero)(v->content))
@@ -38,10 +41,12 @@ extern "C" {
 
 struct _N_VectorContent_Gkylzero
 {
-  sunbooleantype own_vector;  /* ownership Gkylzero vector */
-  sunbooleantype use_gpu;     /* where to reside */
-  struct gkyl_array* dataptr; /* the actual Gkylzero object pointer */
-  /* TODO: ADD GKYL COMMUNICATOR */
+  sunbooleantype own_vector; /* ownership Gkylzero vector */
+  sunbooleantype use_gpu;    /* where to reside */
+  // Gkeyll pointers.
+  struct gkyl_comm* comm;         // Communicator.
+  struct gkyl_range* local_range; // Local range.
+  struct gkyl_array* dataptr;     // Data of this array/vector.
 };
 
 typedef struct _N_VectorContent_Gkylzero* N_VectorContent_Gkylzero;
@@ -53,7 +58,8 @@ struct gkyl_array* mkarr(bool on_gpu, long nc, long size);
 
 N_Vector N_VNewEmpty_Gkylzero(SUNContext sunctx);
 N_Vector N_VMake_Gkylzero(struct gkyl_array* x, sunbooleantype use_gpu,
-                          SUNContext sunctx);
+                          struct gkyl_comm* comm,
+                          struct gkyl_range* local_range, SUNContext sunctx);
 struct gkyl_array* N_VGetVector_Gkylzero(N_Vector v);
 
 N_Vector N_VCloneEmpty_Gkylzero(N_Vector w);
