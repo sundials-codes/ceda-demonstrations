@@ -1202,7 +1202,7 @@ int main(int argc, char* argv[])
   if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
 
   /* Specify the fixed step size for the reference STS solution */
-  flag = ARKodeSetFixedStep(arkode_mem_ref, 1.0e-5);
+  flag = ARKodeSetFixedStep(arkode_mem_ref, 5.0e-5);
   if (check_flag(&flag, "ARKodeSetFixedStep", 1)) { return 1; }
 
   if (!is_SSP)
