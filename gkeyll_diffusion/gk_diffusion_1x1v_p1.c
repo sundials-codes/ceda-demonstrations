@@ -477,7 +477,11 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
 
   // Things needed for L2 norm diagnostic.
   app->L2_f = mkarr(use_gpu, 1, app->local_ext.volume);
-  if (use_gpu) { app->red_L2_f = gkyl_cu_malloc(sizeof(double)); }
+  if (use_gpu)
+    app->red_L2_f = gkyl_cu_malloc(sizeof(double));
+  else
+    app->red_L2_f = gkyl_malloc(sizeof(double));
+
   app->integ_L2_f =
     gkyl_dynvec_new(GKYL_DOUBLE, 1); // Dynamic vector to store L2 norm in time.
   app->is_first_integ_L2_write_call = true;
@@ -495,13 +499,13 @@ void gkyl_diffusion_app_calc_integrated_L2_f(struct gkyl_diffusion_app* app,
   gkyl_dg_calc_l2_range(app->basis, 0, app->L2_f, 0, app->f, app->local);
   gkyl_array_scale_range(app->L2_f, app->grid.cellVolume, &app->local);
 
+  gkyl_array_reduce_range(app->red_L2_f, app->L2_f, GKYL_SUM, &app->local);
+
   double L2[1] = {0.0};
   if (app->use_gpu)
-  {
-    gkyl_array_reduce_range(app->red_L2_f, app->L2_f, GKYL_SUM, &app->local);
     gkyl_cu_memcpy(L2, app->red_L2_f, sizeof(double), GKYL_CU_MEMCPY_D2H);
-  }
-  else gkyl_array_reduce_range(L2, app->L2_f, GKYL_SUM, &app->local);
+  else
+    memcpy(L2, app->red_L2_f, sizeof(double));
 
   double L2_global[1] = {0.0};
   gkyl_comm_allreduce_host(app->comm, GKYL_DOUBLE, GKYL_SUM, 1, L2, L2_global);
@@ -624,12 +628,17 @@ void gkyl_diffusion_app_release(struct gkyl_diffusion_app* app)
   // Free memory associated with the app.
   gkyl_array_release(app->L2_f);
   gkyl_dynvec_release(app->integ_L2_f);
-  if (app->use_gpu) gkyl_cu_free(app->red_L2_f);
+  if (app->use_gpu)
+    gkyl_cu_free(app->red_L2_f);
+  else
+    gkyl_free(app->red_L2_f);
 
   gkyl_dg_updater_diffusion_gyrokinetic_release(app->diff_slvr);
   gkyl_array_release(app->diffD);
-  if (app->use_gpu) gkyl_cu_free(app->omega_cfl);
-  else gkyl_free(app->omega_cfl);
+  if (app->use_gpu)
+    gkyl_cu_free(app->omega_cfl);
+  else
+    gkyl_free(app->omega_cfl);
 
   gkyl_array_release(app->cflrate);
   gkyl_array_release(app->f);
@@ -951,21 +960,19 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype t_curr,
 
   // TODO: change code so these allocations only happen once.
   int ncomp = udptr->ncomp;
-  struct gkyl_array* wdptr; // Temporary buffer. Should change code to avoid this.
   double* red_ho = gkyl_malloc(ncomp * sizeof(double));
   double *red_local, *red_global;
   if (app->use_gpu)
   {
     red_local  = gkyl_cu_malloc(ncomp * sizeof(double));
     red_global = gkyl_cu_malloc(ncomp * sizeof(double));
-    wdptr      = mkarr(true, ncomp, udptr->size);
   }
   else
   {
     red_local  = gkyl_malloc(ncomp * sizeof(double));
     red_global = gkyl_malloc(ncomp * sizeof(double));
-    wdptr      = mkarr(false, ncomp, udptr->size);
   }
+  struct gkyl_array* wdptr = mkarr(app->use_gpu, ncomp, udptr->size); // Temporary buffer. Should change code to avoid this.
 
   gkyl_array_set_range(wdptr, 1.0, udptr, local_range);
   gkyl_array_accumulate_range(wdptr, -1.0, vdptr, local_range);
@@ -993,7 +1000,6 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype t_curr,
     gkyl_free(red_local);
     gkyl_free(red_global);
   }
-
   gkyl_array_release(wdptr);
 
   gkyl_diffusion_printf(app->comm,
