@@ -122,7 +122,7 @@ def make_generic_plot(data, kval, SSPNormTypes, STSEigSafeties, STSUserDomEigs, 
                         for dee_maxiters in ndata['dee_maxiters'].unique():
                             if dee_maxiters not in STSDEEMaxIters:
                                 continue
-                            ddata = ndata.groupby(['normtype',]).get_group((normtype,))
+                            ddata = ndata.groupby(['dee_maxiters',]).get_group((dee_maxiters,))
                             stepsize = ddata['h'].to_numpy()
                             rtol = ddata['rtol'].to_numpy()
                             rhsevals = ddata['RHSEvals'].to_numpy() + ddata['RHSEvalsDEE'].to_numpy()
