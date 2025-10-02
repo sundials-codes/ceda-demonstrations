@@ -951,21 +951,19 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype t_curr,
 
   // TODO: change code so these allocations only happen once.
   int ncomp = udptr->ncomp;
-  struct gkyl_array* wdptr; // Temporary buffer. Should change code to avoid this.
   double* red_ho = gkyl_malloc(ncomp * sizeof(double));
   double *red_local, *red_global;
   if (app->use_gpu)
   {
     red_local  = gkyl_cu_malloc(ncomp * sizeof(double));
     red_global = gkyl_cu_malloc(ncomp * sizeof(double));
-    wdptr      = mkarr(true, ncomp, udptr->size);
   }
   else
   {
     red_local  = gkyl_malloc(ncomp * sizeof(double));
     red_global = gkyl_malloc(ncomp * sizeof(double));
-    wdptr      = mkarr(false, ncomp, udptr->size);
   }
+  struct gkyl_array* wdptr = mkarr(app->use_gpu, ncomp, udptr->size); // Temporary buffer. Should change code to avoid this.
 
   gkyl_array_set_range(wdptr, 1.0, udptr, local_range);
   gkyl_array_accumulate_range(wdptr, -1.0, vdptr, local_range);
@@ -993,7 +991,6 @@ double compute_max_error(N_Vector u, N_Vector v, sunrealtype t_curr,
     gkyl_free(red_local);
     gkyl_free(red_global);
   }
-
   gkyl_array_release(wdptr);
 
   gkyl_diffusion_printf(app->comm,
