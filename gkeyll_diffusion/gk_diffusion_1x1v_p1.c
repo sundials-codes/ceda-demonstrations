@@ -477,7 +477,11 @@ struct gkyl_diffusion_app* gkyl_diffusion_app_new(struct gkyl_diffusion_app_inp*
 
   // Things needed for L2 norm diagnostic.
   app->L2_f = mkarr(use_gpu, 1, app->local_ext.volume);
-  if (use_gpu) { app->red_L2_f = gkyl_cu_malloc(sizeof(double)); }
+  if (use_gpu)
+    app->red_L2_f = gkyl_cu_malloc(sizeof(double));
+  else
+    app->red_L2_f = gkyl_malloc(sizeof(double));
+
   app->integ_L2_f =
     gkyl_dynvec_new(GKYL_DOUBLE, 1); // Dynamic vector to store L2 norm in time.
   app->is_first_integ_L2_write_call = true;
@@ -495,13 +499,13 @@ void gkyl_diffusion_app_calc_integrated_L2_f(struct gkyl_diffusion_app* app,
   gkyl_dg_calc_l2_range(app->basis, 0, app->L2_f, 0, app->f, app->local);
   gkyl_array_scale_range(app->L2_f, app->grid.cellVolume, &app->local);
 
+  gkyl_array_reduce_range(app->red_L2_f, app->L2_f, GKYL_SUM, &app->local);
+
   double L2[1] = {0.0};
   if (app->use_gpu)
-  {
-    gkyl_array_reduce_range(app->red_L2_f, app->L2_f, GKYL_SUM, &app->local);
     gkyl_cu_memcpy(L2, app->red_L2_f, sizeof(double), GKYL_CU_MEMCPY_D2H);
-  }
-  else gkyl_array_reduce_range(L2, app->L2_f, GKYL_SUM, &app->local);
+  else
+    memcpy(L2, app->red_L2_f, sizeof(double));
 
   double L2_global[1] = {0.0};
   gkyl_comm_allreduce_host(app->comm, GKYL_DOUBLE, GKYL_SUM, 1, L2, L2_global);
@@ -624,12 +628,17 @@ void gkyl_diffusion_app_release(struct gkyl_diffusion_app* app)
   // Free memory associated with the app.
   gkyl_array_release(app->L2_f);
   gkyl_dynvec_release(app->integ_L2_f);
-  if (app->use_gpu) gkyl_cu_free(app->red_L2_f);
+  if (app->use_gpu)
+    gkyl_cu_free(app->red_L2_f);
+  else
+    gkyl_free(app->red_L2_f);
 
   gkyl_dg_updater_diffusion_gyrokinetic_release(app->diff_slvr);
   gkyl_array_release(app->diffD);
-  if (app->use_gpu) gkyl_cu_free(app->omega_cfl);
-  else gkyl_free(app->omega_cfl);
+  if (app->use_gpu)
+    gkyl_cu_free(app->omega_cfl);
+  else
+    gkyl_free(app->omega_cfl);
 
   gkyl_array_release(app->cflrate);
   gkyl_array_release(app->f);

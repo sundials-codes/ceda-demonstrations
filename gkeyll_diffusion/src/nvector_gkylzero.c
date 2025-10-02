@@ -470,12 +470,12 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
   gkyl_comm_allreduce(comm, GKYL_DOUBLE, GKYL_MAX, ncomp, red_local, red_global);
 
   if (use_gpu)
-    gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double),
-                   GKYL_CU_MEMCPY_D2H);
-  else memcpy(red_ho, red_global, ncomp * sizeof(double));
+    gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
+  else
+    memcpy(red_ho, red_global, ncomp * sizeof(double));
 
-  sunrealtype max = 0.0;
-  for (sunindextype i = 0; i < ncomp; ++i) max = fmax(max, red_ho[i]);
+  sunrealtype u_abs_max = -1.0;
+  for (sunindextype i = 0; i < ncomp; ++i) u_abs_max = fmax(u_abs_max, red_ho[i]);
 
   if (use_gpu)
   {
@@ -488,7 +488,7 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
     gkyl_free(red_global);
   }
 
-  return (max);
+  return u_abs_max;
 }
 
 void N_VAddconst_Gkylzero(N_Vector u, sunrealtype x, N_Vector v)
