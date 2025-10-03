@@ -102,7 +102,7 @@ user_dom_eig = [False, True]
 dee_id = 0
 dee_init_wups = 0
 dee_succ_wups = 0
-dee_maxiters_val = [100]
+dee_maxiters_val = [100, 1000]
 dee_reltol = 1e-1
 
 # flags to enable/disable classes of tests
