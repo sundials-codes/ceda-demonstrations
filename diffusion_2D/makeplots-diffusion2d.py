@@ -131,12 +131,12 @@ tolvals = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
 # generate comparison plots for each (kx,tol) pair
 for kx in kxvals:
     for tol in tolvals:
-        comparison_plot(fname, kx, tol, 'Adaptive', 'adaptive_comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.png')
+        comparison_plot(fname, kx, tol, 'Adaptive', 'adaptive_comparison-kx'+repr(kx)+'_tol'+repr(tol)+'.pdf')
 
 # generate efficiency plots for each (kx,grid) pair
 for kx in kxvals:
     for grid in grids:
-        efficiency_plot(fname, kx, grid, 'Adaptive', 'adaptive_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
+        efficiency_plot(fname, kx, grid, 'Adaptive', 'adaptive_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.pdf')
 
 # print a list of all failed tests to stdout
 print("Adaptive step failed tests:")
@@ -148,7 +148,7 @@ fname = "results_diffusion_2D_fixedstep.xlsx"
 # generate efficiency plots for each (kx,grid) pair
 for kx in kxvals:
     for grid in grids:
-        efficiency_plot(fname, kx, grid, 'Fixed step', 'fixed_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.png')
+        efficiency_plot(fname, kx, grid, 'Fixed step', 'fixed_efficiency-kx'+repr(kx)+'_nx'+repr(grid)+'.pdf')
 
 # print a list of all failed tests to stdout
 print("Fixed step failed tests:")

@@ -11,7 +11,7 @@ CUDA_ARCH ?= 70
 # Warning flags: -Wall -Wno-unused-variable -Wno-unused-function -Wno-missing-braces
 CFLAGS ?= -O3 -g -ffast-math -fPIC -MMD -MP -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 LDFLAGS =
-PREFIX = ${PWD}/../deps/gkyl-install
+PREFIX = ${PWD}/../deps/gkylsoft
 SUN_PREFIX = $(shell dirname ${PREFIX})
 
 # determine OS we are running on
@@ -48,7 +48,7 @@ G0_LIB = -lgkylzero
 
 SUNDIALS_INC_DIR = ${SUN_PREFIX}/sundials-install/include
 SUNDIALS_LIB_DIR = ${SUN_PREFIX}/sundials-install/lib
-SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower -lsundials_sundomeigestarnoldi
+SUNDIALS_LIB = -lsundials_arkode -lsundials_core -lsundials_sundomeigestpower # -lsundials_sundomeigestarnoldi
 SUNDIALS_RPATH = -Wl,-rpath,${SUNDIALS_LIB_DIR}
 
 USING_NVCC =
@@ -149,25 +149,25 @@ INCLUDES = -I${G0_INC_DIR} -I${SUNDIALS_INC_DIR} -I${LAPACK_INC} -I${BLAS_INC} -
 LIB_DIRS = -L${SUNDIALS_LIB_DIR} -L${LAPACK_LIB_DIR} -L${BLAS_LIB_DIR} -L${SUPERLU_LIB_DIR} -L${MPI_LIB_DIR} -L${LUA_LIB_DIR} -L${NCCL_LIB_DIR} -L${CUDSS_LIB_DIR}
 EXT_LIBS = ${LAPACK_LIB} ${BLAS_LIB} ${SUNDIALS_LIB} ${SUNDIALS_RPATH} ${SUPERLU_LIB} ${MPI_RPATH} ${MPI_LIBS} ${LUA_RPATH} ${LUA_LIBS} ${NCCL_LIBS} ${CUDSS_RPATH} ${CUDSS_LIBS} -lm -lpthread -ldl
 
-all: gk_diffusion_1x1v_p1 test_nvector_gkylzero
+all: gk_diffusion_1x1v_p1 analytic_CR_test test_nvector_gkylzero
 
-gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c nvector_gkylzero.o input_handler.o
-	${CC} ${CFLAGS} ${INCLUDES} gk_diffusion_1x1v_p1.c nvector_gkylzero.o input_handler.o \
+gk_diffusion_1x1v_p1: gk_diffusion_1x1v_p1.c src/nvector_gkylzero.c src/input_handler.c
+	${CC} ${CFLAGS} ${INCLUDES} \
+		gk_diffusion_1x1v_p1.c src/nvector_gkylzero.c src/input_handler.c \
 		-o gk_diffusion_1x1v_p1 \
 		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
 
-test_nvector_gkylzero: test_nvector_gkylzero.c nvector_gkylzero.o
-	${CC} ${CFLAGS} ${INCLUDES} test_nvector_gkylzero.c nvector_gkylzero.o \
+analytic_CR_test: analytic_CR_test.c src/nvector_gkylzero.c src/input_handler.c
+	${CC} ${CFLAGS} ${INCLUDES} \
+		analytic_CR_test.c src/nvector_gkylzero.c src/input_handler.c \
+		-o analytic_CR_test \
+		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
+
+test_nvector_gkylzero: test_nvector_gkylzero.c src/nvector_gkylzero.c
+	${CC} ${CFLAGS} ${INCLUDES} \
+		test_nvector_gkylzero.c src/nvector_gkylzero.c \
 		-o test_nvector_gkylzero \
 		-L${G0_LIB_DIR} ${G0_RPATH} ${G0_LIBS} ${LIB_DIRS} ${EXT_LIBS}
 
-
-
-nvector_gkylzero.o: src/nvector_gkylzero.c
-	${CC} ${CFLAGS} ${INCLUDES} -c src/nvector_gkylzero.c -o nvector_gkylzero.o
-
-input_handler.o: src/input_handler.c
-	${CC} ${CFLAGS} ${INCLUDES} -c src/input_handler.c -o input_handler.o
-
 clean:
-	rm -rf gk_diffusion_1x1v_p1 gk_diffusion_1x1v_p1.dSYM *.gkyl *.o
+	rm -rf gk_diffusion_1x1v_p1 analytic_CR_test test_nvector_gkylzero gk_diffusion_1x1v_p1.dSYM *.gkyl *.o *.pdf

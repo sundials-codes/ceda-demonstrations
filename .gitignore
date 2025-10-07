@@ -3,7 +3,7 @@
 
 # Submodule builds
 deps/sundials-install
-deps/gkyl-install
+deps/gkylsoft/
 
 # Prerequisites
 *.d
@@ -39,6 +39,7 @@ deps/gkyl-install
 *.out
 *.app
 gk_diffusion_1x1v_p1
+analytic_CR_test
 test_nvector_gkylzero
 
 # Build folder
@@ -58,6 +59,7 @@ bin/
 
 # Output file
 *.csv
+*.xlsx
 
 # Local scripts
 local_scripts

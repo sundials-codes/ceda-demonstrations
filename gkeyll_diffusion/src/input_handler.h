@@ -39,11 +39,11 @@ typedef struct
   sunrealtype tf;
 
   // Integrator settings
-  sunrealtype rtol;           // relative tolerance
-  sunrealtype atol;           // absolute tolerance
-  sunrealtype hfixed;         // fixed step size
-  int maxsteps;               // max number of steps between outputs
-  int wrms_norm_type;         // wrms norm type (1:componentwise 2:cellwise)
+  sunrealtype rtol;   // relative tolerance
+  sunrealtype atol;   // absolute tolerance
+  sunrealtype hfixed; // fixed step size
+  int maxsteps;       // max number of steps between outputs
+  int wrms_norm_type; // wrms norm type (1:componentwise 2:cellwise)
 
   // LSRKStep options
   ARKODE_LSRKMethodType method; // LSRK method choice
@@ -53,11 +53,11 @@ typedef struct
   sunrealtype eigsafety;        // dominant eigenvalue safety factor
 
   // Output variables
-  int nout;       // number of output times
+  int nout; // number of output times
 
   // DEE options
   sunbooleantype user_dom_eig; // whether a user-provided dominant eigenvalue function is used
-  int dee_id;            // DEE ID (0: Power, 1: Arnoldi)
+  int dee_id;                  // DEE ID (0: Power, 1: Arnoldi)
   int dee_num_init_wups; // number of initial warmups before the first estimate
   int dee_num_succ_wups; // number of succeeding warmups before each estimate
   int dee_max_iters;     // max number of iterations
@@ -79,6 +79,9 @@ int FreeUserData(UserData* udata);
 // Read the command line inputs and set UserData values
 int ReadInputs(int argc, char** argv, UserData* udata);
 
+// Function to check if an input string is a valid integer
+sunbooleantype isInteger(const char* str);
+
 // -----------------------------------------------------------------------------
 // Output and utility functions
 // -----------------------------------------------------------------------------
@@ -87,7 +90,7 @@ int ReadInputs(int argc, char** argv, UserData* udata);
 void InputHelp();
 
 // Print some UserData information
-int PrintUserData(UserData* udata);
+int PrintUserData(UserData* udata, int rank);
 
 // Print integration timing
 int OutputTiming(UserData* udata);
