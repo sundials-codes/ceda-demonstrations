@@ -3,7 +3,7 @@ c-------------------------------------------------------------------------------
 c    1D Brusselator problem with stiff reaction and advection
 c----------------------------------------------------------------------------------------------
 c    This driver shows how to use PIROCK. It solves a
-c    system of ODEs resulting from the 1-dimensional space 
+c    system of ODEs resulting from the 1-dimensional space
 c    discretization of the Brusselator equations (u=u(x,t),v=v(x,t), w=w(x,t)):
 c
 c    This example simulates the 1D advection-diffusion-reaction equation,
@@ -28,18 +28,18 @@ c           u_t(t,0) = u_t(t,1) = 0,
 c           v_t(t,0) = v_t(t,1) = 0,
 c           w_t(t,0) = w_t(t,1) = 0.
 c
-c    We discretize the space variables with x_i=(i-1)/(N-1), for i=1,...,N, with N=512. 
-c    We obtain a system of 3N equations. 
+c    We discretize the space variables with x_i=(i-1)/(N-1), for i=1,...,N, with N=512.
+c    We obtain a system of 3N equations.
 c--------------------------------------------------------------------------------------------
 
       SUBROUTINE init(nsd,t,tend,y)
 	implicit double precision (a-h,o-z)
       double precision  y(*)
-      double precision  pi, xx 
+      double precision  pi, xx
       parameter(pi = 3.141592653589793d0)
-c      parameter(npdes=3) 
+c      parameter(npdes=3)
 
-			
+
 c --- common parameters for the problem -----
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
@@ -47,7 +47,7 @@ c --- common parameters for the problem -----
 c --- namelist definition
       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
      &                 brussa,brussb,eps,atol,rtol,iwork20,iwork21
-     
+
 
 c ----- dimensions -----
         neqn   = nsd*npdes
@@ -63,14 +63,14 @@ c         goto 110
 
 c   100   continue
 c         write(6,*) 'Could not open namelist file'
-			
+
         write(6,*) 'Integration of the '
      &   ,'1-dim Brusselator problem, ns=',ns
 c        write(6,*) 'advection pb:', uxadv,vxadv,wxadv
 c        write(6,*) 'diffusion pb:', alf
 c        write(6,*) 'reaction driver:', brussa,brussb,eps
 c --------------- multiplying by 1.d0 because of tests that are run from python script
-c --------------- because Python can't take in values with '.d' 
+c --------------- because Python can't take in values with '.d'
         alf=alf*1.d0
         amult=amult*1.d0
         uxadv=uxadv*1.d0
@@ -91,8 +91,8 @@ c ----- initial and end point of integration -----
 c ----- initial values -----
         ans=ns
         do i=1,ns
-            xx       = ((i-1)/(ns-1))*1.d0
-            y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx) 
+            xx       = ((i-1.d0)/(ns-1.d0))
+            y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
             y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
             y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
         end do
@@ -103,12 +103,12 @@ c ----- initial values -----
       end
 
 c--------------------------------------------------------
-c     Solution is saved in a .dat file 
-c--------------------------------------------------------			
+c     Solution is saved in a .dat file
+c--------------------------------------------------------
       SUBROUTINE solout(neqn,t,tend,y,ytmp)
 			implicit double precision (a-h,o-z)
       double precision  y(neqn),ytmp(neqn)
-			
+
 c --- common parameters for the problem -----
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
@@ -124,7 +124,7 @@ c ----- file for solution -----
       return
       end
 c--------------------------------------------------------
-c     The subroutine RHO gives an estimation of the spectral 
+c     The subroutine RHO gives an estimation of the spectral
 c     radius of the Jacobian matrix of the diffusion. This
 c     is a bound for the whole interval and thus RHO is called
 c     once.
@@ -133,11 +133,11 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-        rhodiff = 4.0d0*(nssq)*alf 
+        rhodiff = 4.0d0*(nssq)*alf
       return
-      end 
+      end
 c--------------------------------------------------------
-c     The subroutine RHOADV gives an estimation of the spectral 
+c     The subroutine RHOADV gives an estimation of the spectral
 c     radius of the Jacobian matrix of the advection. This
 c     is a bound for the whole interval and thus RHO is called
 c     once.
@@ -149,7 +149,7 @@ c--------------------------------------------------------
         rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns-1)
 c        rhoadv = sqrt((uxadv)**2+(vxadv)**2+(uyadv)**2+(vyadv)**2)*ns
       return
-      end 
+      end
 c--------------------------------------------------------
 c     The subroutine FBRUS compute the value of f(x,y) and
 c     has to be declared as external.
@@ -163,7 +163,7 @@ c ----- brusselator with diffusion in 1 dim. space -----
 c ----- constants for inhomogenity -----
       ans=ns
       radsq=0.1d0**2
-c ----- zero boundary conditions -----   
+c ----- zero boundary conditions -----
       f(1)      = 0.d0
       f(2)      = 0.d0
       f(3)      = 0.d0
@@ -189,7 +189,7 @@ c ----- the derivative -----
          f(i*3)  =alf*nssq*(wleft+wright-2.d0*wij)
       end do
       return
-      end  
+      end
 
 c--------------------------------------------------------
 c     The subroutine FA (advection terms)
@@ -201,7 +201,7 @@ c--------------------------------------------------------
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
-c ----- zero boundary conditions -----      
+c ----- zero boundary conditions -----
       f(1)      = 0.d0
       f(2)      = 0.d0
       f(3)      = 0.d0
@@ -224,10 +224,10 @@ c        vij=y(i*3-1)
 c        wij=y(i*3)
 	  f(i*3-2)=0.5d0*(ns-1)*(-uxadv*(uright-uleft))
         f(i*3-1)=0.5d0*(ns-1)*(-vxadv*(vright-vleft))
-        f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))			
+        f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))
 	end do
       return
-      end  
+      end
 c--------------------------------------------------------
 c     The subroutine FD2 (non-symmetric diffusion)
 c     has to be declared as external.
@@ -242,7 +242,7 @@ c--------------------------------------------------------
 			   f(i)=0.0d0
 			end do
 			return
-      end  
+      end
 c--------------------------------------------------------
 c     The subroutine FR (reaction terms)
 c     has to be declared as external.
@@ -276,7 +276,7 @@ c      write (6,*) 'WARNING DUMMY FUNCTION FR CALLED'
             frjac(3,3) = -(1.d0/eps) -uij
           end if
 	    return
-      end  
+      end
 c--------------------------------------------------------
 c     The subroutine FW (noise terms)
 c     has to be declared as external.
@@ -291,4 +291,4 @@ c--------------------------------------------------------
 			f(i)=0.d0
 		  end do
 		  return
-      end  
+      end
