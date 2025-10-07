@@ -1,0 +1,48 @@
+%
+%   The codes ROCK2 and PIROCK are available at http://anmc.epfl.ch/ and described in 
+%   further detail in 
+%
+%    A. Abdulle & G. Vilmart
+%    PIROCK: a swiss-knife partitioned implicit-explicit 
+%    orthogonal Runge-Kutta Chebyshev integrator for stiff 
+%    diffusion-advection-reaction problems with or without noise,
+%    Journal of Computational Physics 242 (2013), 869--888.
+%    doi: http://dx.doi.org/10.1016/j.jcp.2013.02.009
+%
+%
+%   A. Abdulle & A.A. Medovikov%   Second order Chebyshev methods based on orthogonal polynomials%   Numer. Math.  90, no. 1  (2001), 1--18.
+%
+%
+%   Please cite these articles in any publication describing research
+%   performed using the software.
+%
+%
+%   Email           : assyr.abdulle@epfl.ch 
+%   Last updated    : April 2002
+%
+%   ROCK2 is Copyright (C) 2002 A. Abdulle
+%   The software is provided free for non-commercial use unter the terms of 
+%   the GNU General Public License.   
+%
+%
+%   If you are interested in commercial use, please contact the author.
+%
+%
+%
+%
+%
+%
+%  This program is free software; you can redistribute it and/or 
+%  published by the Free Software Foundation; either version 2 of 
+%  the License, or (at your option) any later version. 
+%
+%  This program is distributed in the hope that it will be useful, 
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+%  General Public License for more details. 
+% 
+%  You should have received a copy of the GNU General Public License 
+%  along with this program; if not, write to the Free Software 
+%  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
+%  USA. 
+%
