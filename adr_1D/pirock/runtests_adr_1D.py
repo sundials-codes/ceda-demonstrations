@@ -7,7 +7,7 @@
 # For details, see the LICENSE file.
 #------------------------------------------------------------------------------------------------------------------------------------
 # This is a python script that runs the 1d Brusselator (advection, reaction, diffusion) problem using the PIROCK package.
-# The files involved in running this problem are 'namelist_read.txt' and 'dr_adr_1D.f'. 
+# The files involved in running this problem are 'namelist_read.txt' and 'dr_adr_1D.f'.
 # The test problem is defined in the file 'pb_adr_1D.f'.
 # This script runs the test problem for different advection, diffusion, reaction coefficients, and spatial dimensions.
 # Advection and reaction can also be turned on and off.
@@ -26,14 +26,14 @@ import itertools
 from itertools import cycle
 
 def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,showcommand=True):
-    stats = {'ReturnCode': 0, 'reac': 0, 'advec': 0, 'spatial_dim': 0, 'diff_coef': 0.0, 
+    stats = {'ReturnCode': 0, 'reac': 0, 'advec': 0, 'spatial_dim': 0, 'diff_coef': 0.0,
              'u_advec_coef': 0.0, 'v_advec_coef': 0.0, 'w_advec_coef': 0.0, 'a_rec_coef': 0.0,
-             'b_rec_coef': 0.0, 'eps': 0.0, 'CPU_time':0.0, 'time_step': " ", 'intial_h': 0.0, 
+             'b_rec_coef': 0.0, 'eps': 0.0, 'CPU_time':0.0, 'time_step': " ", 'intial_h': 0.0,
              'total_steps': 0, 'accpt_steps': 0, 'reject_steps': 0, 'stages':0,'fD_evals': 0,
              'fA_evals': 0, 'fR_evals': 0, 'fRJac_evals': 0}
-    
-    advection_OnOff = True #True (1 in PIROCK): advection, False (0 in PIROCK): no advection 
-    reaction_OnOff  = True #True (1 in PIROCK): reaction,  False (0 in PIROCK): no reaction 
+
+    advection_OnOff = True #True (1 in PIROCK): advection, False (0 in PIROCK): no advection
+    reaction_OnOff  = True #True (1 in PIROCK): reaction,  False (0 in PIROCK): no reaction
 
     if (advection_OnOff):
         advec_iwork20 = 1
@@ -54,8 +54,8 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
     nsd_params = []
     with open(executable_file,'r') as exfile:
         lines = exfile.readlines()
-    
-    #look for the line with nsd 
+
+    #look for the line with nsd
     for line in lines:
         newline = line
         if 'parameter(nsd=' in line:
@@ -159,6 +159,9 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
             stats['eps']          = epsV
             stats['atol']         = atolV
             stats['rtol']         = rtolV
+            stats['h']            = hV
+
+            # load the "sol.dat" and "ref.dat" files, and compute solution error
 
             # # Show output
             # print("Program output:")
@@ -187,7 +190,7 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
                 elif 'Number of reaction Jacobian' in line:
                     txt = line.split()
                     stats['fRJac_evals'] = txt[5]
-    
+
     return stats
 # end of function
 
@@ -197,18 +200,18 @@ nsd_values = [512]  #spatial dimension
 alf_values = [1e-1] #diffusion coefficient
 
 # advection values in the x-direction for u, v and w
-uxadv_values = [1e-2] #advection coefficient for u in the x-direction 
-vxadv_values = [1e-2] #advection coefficient for v in the x-direction 
-wxadv_values = [1e-2] #advection coefficient for w in the x-direction 
+uxadv_values = [1e-2] #advection coefficient for u in the x-direction
+vxadv_values = [1e-2] #advection coefficient for v in the x-direction
+wxadv_values = [1e-2] #advection coefficient for w in the x-direction
 
 # advection values in the y-direction for u, v and w, these values will remain unchanged (0) because the example is 1D
-uyadv_values = [0.0] #advection coefficient for u in the y-direction 
-vyadv_values = [0.0] #advection coefficient for v in the y-direction 
-wyadv_values = [0.0] #advection coefficient for w in the y-direction 
+uyadv_values = [0.0] #advection coefficient for u in the y-direction
+vyadv_values = [0.0] #advection coefficient for v in the y-direction
+wyadv_values = [0.0] #advection coefficient for w in the y-direction
 
 # reaction values
 brussa = [0.6]  #A
-brussb = [2.0]  #B 
+brussb = [2.0]  #B
 eps    = [1e-2] #epsilon
 
 # absolute and relative tolerances
@@ -216,7 +219,7 @@ atol = [1e-3]
 rtol = [1e-3]
 
 # adaptive/fixed step size: adaptive step size: <=0.0, fixed step size: >0.0
-fixed_h = [0.0] 
+fixed_h = [0.0]
 
 # filename to hold run statistics
 fname = "PIROCK_adr_1D"
