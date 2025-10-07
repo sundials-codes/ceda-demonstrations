@@ -1,4 +1,7 @@
-c Brusselator problem with advection, stiff reaction
+
+c    Programmer(s): Sylvia Amihere @ UMBC
+c    Based on the Based on the SUNDIALS example ark_advection_diffusion_reaction.cpp by
+c    David J. Gardner @ LLNL and Daniel Reynolds @ UMBC
 c-------------------------------------------------------------------------------------------
 c    1D Brusselator problem with stiff reaction and advection
 c----------------------------------------------------------------------------------------------
@@ -37,7 +40,6 @@ c-------------------------------------------------------------------------------
       double precision  y(*)
       double precision  pi, xx
       parameter(pi = 3.141592653589793d0)
-c      parameter(npdes=3)
 
 
 c --- common parameters for the problem -----
@@ -46,7 +48,7 @@ c --- common parameters for the problem -----
 
 c --- namelist definition
       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,iwork20,iwork21
+     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
 
 
 c ----- dimensions -----
