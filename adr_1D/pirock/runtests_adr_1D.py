@@ -68,6 +68,8 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
     with open(executable_file, 'w') as excfile:
         excfile.writelines(nsd_params)
 
+    ### TO-DO: compile updated source code file
+
     # modify parameters in namelist file and turn on/off advection/reaction
     namelist_filename = 'namelist_read.txt'
     namelist_file = os.path.join(script_dir, namelist_filename)
@@ -161,7 +163,7 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
             stats['rtol']         = rtolV
             stats['h']            = hV
 
-            # load the "sol.dat" and "ref.dat" files, and compute solution error
+            ### TO-DO: load the "sol.dat" and "ref.dat" files, compute solution error, and store this in the stats
 
             # # Show output
             # print("Program output:")
