@@ -846,8 +846,8 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
   if (uopts.output)
   {
     // Compute rms norm of the state and error
-    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx);
-    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / udata.nx);
+    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx / 3);
+    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / udata.nx / 3);
     cout << setw(22) << t << setw(25) << urms
          << setprecision(2) << setw(12) << erms
          << setprecision(numeric_limits<sunrealtype>::digits10) << endl;

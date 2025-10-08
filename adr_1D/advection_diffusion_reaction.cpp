@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
     if (uopts.calc_error)
     {
       cout << "  Solution error     = " << setprecision(2)
-           << sqrt(total_error / uopts.nout / udata.nx) << endl;
+           << sqrt(total_error / uopts.nout / udata.nx / 3) << endl;
     }
     switch (uopts.integrator)
     {
