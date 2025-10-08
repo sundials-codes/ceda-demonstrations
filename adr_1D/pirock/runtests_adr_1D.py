@@ -20,10 +20,8 @@
 import pandas as pd
 import subprocess
 import shlex
-import sys, os,re
+import sys, os
 import numpy as np
-import itertools
-from itertools import cycle
 
 def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,showcommand=True):
     stats = {'ReturnCode': 0, 'reac': 0, 'advec': 0, 'spatial_dim': 0, 'diff_coef': 0.0,
