@@ -162,6 +162,7 @@ struct UserOptions
   bool linear = false; // signal that the problem is linearly implicit
 
   bool calc_error = false;
+  bool write_solution = false;
 
   int output = 1;  // 0 = none, 1 = stats, 2 = disk, 3 = disk with tstop
   int nout   = 10; // number of output times
@@ -453,6 +454,7 @@ static void InputHelp()
   cout << "  --maxsteps <int>         : max steps between outputs\n";
   cout << "  --linear                 : linearly implicit\n";
   cout << "  --calc_error             : use reference solution to compute solution error\n";
+  cout << "  --write_solution         : write the reference solution to disk\n";
   cout << "  --output <int>           : output level\n";
   cout << "  --nout <int>             : number of outputs\n";
   cout << "  --help                   : print options and exit\n";
@@ -544,6 +546,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--maxsteps", uopts.maxsteps);
   find_arg(args, "--linear", uopts.linear);
   find_arg(args, "--calc_error", uopts.calc_error);
+  find_arg(args, "--write_solution", uopts.write_solution);
   find_arg(args, "--output", uopts.output);
   find_arg(args, "--nout", uopts.nout);
 
@@ -581,6 +584,13 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   if (uopts.table_id < 0 || uopts.table_id > 6)
   {
     cerr << "ERROR: Invalid ARK table ID" << endl;
+    return -1;
+  }
+
+  if (uopts.write_solution && !uopts.calc_error)
+  {
+    cerr << "ERROR: Cannot write_solution if calc_error is false"
+         <<  " (since calc_error computes the reference solution)" << endl;
     return -1;
   }
 
@@ -857,6 +867,42 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
       }
       uopts.uout << endl;
     }
+  }
+
+  return 0;
+}
+
+// Write solution to disk
+static int WriteSolution(sunrealtype t, N_Vector y,
+                        UserData& udata, UserOptions& uopts)
+{
+  if (uopts.write_solution)
+  {
+    sunrealtype* ydata = N_VGetArrayPointer(y);
+    if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
+    stringstream fname;
+    fname << "reference.dat";
+    ofstream uref;
+    uref.open(fname.str());
+    uref << setprecision(numeric_limits<sunrealtype>::digits10) << t;
+    for (sunindextype i = 0; i< udata.nx; i++)
+    {
+      uref << setprecision(numeric_limits<sunrealtype>::digits10)
+           << " " << ydata[UIDX(i)];
+    }
+    for (sunindextype i = 0; i< udata.nx; i++)
+    {
+      uref << setprecision(numeric_limits<sunrealtype>::digits10)
+           << " " << ydata[VIDX(i)];
+    }
+    for (sunindextype i = 0; i< udata.nx; i++)
+    {
+      uref << setprecision(numeric_limits<sunrealtype>::digits10)
+           << " " << ydata[WIDX(i)];
+    }
+    uref << endl;
+    uref.close();
+    cout << "Reference solution is written to reference.dat" << endl;
   }
 
   return 0;

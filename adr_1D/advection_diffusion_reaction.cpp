@@ -216,6 +216,10 @@ int main(int argc, char* argv[])
   flag = CloseOutput(uopts);
   if (check_flag(flag, "CloseOutput")) { return 1; }
 
+  // Write reference solution to disk (if applicable)
+  flag = WriteSolution(tout, yref, udata, uopts);
+  if (check_flag(flag, "WriteSolution")) { return 1; }
+
   // ------------
   // Output stats
   // ------------
