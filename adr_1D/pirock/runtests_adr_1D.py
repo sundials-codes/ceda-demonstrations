@@ -23,7 +23,16 @@ import shlex
 import sys, os
 import numpy as np
 
-def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,showcommand=True):
+def calc_error(nx, solfile, reffile):
+    soldata = np.loadtxt(solfile)
+    refdata = np.loadtxt(reffile)
+    usol = np.reshape(soldata[1:],[nx,3])
+    uref = np.reshape(refdata[1:],[nx,3])
+    uerr = usol-uref
+    return np.sqrt(np.mean(np.square(uerr)))
+
+
+def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,reffile,showcommand=True):
     stats = {'ReturnCode': 0, 'reac': 0, 'advec': 0, 'spatial_dim': 0, 'diff_coef': 0.0,
              'u_advec_coef': 0.0, 'v_advec_coef': 0.0, 'w_advec_coef': 0.0, 'a_rec_coef': 0.0,
              'b_rec_coef': 0.0, 'eps': 0.0, 'CPU_time':0.0, 'time_step': " ", 'intial_h': 0.0,
@@ -67,6 +76,9 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
         excfile.writelines(nsd_params)
 
     ### TO-DO: compile updated source code file
+    make_out = subprocess.run(["make"], capture_output=True, text=True)
+    print("rebuilding executable:")
+    print(make_out.stdout)
 
     # modify parameters in namelist file and turn on/off advection/reaction
     namelist_filename = 'namelist_read.txt'
@@ -161,7 +173,8 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,s
             stats['rtol']         = rtolV
             stats['h']            = hV
 
-            ### TO-DO: load the "sol.dat" and "ref.dat" files, compute solution error, and store this in the stats
+            ### compute solution error and store this in the stats
+            stats['Accuracy'] = calc_error(nsdV, "sol.dat", reffile)
 
             # # Show output
             # print("Program output:")
@@ -215,14 +228,17 @@ brussb = [2.0]  #B
 eps    = [1e-2] #epsilon
 
 # absolute and relative tolerances
-atol = [1e-3]
-rtol = [1e-3]
+atol = [1e-11]
+rtol = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 
 # adaptive/fixed step size: adaptive step size: <=0.0, fixed step size: >0.0
 fixed_h = [0.0]
 
 # filename to hold run statistics
 fname = "PIROCK_adr_1D"
+
+# filename for reference solution
+refname = "reference.dat"
 
 RunStats = []
 for nsdVal in nsd_values:
@@ -236,7 +252,8 @@ for nsdVal in nsd_values:
                                 for hVal in fixed_h:
                                     for atolVal in atol:
                                         for rtolVal in rtol:
-                                            stat = runtest(nsdVal,alfVal,uxadvVal,vxadvVal,wxadvVal,brussaVal,brussbVal,epsVal,hVal,atolVal,rtolVal,showcommand=True)
+                                            stat = runtest(nsdVal, alfVal, uxadvVal, vxadvVal, wxadvVal, brussaVal, brussbVal,
+                                                           epsVal, hVal, atolVal, rtolVal, refname, showcommand=True)
                                             RunStats.append(stat)
 # print(RunStats)
 RunStatsDf = pd.DataFrame.from_records(RunStats)
