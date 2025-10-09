@@ -1007,44 +1007,44 @@ c recompute jacobian if iter>irec
 
 			 im=1
 			 do ix=1,neqn,npdes
-			 do k=1,50
-			 dojac=(is_frjac.and.k.eq.1).or.k.gt.irec
-			 call fr(neqn,npdes,ix,t,y1(ix),fnc(ix),frjac(im),dojac)
-			 iwork(17)=iwork(17)+1
-			 if (dojac) iwork(18)=iwork(18)+1
-		   do i=1,npdes
-			 ytmp(ix+i-1)=y1(ix+i-1)-y0(ix+i-1)-h*fnc(ix+i-1)
-			 end do
-			 if (dojac) then
-			 do i=1,npdes
-			 do j=1,npdes
-			 frjac(im+(i-1)+(j-1)*npdes)=-h*frjac(im+(i-1)+(j-1)*npdes)
-			 end do
-			 frjac(im+(i-1)*(npdes+1))=frjac(im+(i-1)*(npdes+1))+1.d0
-			 end do
-			 CALL DEC (npdes, npdes, frjac(im), ijac(ix), IER)
-			 if (IER.NE.0) then
-			 write (6,*) 'WARNING; BUG IN DEC TRIANGULATION'
-c			 pause
-			 end if
-			 end if
-       CALL SOL (npdes, npdes, frjac(im), ytmp(ix), ijac(ix))
-			 err2=err
-			 err=0.d0
-			 do i=1,npdes
-			 y1(ix+i-1)=y1(ix+i-1)-ytmp(ix+i-1)
-			 err=err+dabs(ytmp(ix+i-1))
-			 end do
-			 if (err.le.1.d-13) goto 17
-c			 if (err.eq.0.d0.or.(err.ge.err2.and.k.ge.3)) goto 17
-c			 if (err.le.1.d-13.or.(err.ge.err2.and.k.ge.3)) goto 17
-			 end do
-			 write (6,*) 'WARNING; NEWTON ITERATION FAILED TO CONVERGE',
-     &   ix,err,err2,k,h,y0(ix),y0(ix+1),y1(ix),y1(ix+1)
-c		   pause
-   17  continue
-	     im=im+npdes**2
-       iwork(13)=max(k,iwork(13))
+    			 do k=1,50
+		        	 dojac=(is_frjac.and.k.eq.1).or.k.gt.irec
+			         call fr(neqn,npdes,ix,t,y1(ix),fnc(ix),frjac(im),dojac)
+			         iwork(17)=iwork(17)+1
+			         if (dojac) iwork(18)=iwork(18)+1
+		           do i=1,npdes
+			             ytmp(ix+i-1)=y1(ix+i-1)-y0(ix+i-1)-h*fnc(ix+i-1)
+			         end do
+			         if (dojac) then
+			             do i=1,npdes
+			                 do j=1,npdes
+			                     frjac(im+(i-1)+(j-1)*npdes)=-h*frjac(im+(i-1)+(j-1)*npdes)
+			                 end do
+			                 frjac(im+(i-1)*(npdes+1))=frjac(im+(i-1)*(npdes+1))+1.d0
+			             end do
+			             CALL DEC (npdes, npdes, frjac(im), ijac(ix), IER)
+			             if (IER.NE.0) then
+			                 write (6,*) 'WARNING; BUG IN DEC TRIANGULATION'
+c               			 pause
+			             end if
+			         end if
+               CALL SOL (npdes, npdes, frjac(im), ytmp(ix), ijac(ix))
+			         err2=err
+			         err=0.d0
+			         do i=1,npdes
+			             y1(ix+i-1)=y1(ix+i-1)-ytmp(ix+i-1)
+			             err=err+dabs(ytmp(ix+i-1))
+			         end do
+			         if (err.le.1.d-13) goto 17
+c			         if (err.eq.0.d0.or.(err.ge.err2.and.k.ge.3)) goto 17
+c			         if (err.le.1.d-13.or.(err.ge.err2.and.k.ge.3)) goto 17
+			     end do
+			     write (6,*) 'WARNING; NEWTON ITERATION FAILED TO CONVERGE',
+     &                 ix,err,err2,k,h,y0(ix),y0(ix+1),y1(ix),y1(ix+1)
+c		       pause
+   17      continue
+	         im=im+npdes**2
+           iwork(13)=max(k,iwork(13))
        end do
 			end
 c ---------------------------------------------------------------

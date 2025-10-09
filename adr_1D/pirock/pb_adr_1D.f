@@ -108,7 +108,7 @@ c--------------------------------------------------------
 c     Solution is saved in a .dat file
 c--------------------------------------------------------
       SUBROUTINE solout(neqn,t,tend,y,ytmp)
-			implicit double precision (a-h,o-z)
+	implicit double precision (a-h,o-z)
       double precision  y(neqn),ytmp(neqn)
 
 c --- common parameters for the problem -----
@@ -116,13 +116,13 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
 c ----- file for solution -----
-       open(8,file='sol.dat')
-       rewind 8
-		  write (8,*) t,(y((i)*3-2),i=1,ns),
-     &     (y((i)*3-1),i=1,ns), (y((i)*3),i=1,ns)
+      open(8,file='sol.dat')
+      rewind 8
+	write (8,*) t,(y((i)*3-2),i=1,ns),
+     &      (y((i)*3-1),i=1,ns), (y((i)*3),i=1,ns)
 
-			 write(6,*) 'Solution is tabulated in file sol.dat'
-			 close(8)
+	write(6,*) 'Solution is tabulated in file sol.dat'
+	close(8)
       return
       end
 c--------------------------------------------------------
@@ -135,7 +135,7 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-        rhodiff = 4.0d0*(nssq)*alf
+      rhodiff = 4.0d0*(nssq)*alf
       return
       end
 c--------------------------------------------------------
@@ -148,8 +148,7 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-        rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns-1)
-c        rhoadv = sqrt((uxadv)**2+(vxadv)**2+(uyadv)**2+(vyadv)**2)*ns
+      rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns-1)
       return
       end
 c--------------------------------------------------------
@@ -175,20 +174,20 @@ c ----- zero boundary conditions -----
 c ----- big loop -----
       do i=2,ns-1
 c ----- left neighbour -----
-        uleft=y((i-1)*3-2)
-        vleft=y((i-1)*3-1)
-        wleft=y((i-1)*3)
+          uleft=y((i-1)*3-2)
+          vleft=y((i-1)*3-1)
+          wleft=y((i-1)*3)
 c ----- right neighbour -----
-        uright=y((i+1)*3-2)
-        vright=y((i+1)*3-1)
-        wright=y((i+1)*3)
+          uright=y((i+1)*3-2)
+          vright=y((i+1)*3-1)
+          wright=y((i+1)*3)
 c ----- the derivative -----
-         uij=y(i*3-2)
-         vij=y(i*3-1)
-         wij=y(i*3)
-         f(i*3-2)=alf*nssq*(uleft+uright-2.d0*uij)
-         f(i*3-1)=alf*nssq*(vleft+vright-2.d0*vij)
-         f(i*3)  =alf*nssq*(wleft+wright-2.d0*wij)
+          uij=y(i*3-2)
+          vij=y(i*3-1)
+          wij=y(i*3)
+          f(i*3-2) = alf * nssq * (uleft + uright - 2.d0*uij)
+          f(i*3-1) = alf * nssq * (vleft + vright - 2.d0*vij)
+          f(i*3)   = alf * nssq * (wleft + wright - 2.d0*wij)
       end do
       return
       end
@@ -213,23 +212,20 @@ c ----- zero boundary conditions -----
 c ----- big loop -----
       do i=2,ns-1
 c ----- left neighbour -----
-        uleft=y((i-1)*3-2)
-        vleft=y((i-1)*3-1)
-        wleft=y((i-1)*3)
+          uleft=y((i-1)*3-2)
+          vleft=y((i-1)*3-1)
+          wleft=y((i-1)*3)
 c ----- right neighbour -----
-        uright=y((i+1)*3-2)
-        vright=y((i+1)*3-1)
-        wright=y((i+1)*3)
+          uright=y((i+1)*3-2)
+          vright=y((i+1)*3-1)
+          wright=y((i+1)*3)
 c ----- the derivative -----
-        uij=y(i*3-2)
-        vij=y(i*3-1)
-        wij=y(i*3)
-	  f(i*3-2)=0.5d0*(ns-1)*(-uxadv*(uright-uleft))
-     &          +brussa-(wij+1.d0)*uij+vij*uij*uij
-        f(i*3-1)=0.5d0*(ns-1)*(-vxadv*(vright-vleft))
-     &          +wij*uij-vij*uij*uij
-        f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))
-     &          +(brussb-wij)/eps-wij*uij
+          uij=y(i*3-2)
+          vij=y(i*3-1)
+          wij=y(i*3)
+	    f(i*3-2)=0.5d0*(ns-1)*(-uxadv*(uright-uleft))
+          f(i*3-1)=0.5d0*(ns-1)*(-vxadv*(vright-vleft))
+          f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))
 	end do
       return
       end
@@ -242,11 +238,11 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-		  write (6,*) 'warning, dummy function fd2 called !!'
-			do i=1,neqn
-			   f(i)=0.0d0
-			end do
-			return
+      write (6,*) 'warning, dummy function fd2 called !!'
+	do i=1,neqn
+	    f(i)=0.0d0
+	end do
+	return
       end
 c--------------------------------------------------------
 c     The subroutine FR (reaction terms)
@@ -258,29 +254,48 @@ c--------------------------------------------------------
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 	logical is_frjac
-c      write (6,*) 'WARNING DUMMY FUNCTION FR CALLED'
-          uij = y(1)
-          vij = y(2)
-          wij = y(3)
+      uij = y(1)
+      vij = y(2)
+      wij = y(3)
 
-          f(1) = brussa -(wij+1.d0)*uij +vij*uij*uij
-          f(2) = wij*uij -vij*uij*uij
-          f(3) = (brussb-wij)/eps -wij*uij
+      if ((ieqn .eq. 1) .or. (ieqn .eq. neqn)) then
+          f(1) = 0.d0
+          f(2) = 0.d0
+          f(3) = 0.d0
+      else
+          f(1) = brussa - (wij+1.d0)*uij + vij*uij*uij
+          f(2) = wij*uij - vij*uij*uij
+          f(3) = (brussb - wij)/eps - wij*uij
+      end if
 
-          if (is_frjac) then
-            frjac(1,1) = -(wij+1.d0) +2.d0*uij*vij
-            frjac(2,1) = wij -2.d0*uij*vij
-            frjac(3,1) = -wij
+      if (is_frjac) then
+          if ((ieqn .eq. 1) .or. (ieqn .eq. neqn)) then
+              frjac(1,1) = 0.d0
+              frjac(2,1) = 0.d0
+              frjac(3,1) = 0.d0
 
-            frjac(1,2) = uij*uij
-            frjac(2,2) = -uij*uij
-            frjac(3,2) = 0.d0
+              frjac(1,2) = 0.d0
+              frjac(2,2) = 0.d0
+              frjac(3,2) = 0.d0
 
-            frjac(1,3) = -uij
-            frjac(2,3) = uij
-            frjac(3,3) = -(1.d0/eps) -uij
+              frjac(1,3) = 0.d0
+              frjac(2,3) = 0.d0
+              frjac(3,3) = 0.d0
+          else
+              frjac(1,1) = -(wij+1.d0) + 2.d0*uij*vij
+              frjac(1,2) = uij*uij
+              frjac(1,3) = -uij
+
+              frjac(2,1) = wij - 2.d0*uij*vij
+              frjac(2,2) = -uij*uij
+              frjac(2,3) = uij
+
+              frjac(3,1) = -wij
+              frjac(3,2) = 0.d0
+              frjac(3,3) = -(1.d0/eps) - uij
           end if
-	    return
+      end if
+	return
       end
 c--------------------------------------------------------
 c     The subroutine FW (noise terms)
@@ -291,9 +306,9 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-		  write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
-		  do i=1,neqn
-			f(i)=0.d0
-		  end do
-		  return
+	write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
+	do i=1,neqn
+	    f(i)=0.d0
+	end do
+	return
       end
