@@ -32,7 +32,7 @@ def calc_error(nx, solfile, reffile):
     return np.sqrt(np.mean(np.square(uerr)))
 
 
-def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,reffile,showcommand=True):
+def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,reffile,rebuild=False,showcommand=False):
     stats = {'ReturnCode': 0, 'reac': 0, 'advec': 0, 'spatial_dim': 0, 'diff_coef': 0.0,
              'u_advec_coef': 0.0, 'v_advec_coef': 0.0, 'w_advec_coef': 0.0, 'a_rec_coef': 0.0,
              'b_rec_coef': 0.0, 'eps': 0.0, 'CPU_time':0.0, 'time_step': " ", 'intial_h': 0.0,
@@ -54,31 +54,32 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,r
     # Automatically find the directory where this Python script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # modify spatial dimension in fortran file
-    executable_filename = 'dr_adr_1D.f'
-    executable_file = os.path.join(script_dir, executable_filename)
+    # modify spatial dimension in fortran file and rebuild (if requesteed)
+    if (rebuild):
+        executable_filename = 'dr_adr_1D.f'
+        executable_file = os.path.join(script_dir, executable_filename)
 
-    nsd_params = []
-    with open(executable_file,'r') as exfile:
-        lines = exfile.readlines()
+        nsd_params = []
+        with open(executable_file,'r') as exfile:
+            lines = exfile.readlines()
 
-    #look for the line with nsd
-    for line in lines:
-        newline = line
-        if 'parameter(nsd=' in line:
-            start = line.find('parameter(nsd=') + len('parameter(nsd=')
-            end = line.find(',', start)
-            newline = line[:start] + str(nsdV) + line[end:]
-        nsd_params.append(newline)
+        #look for the line with nsd
+        for line in lines:
+            newline = line
+            if 'parameter(nsd=' in line:
+                start = line.find('parameter(nsd=') + len('parameter(nsd=')
+                end = line.find(',', start)
+                newline = line[:start] + str(nsdV) + line[end:]
+            nsd_params.append(newline)
 
-    # Write modified content back
-    with open(executable_file, 'w') as excfile:
-        excfile.writelines(nsd_params)
+        # Write modified content back
+        with open(executable_file, 'w') as excfile:
+            excfile.writelines(nsd_params)
 
-    ### TO-DO: compile updated source code file
-    make_out = subprocess.run(["make"], capture_output=True, text=True)
-    print("rebuilding executable:")
-    print(make_out.stdout)
+        ### compile updated source code file
+        make_out = subprocess.run(["make"], capture_output=True, text=True)
+        print("rebuilding executable:")
+        print(make_out.stdout)
 
     # modify parameters in namelist file and turn on/off advection/reaction
     namelist_filename = 'namelist_read.txt'
@@ -153,56 +154,56 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,r
     else:
         if(showcommand):
             print("Run command: " + runcommand + " SUCCESS\n")
-            if (hV<=0.0):
-                stats['time_step']= "adaptive"
-            else:
-                stats['time_step']= "fixed_h"
-            # end
-            stats['advec']        = advec_iwork20
-            stats['reac']         = reac_iwork21
-            stats['ReturnCode']   = run_result.returncode
-            stats['spatial_dim']  = nsdV
-            stats['diff_coef']    = alfV
-            stats['u_advec_coef'] = uxadvV
-            stats['v_advec_coef'] = vxadvV
-            stats['w_advec_coef'] = wxadvV
-            stats['a_rec_coef']   = brussaV
-            stats['b_rec_coef']   = brussbV
-            stats['eps']          = epsV
-            stats['atol']         = atolV
-            stats['rtol']         = rtolV
-            stats['h']            = hV
+        if (hV<=0.0):
+            stats['time_step']= "adaptive"
+        else:
+            stats['time_step']= "fixed_h"
+        # end
+        stats['advec']        = advec_iwork20
+        stats['reac']         = reac_iwork21
+        stats['ReturnCode']   = run_result.returncode
+        stats['spatial_dim']  = nsdV
+        stats['diff_coef']    = alfV
+        stats['u_advec_coef'] = uxadvV
+        stats['v_advec_coef'] = vxadvV
+        stats['w_advec_coef'] = wxadvV
+        stats['a_rec_coef']   = brussaV
+        stats['b_rec_coef']   = brussbV
+        stats['eps']          = epsV
+        stats['atol']         = atolV
+        stats['rtol']         = rtolV
+        stats['h']            = hV
 
-            ### compute solution error and store this in the stats
-            stats['Accuracy'] = calc_error(nsdV, "sol.dat", reffile)
+        ### compute solution error and store this in the stats
+        stats['Accuracy'] = calc_error(nsdV, "sol.dat", reffile)
 
-            # # Show output
-            # print("Program output:")
-            # print(run_result.stdout.decode())
-            lines = run_result.stdout.decode().splitlines()
-            for line in lines:
-                if 'initial step size h= ' in line:
-                    txt = line.split()
-                    stats['intial_h'] = float(txt[4])
-                elif 'CPU time ' in line:
-                    txt = line.split()
-                    stats['CPU_time'] = float(txt[2])
-                elif 'Max number of stages used= ' in line:
-                    txt = line.split()
-                    stats['stages'] = txt[5]
-                elif ' Number of f evaluations= ' in line:
-                    txt = line.split()
-                    stats['fD_evals'] = txt[4]
-                    stats['fA_evals'] = txt[7]
-                    stats['total_steps'] = txt[9]
-                    stats['accpt_steps'] = txt[11]
-                    stats['reject_steps'] = txt[13]
-                elif 'Number of reaction VF' in line:
-                    txt = line.split()
-                    stats['fR_evals'] = txt[5]
-                elif 'Number of reaction Jacobian' in line:
-                    txt = line.split()
-                    stats['fRJac_evals'] = txt[5]
+        # # Show output
+        # print("Program output:")
+        # print(run_result.stdout.decode())
+        lines = run_result.stdout.decode().splitlines()
+        for line in lines:
+            if 'initial step size h= ' in line:
+                txt = line.split()
+                stats['intial_h'] = float(txt[4])
+            elif 'CPU time ' in line:
+                txt = line.split()
+                stats['CPU_time'] = float(txt[2])
+            elif 'Max number of stages used= ' in line:
+                txt = line.split()
+                stats['stages'] = txt[5]
+            elif ' Number of f evaluations= ' in line:
+                txt = line.split()
+                stats['fD_evals'] = txt[4]
+                stats['fA_evals'] = txt[7]
+                stats['total_steps'] = txt[9]
+                stats['accpt_steps'] = txt[11]
+                stats['reject_steps'] = txt[13]
+            elif 'Number of reaction VF' in line:
+                txt = line.split()
+                stats['fR_evals'] = txt[5]
+            elif 'Number of reaction Jacobian' in line:
+                txt = line.split()
+                stats['fRJac_evals'] = txt[5]
 
     return stats
 # end of function
@@ -212,67 +213,65 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,r
 nsd_values = [512]  #spatial dimension
 alf_values = [1e-1] #diffusion coefficient
 
-# advection values in the x-direction for u, v and w
-uxadv_values = [1e-2] #advection coefficient for u in the x-direction
-vxadv_values = [1e-2] #advection coefficient for v in the x-direction
-wxadv_values = [1e-2] #advection coefficient for w in the x-direction
-
-# advection values in the y-direction for u, v and w, these values will remain unchanged (0) because the example is 1D
-uyadv_values = [0.0] #advection coefficient for u in the y-direction
-vyadv_values = [0.0] #advection coefficient for v in the y-direction
-wyadv_values = [0.0] #advection coefficient for w in the y-direction
+# advection coefficients (for all of u, v and w)
+adv_values = [1e-2] #x-direction
 
 # reaction values
-brussa = [0.6]  #A
-brussb = [2.0]  #B
-eps    = [1e-2] #epsilon
+brussa = 0.6  #A
+brussb = 2.0  #B
+eps    = 1e-2 #epsilon
 
 # absolute and relative tolerances
 atol = [1e-11]
 rtol = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 
 # adaptive/fixed step size: adaptive step size: <=0.0, fixed step size: >0.0
-fixed_h = [0.0]
+fixed_h = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
-# filename to hold run statistics
-fname = "PIROCK_adr_1D"
+# flag to indicate whether code will need to be rebuild between tests (only required if `nsd_values` contains values other than 512)
+rebuild = False
 
 # filename for reference solution
 refname = "reference.dat"
 
-RunStats = []
+# filename to hold adaptive run statistics
+fname = "PIROCK_adr_1D_adaptive"
+
+RunStatsAd = []
 for nsdVal in nsd_values:
     for alfVal in alf_values:
-        for uxadvVal in uxadv_values:
-            for vxadvVal in vxadv_values:
-                for wxadvVal in wxadv_values:
-                    for brussaVal in brussa:
-                        for brussbVal in brussb:
-                            for epsVal in eps:
-                                for hVal in fixed_h:
-                                    for atolVal in atol:
-                                        for rtolVal in rtol:
-                                            stat = runtest(nsdVal, alfVal, uxadvVal, vxadvVal, wxadvVal, brussaVal, brussbVal,
-                                                           epsVal, hVal, atolVal, rtolVal, refname, showcommand=True)
-                                            RunStats.append(stat)
-# print(RunStats)
-RunStatsDf = pd.DataFrame.from_records(RunStats)
+        for advVal in adv_values:
+            for atolVal in atol:
+                for rtolVal in rtol:
+                    stat = runtest(nsdVal, alfVal, advVal, advVal, advVal, brussa, brussb,
+                                   eps, 0.0, atolVal, rtolVal, refname, rebuild)
+                    RunStatsAd.append(stat)
+RunStatsAdDf = pd.DataFrame.from_records(RunStatsAd)
 
 # save dataframe as Excel file
-print("RunStatsDf object:")
-print(RunStatsDf)
+print("RunStatsAdDf object:")
+print(RunStatsAdDf)
 print("Saving as Excel")
-RunStatsDf.to_excel(fname + '.xlsx', index=False)
+RunStatsAdDf.to_excel(fname + '.xlsx', index=False)
+
+
+# filename to hold fixed-step run statistics
+fname = "PIROCK_adr_1D_fixedstep"
+
+RunStatsFx = []
+for nsdVal in nsd_values:
+    for alfVal in alf_values:
+        for advVal in adv_values:
+            for hVal in fixed_h:
+                stat = runtest(nsdVal, alfVal, advVal, advVal, advVal, brussa, brussb,
+                               eps, hVal, 1e-11, 1e-6, refname, rebuild)
+                RunStatsFx.append(stat)
+RunStatsFxDf = pd.DataFrame.from_records(RunStatsFx)
+
+# save dataframe as Excel file
+print("RunStatsFxDf object:")
+print(RunStatsFxDf)
+print("Saving as Excel")
+RunStatsFxDf.to_excel(fname + '.xlsx', index=False)
 
 # end of script
-
-
-
-
-
-
-
-
-
-
-
