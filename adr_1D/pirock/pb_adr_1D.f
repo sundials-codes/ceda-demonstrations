@@ -221,12 +221,15 @@ c ----- right neighbour -----
         vright=y((i+1)*3-1)
         wright=y((i+1)*3)
 c ----- the derivative -----
-c        uij=y(i*3-2)
-c        vij=y(i*3-1)
-c        wij=y(i*3)
+        uij=y(i*3-2)
+        vij=y(i*3-1)
+        wij=y(i*3)
 	  f(i*3-2)=0.5d0*(ns-1)*(-uxadv*(uright-uleft))
+     &          +brussa-(wij+1.d0)*uij+vij*uij*uij
         f(i*3-1)=0.5d0*(ns-1)*(-vxadv*(vright-vleft))
+     &          +wij*uij-vij*uij*uij
         f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))
+     &          +(brussb-wij)/eps-wij*uij
 	end do
       return
       end
