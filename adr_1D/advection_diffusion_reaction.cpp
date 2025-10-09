@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
   if (check_flag(flag, "CloseOutput")) { return 1; }
 
   // Write reference solution to disk (if applicable)
-  flag = WriteSolution(tout, yref, udata, uopts);
+  flag = WriteSolution(t, yref, udata, uopts);
   if (check_flag(flag, "WriteSolution")) { return 1; }
 
   // ------------
@@ -1401,8 +1401,7 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   sunrealtype c = -ONE * udata->c / (TWO * udata->dx);
 
-  fdata[0] = fdata[1] = fdata[2] = ZERO;
-
+  N_VConst(ZERO, f);
   for (sunindextype i = 1; i < udata->nx - 1; i++)
   {
     ul = ydata[UIDX(i - 1)];
@@ -1418,8 +1417,6 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[VIDX(i)] = c * (vr - vl);
     fdata[WIDX(i)] = c * (wr - wl);
   }
-
-  fdata[udata->neq - 3] = fdata[udata->neq - 2] = fdata[udata->neq - 1] = ZERO;
 
   return 0;
 }
@@ -1444,8 +1441,7 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   sunrealtype d = udata->d / (udata->dx * udata->dx);
 
-  fdata[0] = fdata[1] = fdata[2] = ZERO;
-
+  N_VConst(ZERO, f);
   for (sunindextype i = 1; i < udata->nx - 1; i++)
   {
     ul = ydata[UIDX(i - 1)];
@@ -1465,8 +1461,6 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[WIDX(i)] = d * (wl - TWO * wc + wr);
   }
 
-  fdata[udata->neq - 3] = fdata[udata->neq - 2] = fdata[udata->neq - 1] = ZERO;
-
   return 0;
 }
 
@@ -1479,6 +1473,7 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
 
   sunrealtype d = udata->d / (udata->dx * udata->dx);
 
+  SUNMatZero(J);
   for (sunindextype i = 1; i < udata->nx - 1; i++)
   {
     SM_ELEMENT_B(J, UIDX(i), UIDX(i - 1)) = d;
@@ -1513,8 +1508,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   // Compute reaction RHS
   sunrealtype u, v, w;
 
-  fdata[0] = fdata[1] = fdata[2] = ZERO;
-
+  N_VConst(ZERO, f);
   for (sunindextype i = 1; i < udata->nx - 1; i++)
   {
     u = ydata[UIDX(i)];
@@ -1525,8 +1519,6 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[VIDX(i)] = w * u - v * u * u;
     fdata[WIDX(i)] = ((udata->B - w) / udata->eps) - w * u;
   }
-
-  fdata[udata->neq - 3] = fdata[udata->neq - 2] = fdata[udata->neq - 1] = ZERO;
 
   return 0;
 }
@@ -1544,6 +1536,7 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
 
   sunrealtype u, v, w;
 
+  SUNMatZero(J);
   for (sunindextype i = 1; i < udata->nx - 1; i++)
   {
     u = ydata[UIDX(i)];
@@ -1620,9 +1613,6 @@ int J_diff_react(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   if (flag) { return flag; }
 
   // Compute reaction Jacobian
-  flag = SUNMatZero(udata->temp_J);
-  if (flag) { return flag; }
-
   flag = J_reaction(t, y, fy, udata->temp_J, user_data, tmp1, tmp2, tmp3);
   if (flag) { return flag; }
 

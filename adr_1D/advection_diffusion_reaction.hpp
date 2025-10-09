@@ -607,6 +607,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   cout << "  d                = " << udata.d << endl;
   cout << "  A                = " << udata.A << endl;
   cout << "  B                = " << udata.B << endl;
+  cout << "  eps              = " << udata.eps << endl;
   cout << " --------------------------------- " << endl;
   cout << "  tf               = " << udata.tf << endl;
   cout << "  xl               = " << udata.xl << endl;
