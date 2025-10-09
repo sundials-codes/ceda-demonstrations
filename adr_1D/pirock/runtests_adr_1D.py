@@ -226,7 +226,7 @@ atol = [1e-11]
 rtol = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 
 # adaptive/fixed step size: adaptive step size: <=0.0, fixed step size: >0.0
-fixed_h = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+fixed_h = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
 # flag to indicate whether code will need to be rebuild between tests (only required if `nsd_values` contains values other than 512)
 rebuild = False

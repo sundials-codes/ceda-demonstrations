@@ -47,8 +47,8 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
 c --- namelist definition
-      namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
+c       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
+c      &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
 
 
 c ----- dimensions -----
@@ -68,9 +68,11 @@ c         write(6,*) 'Could not open namelist file'
 
         write(6,*) 'Integration of the '
      &   ,'1-dim Brusselator problem, ns=',ns
-c        write(6,*) 'advection pb:', uxadv,vxadv,wxadv
-c        write(6,*) 'diffusion pb:', alf
-c        write(6,*) 'reaction driver:', brussa,brussb,eps
+        write(6,*) 'advection pb:', uxadv,vxadv,wxadv
+        write(6,*) 'diffusion pb:', alf
+        write(6,*) 'brusselator A:', brussa
+        write(6,*) 'brusselator B:', brussb
+        write(6,*) 'brusselator eps:', eps
 c --------------- multiplying by 1.d0 because of tests that are run from python script
 c --------------- because Python can't take in values with '.d'
         alf=alf*1.d0
@@ -91,7 +93,6 @@ c ----- initial and end point of integration -----
         tend = 3.d0
 
 c ----- initial values -----
-        ans=ns
         do i=1,ns
             xx       = ((i-1.d0)/(ns-1.d0))
             y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
@@ -118,8 +119,8 @@ c --- common parameters for the problem -----
 c ----- file for solution -----
       open(8,file='sol.dat')
       rewind 8
-	write (8,*) t,(y((i)*3-2),i=1,ns),
-     &      (y((i)*3-1),i=1,ns), (y((i)*3),i=1,ns)
+	write (8,*) t,(y(i*3-2),i=1,ns),
+     &      (y(i*3-1),i=1,ns), (y(i*3),i=1,ns)
 
 	write(6,*) 'Solution is tabulated in file sol.dat'
 	close(8)
@@ -161,9 +162,6 @@ c ----- brusselator with diffusion in 1 dim. space -----
       dimension y(neqn),f(neqn)
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-c ----- constants for inhomogenity -----
-      ans=ns
-      radsq=0.1d0**2
 c ----- zero boundary conditions -----
       f(1)      = 0.d0
       f(2)      = 0.d0
@@ -258,7 +256,7 @@ c--------------------------------------------------------
       vij = y(2)
       wij = y(3)
 
-      if ((ieqn .eq. 1) .or. (ieqn .eq. neqn)) then
+      if ((ieqn .eq. 1) .or. (ieqn .eq. neqn-2)) then
           f(1) = 0.d0
           f(2) = 0.d0
           f(3) = 0.d0
@@ -269,7 +267,7 @@ c--------------------------------------------------------
       end if
 
       if (is_frjac) then
-          if ((ieqn .eq. 1) .or. (ieqn .eq. neqn)) then
+          if ((ieqn .eq. 1) .or. (ieqn .eq. neqn-2)) then
               frjac(1,1) = 0.d0
               frjac(2,1) = 0.d0
               frjac(3,1) = 0.d0
