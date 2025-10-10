@@ -305,11 +305,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
     if (Generate_PDF):
         plt.savefig(picname + '.pdf')
 
-runtime_efficiency_figsize = (10,8)
+runtime_efficiency_figsize = (10,4)
 runtime_efficiency_bbox = (0.55, 0.95)
 def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators=None):
     fig = plt.figure(figsize=runtime_efficiency_figsize)
-    gs = GridSpec(2, 1, figure=fig)
+    gs = GridSpec(1, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0,0])
     for integrator in data['inttype'].unique():
         intdata = data.groupby(['inttype',]).get_group((integrator,))
@@ -477,7 +477,7 @@ if (Plot_AD):
         data=pd.read_excel('AdvDiff-fixed.xlsx')
         make_convergence_comparison_plot(data, 'AdvDiff Convergence', 'ad_fixed_convergence')
         make_efficiency_comparison_plot(data, 'AdvDiff Efficiency (Fixed)', 'ad_fixed_efficiency', plot_rx=False)
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiff Runtime Efficiency (Fixed)', 'ad_fixed_runtime)efficiency')
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiff Runtime Efficiency (Fixed)', 'ad_fixed_runtime_efficiency')
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiff-adapt.xlsx')
         make_accuracy_comparison_plot(data, 'AdvDiff Accuracy', 'ad_adaptive_accuracy')
