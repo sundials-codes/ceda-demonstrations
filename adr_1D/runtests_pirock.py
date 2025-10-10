@@ -20,7 +20,6 @@
 import pandas as pd
 import subprocess
 import shlex
-import sys, os
 import numpy as np
 
 def calc_error(nx, solfile, reffile):
@@ -82,70 +81,27 @@ def runtest(nsdV,alfV,uxadvV,vxadvV,wxadvV,brussaV,brussbV,epsV,hV,atolV,rtolV,r
         print(make_out.stdout)
 
     # modify parameters in namelist file and turn on/off advection/reaction
-    namelist_filename = 'namelist_read.txt'
-    namelist_file = os.path.join(script_dir, namelist_filename)
-
-    namelist_params = []
-    with open(namelist_file,'r') as namefile:
-        lines = namefile.readlines()
-    for line in lines:
-        new_line = line
-        if 'iwork20' in line:
-            start = line.find('iwork20 = ') + len('iwork20 = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(advec_iwork20) + line[end:]
-        if 'iwork21' in line:
-            start = line.find('iwork21 = ') + len('iwork21 = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(reac_iwork21) + line[end:]
-        if 'alf' in line:
-            start = line.find('alf = ') + len('alf = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(alfV) + line[end:]
-        if 'uxadv' in line:
-            start = line.find('uxadv = ') + len('uxadv = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(uxadvV) + line[end:]
-        if 'vxadv' in line:
-            start = line.find('vxadv = ') + len('vxadv = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(vxadvV) + line[end:]
-        if 'wxadv' in line:
-            start = line.find('wxadv = ') + len('wxadv = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(wxadvV) + line[end:]
-        if 'brussa' in line:
-            start = line.find('brussa = ') + len('brussa = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(brussaV) + line[end:]
-        if 'brussb' in line:
-            start = line.find('brussb = ') + len('brussb = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(brussbV) + line[end:]
-        if 'eps' in line:
-            start = line.find('eps = ') + len('eps = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(epsV) + line[end:]
-        if 'h' in line:
-            start = line.find('h = ') + len('h = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(hV) + line[end:]
-        if 'atol' in line:
-            start = line.find('atol = ') + len('atol = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(atolV) + line[end:]
-        if 'rtol' in line:
-            start = line.find('rtol = ') + len('rtol = ')
-            end = line.find('\n', start)
-            new_line = line[:start] + str(rtolV) + line[end:]
-        namelist_params.append(new_line)
-
-    # Write modified content back
-    with open(namelist_file, 'w') as namefile:
-        namefile.writelines(namelist_params)
+    with open("adr_1D_pirock_params.txt",'w') as namefile:
+        namefile.write("&list1\n")
+        namefile.write("   alf = " + str(alfV) + "\n")
+        namefile.write("   uxadv = " + str(uxadvV) + "\n")
+        namefile.write("   uyadv = 0.0\n")
+        namefile.write("   vxadv = " + str(vxadvV) + "\n")
+        namefile.write("   vyadv = 0.0\n")
+        namefile.write("   wxadv = " + str(wxadvV) + "\n")
+        namefile.write("   wyadv = 0.0\n")
+        namefile.write("   brussa = " + str(brussaV) + "\n")
+        namefile.write("   brussb = " + str(brussbV) + "\n")
+        namefile.write("   eps = " + str(epsV) + "\n")
+        namefile.write("   atol = " + str(atolV) + "\n")
+        namefile.write("   rtol = " + str(rtolV) + "\n")
+        namefile.write("   h = " + str(hV) + "\n")
+        namefile.write("   iwork20 = " + str(advec_iwork20) + "\n")
+        namefile.write("   iwork21 = " + str(reac_iwork21) + "\n")
+        namefile.write("/\n")
 
     # the folder should contain the executable after running the Makefile
-    runcommand = "./adr1D"
+    runcommand = "./advection_diffusion_reaction_pirock"
     run_result = subprocess.run(shlex.split(runcommand),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if (run_result.returncode != 0):
         print("Run command " + runcommand + " FAILURE: " + str(run_result.returncode))
