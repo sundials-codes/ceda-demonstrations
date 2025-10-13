@@ -311,7 +311,8 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   }
 
   // Reduce over cells.
-  gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_SQ_SUM,
+//  gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_SQ_SUM,
+  gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_RMS,
                                    local_range);
   gkyl_comm_allreduce(comm, GKYL_DOUBLE, GKYL_SUM, ncomp, red_local, red_global);
 
@@ -321,8 +322,10 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   else memcpy(red_ho, red_global, ncomp * sizeof(double));
 
   // Reduce over components.
-  sunrealtype red_out = 0.0;
-  for (sunindextype i = 0; i < ncomp; ++i) red_out += red_ho[i];
+//  sunrealtype red_out = 0.0;
+//  for (sunindextype i = 0; i < ncomp; ++i) red_out += red_ho[i];
+  // Use the 0th component because each component should have the same result.
+  sunrealtype red_out = red_ho[0];
 
   red_out = SUNRsqrt(red_out / local_range->volume);
 
