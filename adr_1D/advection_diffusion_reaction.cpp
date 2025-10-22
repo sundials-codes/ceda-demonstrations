@@ -1523,7 +1523,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   return 0;
 }
 
-// Diffusion Jacobian function
+// Reaction Jacobian function
 int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
