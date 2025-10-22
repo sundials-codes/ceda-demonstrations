@@ -84,7 +84,7 @@ struct UserData
   sunrealtype dy = dx;
 
   // Number of equations
-  sunindextype neq = NSPECIES * nx * ny;//SA: 2d
+  sunindextype neq = NSPECIES * nx * ny;
 
   // Temporary workspace vector and matrix
   N_Vector temp_v  = nullptr;

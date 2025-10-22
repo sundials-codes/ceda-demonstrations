@@ -1393,13 +1393,13 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype ulx, urx, uty, uby;
   sunrealtype vlx, vrx, vty, vby;
 
-  sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); //SA: we can optimize since dx=dy???
+  sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); 
   sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
   sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
   sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
 
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++)//SA: periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++)//periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
@@ -1438,10 +1438,10 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype ulx, urx, uby, uty, uc;
   sunrealtype vlx, vrx, vby, vty, vc;
 
-  sunrealtype d = udata->d / (udata->dx * udata->dx); //SA: dx=dy
+  sunrealtype d = udata->d / (udata->dx * udata->dx); //dx=dy
 
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++) //SA: periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
@@ -1472,7 +1472,7 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   // Access problem data
   UserData* udata = (UserData*)user_data;
 
-  sunrealtype d = udata->d / (udata->dx * udata->dx);//SA: dx=dy
+  sunrealtype d = udata->d / (udata->dx * udata->dx);//dx=dy
 
   SUNMatZero(J);
   for (sunindextype j = 1; j < udata->ny - 1; j++)
@@ -1519,7 +1519,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype u, v;
 
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++) //SA: periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
@@ -1548,7 +1548,7 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   sunrealtype u, v;
 
   SUNMatZero(J);
-  for (sunindextype j = 0; j < udata->ny; j++) //SA: periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
@@ -1701,7 +1701,7 @@ int SetIC(N_Vector y, UserData& udata)
   {
     for (sunindextype i = 0; i < udata.nx; i++)
     {
-      x = udata.xl + i * udata.dx;//SA: same for y
+      x = udata.xl + i * udata.dx;//same for y
       ydata[UIDX(i, j, nx)] = 22.0 * x * SUNRpowerR((ONE - x), 1.5);
       ydata[VIDX(i, j, nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
     }
