@@ -1393,7 +1393,7 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype ulx, urx, uty, uby;
   sunrealtype vlx, vrx, vty, vby;
 
-  sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); //SA: we can optimize since dx=dy
+  sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); //SA: we can optimize since dx=dy???
   sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
   sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
   sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
@@ -1490,11 +1490,11 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
 
       /* y-direction */
       SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j - 1, nx)) = d;
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j, nx))     = -d * TWO;//SA: repetition??????
+      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j, nx))     = -d * TWO;//SA: Jacobian will be bigger for 2D, with block matrices
       SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j + 1, nx)) = d;
 
       SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j - 1, nx)) = d;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO; //SA: repetition??????
+      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO; 
       SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j + 1, nx)) = d;
     }
   }
@@ -1534,7 +1534,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   return 0;
 }
 
-// Diffusion Jacobian function
+// Reaction Jacobian function
 int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
