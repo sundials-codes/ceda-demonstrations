@@ -1,10 +1,9 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): Daniel R. Reynolds @ UMBC
- * Based on the SUNDIALS example ark_advection_diffusion_reaction.cpp by
- * David J. Gardner @ LLNL
+ * Based on the 2D advection-diffusion-reaction example in PIROCK.
  * -----------------------------------------------------------------------------
  * Header file for advection-diffusion-reaction equation example, see
- * advection_diffusion_reaction.cpp for more details.
+ * advection_diffusion_reaction_2d.cpp for more details.
  * ---------------------------------------------------------------------------*/
 
 #include <algorithm>
@@ -40,8 +39,8 @@
 #define WIDTH (10 + numeric_limits<sunrealtype>::digits10)
 
 // Macro to access each species at an x location
-#define UIDX(i, j, nx) (NSPECIES * (i + j * nx))
-#define VIDX(i, j, nx) (NSPECIES * (i + j * nx) + 1)
+#define UIDX(i, j, n) (NSPECIES * (i + j * n))
+#define VIDX(i, j, n) (NSPECIES * (i + j * n) + 1)
 
 using namespace std;
 
@@ -77,7 +76,7 @@ struct UserData
   sunrealtype xu = ONE;
 
   // Number of nodes
-  sunindextype nx = 400;
+  sunindextype nx = 200;
   sunindextype ny = nx;
 
   // Mesh spacing
@@ -422,25 +421,25 @@ static void InputHelp()
 {
   cout << endl;
   cout << "Command line options:" << endl;
-  cout << "  --no-advection           : disable advection\n";
-  cout << "  --no-reaction            : disable reaction\n";
-  cout << "  --cux <real>             : u_x advection coefficient\n";
-  cout << "  --cuy <real>             : u_y advection coefficient\n";
-  cout << "  --cvx <real>             : v_x advection coefficient\n";
-  cout << "  --cvy <real>             : v_y advection coefficient\n";
-  cout << "  --d <real>               : diffusion coefficient\n";
-  cout << "  --A <real>               : species A concentration\n";
-  cout << "  --B <real>               : species B concentration\n";
-  cout << "  --eps <real>             : stiffness parameter\n";
-  cout << "  --tf <real>              : final time\n";
-  cout << "  --xl <real>              : domain lower boundary\n";
-  cout << "  --xu <real>              : domain upper boundary\n";
-  cout << "  --nx <int>               : number of mesh points in one direction\n";
-  cout << "  --integrator <int>       : integrator option (0=ERK, 1=ARK, 2=ExtSTS, 3=Strang)\n";
-  cout << "  --table_id <int>         : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
-  cout << "  --order <int>            : method order\n";
-  cout << "  --sts_method <int>       : STS method type (0=RKC, 1=RKL)\n";
-  cout << "  --extsts_method <int>    : ExtSTS method type\n";
+  cout << "  --no-advection        : disable advection\n";
+  cout << "  --no-reaction         : disable reaction\n";
+  cout << "  --cux <real>          : u_x advection coefficient\n";
+  cout << "  --cuy <real>          : u_y advection coefficient\n";
+  cout << "  --cvx <real>          : v_x advection coefficient\n";
+  cout << "  --cvy <real>          : v_y advection coefficient\n";
+  cout << "  --d <real>            : diffusion coefficient\n";
+  cout << "  --A <real>            : species A concentration\n";
+  cout << "  --B <real>            : species B concentration\n";
+  cout << "  --eps <real>          : stiffness parameter\n";
+  cout << "  --tf <real>           : final time\n";
+  cout << "  --xl <real>           : domain lower boundary\n";
+  cout << "  --xu <real>           : domain upper boundary\n";
+  cout << "  --nx <int>            : number of mesh points in one direction\n";
+  cout << "  --integrator <int>    : integrator option (0=ERK, 1=ARK, 2=ExtSTS, 3=Strang)\n";
+  cout << "  --table_id <int>      : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
+  cout << "  --order <int>         : method order\n";
+  cout << "  --sts_method <int>    : STS method type (0=RKC, 1=RKL)\n";
+  cout << "  --extsts_method <int> : ExtSTS method type\n";
   cout << "                               advection+diffusion+reaction\n";
   cout << "                                   0 = ARS(2,2,2)\n";
   cout << "                                   1 = Giraldo ARK2\n";
@@ -453,19 +452,19 @@ static void InputHelp()
   cout << "                                   0 = ARS(2,2,2) SDIRK\n";
   cout << "                                   1 = Giraldo DIRK2\n";
   cout << "                                   2 = SSP SDIRK 2\n";
-  cout << "  --rtol <real>            : relative tolerance\n";
-  cout << "  --atol <real>            : absolute tolerance\n";
-  cout << "  --fixed_h <real>         : fixed step size\n";
-  cout << "  --predictor <int>        : nonlinear solver predictor\n";
-  cout << "  --lssetupfreq <int>      : LS setup frequency\n";
-  cout << "  --maxl <int>             : max GMRES iterations\n";
-  cout << "  --maxsteps <int>         : max steps between outputs\n";
-  cout << "  --linear                 : linearly implicit\n";
-  cout << "  --calc_error             : use reference solution to compute solution error\n";
-  cout << "  --write_solution         : write the reference solution to disk\n";
-  cout << "  --output <int>           : output level\n";
-  cout << "  --nout <int>             : number of outputs\n";
-  cout << "  --help                   : print options and exit\n";
+  cout << "  --rtol <real>         : relative tolerance\n";
+  cout << "  --atol <real>         : absolute tolerance\n";
+  cout << "  --fixed_h <real>      : fixed step size\n";
+  cout << "  --predictor <int>     : nonlinear solver predictor\n";
+  cout << "  --lssetupfreq <int>   : LS setup frequency\n";
+  cout << "  --maxl <int>          : max GMRES iterations\n";
+  cout << "  --maxsteps <int>      : max steps between outputs\n";
+  cout << "  --linear              : linearly implicit\n";
+  cout << "  --calc_error          : use reference solution to compute solution error\n";
+  cout << "  --write_solution      : write the reference solution to disk\n";
+  cout << "  --output <int>        : output level\n";
+  cout << "  --nout <int>          : number of outputs\n";
+  cout << "  --help                : print options and exit\n";
 }
 
 inline void find_arg(vector<string>& args, const string key, sunrealtype& dest)
@@ -532,7 +531,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--cux", udata.cux);
   find_arg(args, "--cuy", udata.cuy);
   find_arg(args, "--cvx", udata.cvx);
-  find_arg(args, "--cuy", udata.cuy);
+  find_arg(args, "--cvy", udata.cuy);
   find_arg(args, "--d", udata.d);
   find_arg(args, "--A", udata.A);
   find_arg(args, "--B", udata.B);
@@ -834,7 +833,7 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
   if (uopts.output)
   {
     // Compute rms norm of the state
-    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx);
+    sunrealtype urms = sqrt(N_VDotProd(y, y) / (udata.nx * udata.ny));
     cout << setw(22) << t << setw(25) << urms << endl;
 
     // Write solution to disk
@@ -866,8 +865,8 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
   if (uopts.output)
   {
     // Compute rms norm of the state and error
-    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx / 3);
-    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / udata.nx / 3);
+    sunrealtype urms = sqrt(N_VDotProd(y, y) / (udata.nx * udata.ny) / 2);
+    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / (udata.nx * udata.ny)  / 2);
     cout << setw(22) << t << setw(25) << urms
          << setprecision(2) << setw(12) << erms
          << setprecision(numeric_limits<sunrealtype>::digits10) << endl;

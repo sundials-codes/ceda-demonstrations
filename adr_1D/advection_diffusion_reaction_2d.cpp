@@ -1,7 +1,6 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): Daniel R. Reynolds @ UMBC
- * Based on the SUNDIALS example ark_advection_diffusion_reaction.cpp by
- * David J. Gardner @ LLNL
+ * Based on the 2D advection-diffusion-reaction example in PIROCK.
  * -----------------------------------------------------------------------------
  * This example simulates the 2D diffusion-advection-reaction equation,
  *
@@ -9,14 +8,14 @@
  *   v_t = Df*(v_xx + v_yy) + mu*[0.4*v_x  + 0.7*v_y] + B*u - u^2 * v
  *
  * where u and v represent the concentrations of chemical species,
- * Df = 0.1 is the diffusion rate, and the species with
- * constant concentration over time are A = 1.3 and B = 2*1e7
+ * Df = 0.1 is the diffusion rate, and the species with with constant 
+ * concentration over time are mu = 1.0, A = 1.3 and B = 2*1e7.
  *
  * The problem is evolved for t in [0, 2] and x in [0, 1], with initial
  * conditions given by
  *
- *   u(0,x,y) = 22 * y * (1 - y)^(1.5)
- *   v(0,x,y) = 27 * x * (1 - x)^(1.5)
+ *   u(x,y,0) = 22 * y * (1 - y)^(1.5)
+ *   v(x,y,0) = 27 * x * (1 - x)^(1.5)
  *
  * and periodic boundary conditions i.e.,
  *
@@ -1396,7 +1395,7 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); //SA: we can optimize since dx=dy
   sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
-  sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
+  sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
   sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
 
   N_VConst(ZERO, f);
@@ -1698,11 +1697,11 @@ int SetIC(N_Vector y, UserData& udata)
 
   sunrealtype x;
 
-  for (sunindextype j = 0; j < udata.ny; i++)
+  for (sunindextype j = 0; j < udata.ny; j++)
   {
     for (sunindextype i = 0; i < udata.nx; i++)
     {
-      x              = udata.xl + i * udata.dx;//SA: same for y
+      x = udata.xl + i * udata.dx;//SA: same for y
       ydata[UIDX(i, j, nx)] = 22.0 * x * SUNRpowerR((ONE - x), 1.5);
       ydata[VIDX(i, j, nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
     }
