@@ -1,4 +1,4 @@
-### Set up C++ executable ###
+### Set up C++ executable for 1D advection_diffusion_reaction ###
 
 set(sources ${shared_sources}
   advection_diffusion_reaction.cpp)
@@ -16,6 +16,26 @@ target_link_libraries(${target} PRIVATE
 
 #   request installation of the target into the overall "bin" folder
 install(TARGETS ${target} DESTINATION ${demonstration_bin})
+
+
+### Set up C++ executable for 2D advection_diffusion_reaction ###
+
+set(sources_2d ${shared_sources}
+  advection_diffusion_reaction_2d.cpp)
+
+# set the target name
+set(target_2d advection_diffusion_reaction_2d)
+
+# create executable
+add_executable(${target_2d} ${sources_2d})
+
+target_include_directories(${target_2d} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+target_link_libraries(${target_2d} PRIVATE
+  SUNDIALS::arkode SUNDIALS::nvecserial)
+
+#   request installation of the target into the overall "bin" folder
+install(TARGETS ${target_2d} DESTINATION ${demonstration_bin})
 
 
 ### Set up PIROCK executable ###
