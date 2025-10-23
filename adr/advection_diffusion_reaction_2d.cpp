@@ -4,11 +4,11 @@
  * -----------------------------------------------------------------------------
  * This example simulates the 2D diffusion-advection-reaction equation,
  *
- *   u_t = Df*(u_xx + u_yy) + mu*[-0.5*u_x + 1.0*u_y] + A + u^2 * v - (B + 1)*u 
+ *   u_t = Df*(u_xx + u_yy) + mu*[-0.5*u_x + 1.0*u_y] + A + u^2 * v - (B + 1)*u
  *   v_t = Df*(v_xx + v_yy) + mu*[0.4*v_x  + 0.7*v_y] + B*u - u^2 * v
  *
  * where u and v represent the concentrations of chemical species,
- * Df = 0.1 is the diffusion rate, and the species with with constant 
+ * Df = 0.1 is the diffusion rate, and the species with with constant
  * concentration over time are mu = 1.0, A = 1.3 and B = 2*1e7.
  *
  * The problem is evolved for t in [0, 2] and x in [0, 1], with initial
@@ -109,10 +109,9 @@ int main(int argc, char* argv[])
   void* arkode_mem = nullptr;
   void* arkref_mem = nullptr;
 
-  // Matrix and linear solver for IMEX or ExtSTS integrators
+  // Matrix and linear solver for ImEx, Strang, and ExtSTS integrators
   SUNMatrix A           = nullptr;
   SUNLinearSolver LS    = nullptr;
-  SUNMatrix Aref        = nullptr;
   SUNLinearSolver LSref = nullptr;
 
   // STS integrator for ExtSTS method
@@ -142,7 +141,7 @@ int main(int argc, char* argv[])
   // Create reference solver (4th-order ARK with tighter relative tolerance)
   if (uopts.calc_error)
   {
-    flag = SetupReference(ctx, udata, uopts, yref, &Aref, &LSref, &arkref_mem);
+    flag = SetupReference(ctx, udata, uopts, yref, &LSref, &arkref_mem);
     if (check_flag(flag, "Reference solver setup")) { return 1; }
     flag = ARKodeSStolerances(arkref_mem, 1e-10, uopts.atol);
     if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
@@ -171,6 +170,10 @@ int main(int argc, char* argv[])
                             : WriteOutput(t, y, udata, uopts);
   if (check_flag(flag, "WriteOutput")) { return 1; }
 
+  // Timers
+  sunrealtype ref_time = 0.0;
+  sunrealtype solve_time = 0.0;
+
   // Loop over output times
   for (int iout = 0; iout < uopts.nout; iout++)
   {
@@ -183,16 +186,22 @@ int main(int argc, char* argv[])
     }
 
     //   Advance in time
+    auto solver_start = chrono::high_resolution_clock::now();
     flag = ARKodeEvolve(arkode_mem, tout, y, &t, ARK_NORMAL);
     if (check_flag(flag, "ARKodeEvolve")) { return 1; }
+    auto solver_end = chrono::high_resolution_clock::now();
+    solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
 
     // Advance reference solution and compute error
     if (uopts.calc_error)
     {
       flag = ARKodeSetStopTime(arkref_mem, tout);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
+      auto reference_start = chrono::high_resolution_clock::now();
       flag = ARKodeEvolve(arkref_mem, tout, yref, &t2, ARK_NORMAL);
       if (check_flag(flag, "ARKodeEvolve (ref)")) { return 1; }
+      auto reference_end = chrono::high_resolution_clock::now();
+      ref_time += chrono::duration<sunrealtype>(reference_end - reference_start).count();
       N_VLinearSum(1.0, y, -1.0, yref, yerr);
       total_error += N_VDotProd(yerr, yerr);
     }
@@ -222,6 +231,8 @@ int main(int argc, char* argv[])
   if (uopts.output)
   {
     cout << "Final integrator statistics:" << endl;
+    cout << "  Total solve time   = " << setprecision(2) << solve_time << endl;
+    cout << "  Reference time     = " << setprecision(2) << ref_time << endl;
     if (uopts.calc_error)
     {
       cout << "  Solution error     = " << setprecision(2)
@@ -272,7 +283,6 @@ int main(int argc, char* argv[])
     ARKodeFree(&arkref_mem);
     N_VDestroy(yref);
     N_VDestroy(yerr);
-    SUNMatDestroy(Aref);
     SUNLinSolFree(LSref);
   }
 
@@ -399,7 +409,7 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 
   // Create linear solver
   *LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, uopts.maxl, ctx);
-  if (check_ptr(*LS, "SUNLinSol_Band")) { return 1; }
+  if (check_ptr(*LS, "SUNLinSol_SPGMR")) { return 1; }
 
   // Attach linear solver
   flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
@@ -595,41 +605,35 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 }
 
 int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
-                   N_Vector y, SUNMatrix* A, SUNLinearSolver* LS,
-                   void** arkode_mem)
+                   N_Vector y, SUNLinearSolver* LS, void** arkode_mem)
 {
   // Problem configuration
   ARKRhsFn fe_RHS;   // explicit RHS function
   ARKRhsFn fi_RHS;   // implicit RHS function
-  ARKLsJacFn Ji_RHS; // Jacobian of implicit RHS function
 
   // advection-diffusion-reaction
   if (udata.reaction && udata.advection)
   {
     fe_RHS = f_advection;
     fi_RHS = f_diff_react;
-    Ji_RHS = J_diff_react;
   }
   // advection-diffusion
   else if (!udata.reaction && udata.advection)
   {
     fe_RHS = f_advection;
     fi_RHS = f_diffusion;
-    Ji_RHS = J_diffusion;
   }
   // diffusion-reaction
   else if (udata.reaction && !udata.advection)
   {
     fe_RHS = nullptr;
     fi_RHS = f_diff_react;
-    Ji_RHS = J_diff_react;
   }
   // diffusion
   else if (!udata.reaction && !udata.advection)
   {
     fe_RHS = nullptr;
     fi_RHS = f_diffusion;
-    Ji_RHS = J_diffusion;
   }
   else
   {
@@ -649,21 +653,13 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
   flag = ARKodeSetUserData(*arkode_mem, &udata);
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
-  // Create banded matrix
-  *A = SUNBandMatrix(udata.neq, 3, 3, ctx);
-  if (check_ptr(*A, "SUNBandMatrix")) { return 1; }
-
   // Create linear solver
-  *LS = SUNLinSol_Band(y, *A, ctx);
-  if (check_ptr(*LS, "SUNLinSol_Band")) { return 1; }
+  *LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, uopts.maxl, ctx);
+  if (check_ptr(*LS, "SUNLinSol_SPGMR")) { return 1; }
 
   // Attach linear solver
-  flag = ARKodeSetLinearSolver(*arkode_mem, *LS, *A);
+  flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
   if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
-
-  // Attach Jacobian function
-  flag = ARKodeSetJacFn(*arkode_mem, Ji_RHS);
-  if (check_flag(flag, "ARKodeSetJacFn")) { return 1; }
 
   // Tighten implicit solver tolerances
   flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-1);
@@ -682,13 +678,6 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
   // Set linear solver setup frequency
   flag = ARKodeSetLSetupFrequency(*arkode_mem, uopts.ls_setup_freq);
   if (check_flag(flag, "ARKodeSetLSetupFrequency")) { return 1; }
-
-  if (uopts.linear)
-  {
-    // Specify linearly implicit non-time-dependent RHS
-    flag = ARKodeSetLinear(*arkode_mem, SUNFALSE);
-    if (check_flag(flag, "ARKodeSetLinear")) { return 1; }
-  }
 
   // Select default method of a given order
   flag = ARKodeSetOrder(*arkode_mem, uopts.order);
@@ -1385,33 +1374,30 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   // Access data arrays
   sunrealtype* ydata = N_VGetArrayPointer(y);
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
-
   sunrealtype* fdata = N_VGetArrayPointer(f);
   if (check_ptr(fdata, "N_VGetArrayPointer")) { return -1; }
 
   // Compute advection RHS
-  sunrealtype ulx, urx, uty, uby;
-  sunrealtype vlx, vrx, vty, vby;
-
-  sunrealtype cux = ONE * udata->cux / (TWO * udata->dx); 
-  sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
-  sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
-  sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
-
+  const sunrealtype cux = ONE * udata->cux / (TWO * udata->dx);
+  const sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
+  const sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
+  const sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
+  const sunindextype nx = udata->nx;
+  const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++)//periodic boundary conditions
+  for (sunindextype j = 0; j < ny; j++)//periodic boundary conditions
   {
-    for (sunindextype i = 0; i < udata->nx; i++)
+    for (sunindextype i = 0; i < nx; i++)
     {
-      ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
-      urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
-      uby = (j > 0)      ? ydata[UIDX(i, j - 1, nx)] : ydata[UIDX(i, ny - 1, nx)];
-      uty = (j < ny - 1) ? ydata[UIDX(i, j + 1, nx)] : ydata[UIDX(i, 0, nx)];
+      const sunrealtype ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
+      const sunrealtype urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
+      const sunrealtype uby = (j > 0)      ? ydata[UIDX(i, j - 1, nx)] : ydata[UIDX(i, ny - 1, nx)];
+      const sunrealtype uty = (j < ny - 1) ? ydata[UIDX(i, j + 1, nx)] : ydata[UIDX(i, 0, nx)];
 
-      vlx = (i > 0)      ? ydata[VIDX(i - 1, j, nx)] : ydata[VIDX(nx - 1, j, nx)];
-      vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
-      vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
-      vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
+      const sunrealtype vlx = (i > 0)      ? ydata[VIDX(i - 1, j, nx)] : ydata[VIDX(nx - 1, j, nx)];
+      const sunrealtype vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
+      const sunrealtype vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
+      const sunrealtype vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
 
       fdata[UIDX(i, j, nx)] = cux * (urx - ulx) + cuy * (uty - uby);
       fdata[VIDX(i, j, nx)] = cvx * (vrx - vlx) + cvy * (vty - vby);
@@ -1435,27 +1421,25 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   if (check_ptr(fdata, "N_VGetArrayPointer")) { return -1; }
 
   // Compute diffusion RHS
-  sunrealtype ulx, urx, uby, uty, uc;
-  sunrealtype vlx, vrx, vby, vty, vc;
-
-  sunrealtype d = udata->d / (udata->dx * udata->dx); //dx=dy
-
+  const sunrealtype d = udata->d / (udata->dx * udata->dx); //dx=dy
+  const sunindextype nx = udata->nx;
+  const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
+  for (sunindextype j = 0; j < ny; j++) //periodic boundary conditions
   {
-    for (sunindextype i = 0; i < udata->nx; i++)
+    for (sunindextype i = 0; i < nx; i++)
     {
-      uc  = ydata[UIDX(i, j, nx)];
-      ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
-      urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
-      uby = (j > 0)      ? ydata[UIDX(i, j - 1, nx)] : ydata[UIDX(i, ny - 1, nx)];
-      uty = (j < ny - 1) ? ydata[UIDX(i, j + 1, nx)] : ydata[UIDX(i, 0, nx)];
+      const sunrealtype uc  = ydata[UIDX(i, j, nx)];
+      const sunrealtype ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
+      const sunrealtype urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
+      const sunrealtype uby = (j > 0)      ? ydata[UIDX(i, j - 1, nx)] : ydata[UIDX(i, ny - 1, nx)];
+      const sunrealtype uty = (j < ny - 1) ? ydata[UIDX(i, j + 1, nx)] : ydata[UIDX(i, 0, nx)];
 
-      vc  = ydata[VIDX(i, j, nx)];
-      vlx = (i > 0)      ? ydata[VIDX(i - 1, j, nx)] : ydata[VIDX(nx - 1, j, nx)];
-      vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
-      vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
-      vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
+      const sunrealtype vc  = ydata[VIDX(i, j, nx)];
+      const sunrealtype vlx = (i > 0)      ? ydata[VIDX(i - 1, j, nx)] : ydata[VIDX(nx - 1, j, nx)];
+      const sunrealtype vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
+      const sunrealtype vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
+      const sunrealtype vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
 
       fdata[UIDX(i, j, nx)] = d * (ulx + urx + uby + uty - FOUR * uc);
       fdata[VIDX(i, j, nx)] = d * (vlx + vrx + vby + vty - FOUR * vc);
@@ -1472,7 +1456,10 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   // Access problem data
   UserData* udata = (UserData*)user_data;
 
-  sunrealtype d = udata->d / (udata->dx * udata->dx);//dx=dy
+  // Set shortcut variables
+  const sunrealtype d = udata->d / (udata->dx * udata->dx);//dx=dy
+  const sunindextype nx = udata->nx;
+  const sunindextype ny = udata->ny;
 
   SUNMatZero(J);
   for (sunindextype j = 1; j < udata->ny - 1; j++)
@@ -1494,7 +1481,7 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
       SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j + 1, nx)) = d;
 
       SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j - 1, nx)) = d;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO; 
+      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO;
       SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j + 1, nx)) = d;
     }
   }
@@ -1511,23 +1498,20 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   // Access data arrays
   sunrealtype* ydata = N_VGetArrayPointer(y);
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
-
   sunrealtype* fdata = N_VGetArrayPointer(f);
   if (check_ptr(fdata, "N_VGetArrayPointer")) { return -1; }
 
   // Compute reaction RHS
-  sunrealtype u, v;
-
   N_VConst(ZERO, f);
   for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
-      u = ydata[UIDX(i, j, nx)];
-      v = ydata[VIDX(i, j, nx)];
+      const sunrealtype u = ydata[UIDX(i, j, udata->nx)];
+      const sunrealtype v = ydata[VIDX(i, j, udata->nx)];
 
-      fdata[UIDX(i, j, nx)] = udata->A  + u * u * v - (udata->B + ONE) * u;
-      fdata[VIDX(i, j, nx)] = udata->B * u - u * u * v;
+      fdata[UIDX(i, j, udata->nx)] = udata->A  + u * u * v - (udata->B + ONE) * u;
+      fdata[VIDX(i, j, udata->nx)] = udata->B * u - u * u * v;
     }
   }
 
@@ -1544,20 +1528,18 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   // Access data array
   sunrealtype* ydata = N_VGetArrayPointer(y);
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return 1; }
-
-  sunrealtype u, v;
-
+  const sunindextype nx = udata->nx;
   SUNMatZero(J);
   for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
-      u = ydata[UIDX(i, j, nx)];
-      v = ydata[VIDX(i, j, nx)];
+      const sunrealtype u = ydata[UIDX(i, j, nx)];
+      const sunrealtype v = ydata[VIDX(i, j, nx)];
 
       // all vars wrt u
       SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j, nx)) = TWO * u * v - (udata->B + ONE);
-      SM_ELEMENT_B(J, VIDX(i, j, nx), UIDX(i, j, nx)) = udata->B    - TWO * u * v; 
+      SM_ELEMENT_B(J, VIDX(i, j, nx), UIDX(i, j, nx)) = udata->B    - TWO * u * v;
 
       // all vars wrt v
       SM_ELEMENT_B(J, UIDX(i, j, nx), VIDX(i, j, nx)) =  u * u;
@@ -1702,8 +1684,8 @@ int SetIC(N_Vector y, UserData& udata)
     for (sunindextype i = 0; i < udata.nx; i++)
     {
       x = udata.xl + i * udata.dx;//same for y
-      ydata[UIDX(i, j, nx)] = 22.0 * x * SUNRpowerR((ONE - x), 1.5);
-      ydata[VIDX(i, j, nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
+      ydata[UIDX(i, j, udata.nx)] = 22.0 * x * SUNRpowerR((ONE - x), 1.5);
+      ydata[VIDX(i, j, udata.nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
     }
   }
 

@@ -15,6 +15,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 // Include desired integrators, vectors, linear solvers, and nonlinear solvers
 #include "arkode/arkode_erkstep.h"
@@ -34,7 +35,7 @@
 #define TWO   SUN_RCONST(2.0)
 #define FOUR  SUN_RCONST(4.0)
 
-#define NSPECIES 2 
+#define NSPECIES 2
 
 #define WIDTH (10 + numeric_limits<sunrealtype>::digits10)
 
@@ -255,7 +256,7 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
                 void** lsrkstep_mem, void** arkstep_mem, void** arkode_mem);
 
 int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-                   SUNMatrix* A, SUNLinearSolver* LS, void** arkode_mem);
+                   SUNLinearSolver* LS, void** arkode_mem);
 
 // Compute the initial condition
 int SetIC(N_Vector y, UserData& udata);
@@ -847,8 +848,8 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
       {
         for (sunindextype i = 0; i < udata.nx; i++)
         {
-          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, nx)];
-          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, nx)];
+          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, udata.nx)];
+          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, udata.nx)];
         }
       }
       uopts.uout << endl;
@@ -882,8 +883,8 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
       {
         for (sunindextype i = 0; i < udata.nx; i++)
         {
-          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, nx)];
-          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, nx)];
+          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, udata.nx)];
+          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, udata.nx)];
         }
       }
       uopts.uout << endl;
@@ -911,16 +912,16 @@ static int WriteSolution(sunrealtype t, N_Vector y,
       for (sunindextype i = 0; i< udata.nx; i++)
       {
         uref << setprecision(numeric_limits<sunrealtype>::digits10)
-            << " " << ydata[UIDX(i, j, nx)];
-      }     
+            << " " << ydata[UIDX(i, j, udata.nx)];
+      }
     }
     for (sunindextype j = 0; j< udata.ny; j++)
     {
       for (sunindextype i = 0; i< udata.nx; i++)
       {
         uref << setprecision(numeric_limits<sunrealtype>::digits10)
-            << " " << ydata[VIDX(i, j, nx)];
-      }     
+            << " " << ydata[VIDX(i, j, udata.nx)];
+      }
     }
     uref << endl;
     uref.close();

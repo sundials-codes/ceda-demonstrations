@@ -96,4 +96,4 @@ option(USE_HYPRE "Use HYPRE for preconditioning" OFF)
 # --------------------------------------------------------
 
 add_subdirectory(diffusion_2D)
-add_subdirectory(adr_1D)
+add_subdirectory(adr)
