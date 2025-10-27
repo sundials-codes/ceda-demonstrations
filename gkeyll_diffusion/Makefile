@@ -12,7 +12,7 @@ CUDA_ARCH ?= 70
 CFLAGS ?= -O3 -g -ffast-math -fPIC -MMD -MP -DGIT_COMMIT_ID=\"$(GIT_COMMIT_HASH)\"
 LDFLAGS =
 PREFIX = ${PWD}/../deps/gkylsoft
-SUN_PREFIX = /home/maggul/CEDA_branch/deps
+SUN_PREFIX = $(shell dirname ${PREFIX})
 
 # determine OS we are running on
 UNAME = $(shell uname)

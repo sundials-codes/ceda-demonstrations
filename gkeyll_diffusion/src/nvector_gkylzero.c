@@ -240,7 +240,7 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
   bool use_gpu                   = NV_CONTENT_GKZ(w)->use_gpu;
 
   // TODO: change code so these allocations only happen once.
-  int ncomp = xdptr->ncomp;
+  int ncomp       = xdptr->ncomp;
   double* asum_ho = gkyl_malloc(ncomp * sizeof(double));
   double *asum_local, *asum_global;
   if (use_gpu)
@@ -253,7 +253,9 @@ sunrealtype N_VWrmsNorm_abs_comp_Gkylzero(N_Vector x, N_Vector w)
     asum_local  = gkyl_malloc(ncomp * sizeof(double));
     asum_global = gkyl_malloc(ncomp * sizeof(double));
   }
-  struct gkyl_array* zdptr = mkarr(use_gpu, ncomp, xdptr->size); // Temporary buffer. Should change code to avoid this.
+  struct gkyl_array* zdptr =
+    mkarr(use_gpu, ncomp,
+          xdptr->size); // Temporary buffer. Should change code to avoid this.
 
   gkyl_array_comp_op_range(zdptr, GKYL_PROD, 1.0, xdptr, 0.0, wdptr, local_range);
   gkyl_array_reduce_range(asum_local, zdptr, GKYL_SQ_SUM, local_range);
@@ -311,7 +313,7 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   }
 
   // Reduce over cells.
-//  gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_SQ_SUM,
+  //  gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_SQ_SUM,
   gkyl_array_reduce_weighted_range(red_local, xdptr, wdptr, GKYL_RMS,
                                    local_range);
   gkyl_comm_allreduce(comm, GKYL_DOUBLE, GKYL_SUM, ncomp, red_local, red_global);
@@ -322,8 +324,8 @@ sunrealtype N_VWrmsNorm_cell_norm_Gkylzero(N_Vector x, N_Vector w)
   else memcpy(red_ho, red_global, ncomp * sizeof(double));
 
   // Reduce over components.
-//  sunrealtype red_out = 0.0;
-//  for (sunindextype i = 0; i < ncomp; ++i) red_out += red_ho[i];
+  //  sunrealtype red_out = 0.0;
+  //  for (sunindextype i = 0; i < ncomp; ++i) red_out += red_ho[i];
   // Use the 0th component because each component should have the same result.
   sunrealtype red_out = red_ho[0];
 
@@ -473,12 +475,13 @@ sunrealtype N_VMaxnorm_Gkylzero(N_Vector u)
   gkyl_comm_allreduce(comm, GKYL_DOUBLE, GKYL_MAX, ncomp, red_local, red_global);
 
   if (use_gpu)
-    gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double), GKYL_CU_MEMCPY_D2H);
-  else
-    memcpy(red_ho, red_global, ncomp * sizeof(double));
+    gkyl_cu_memcpy(red_ho, red_global, ncomp * sizeof(double),
+                   GKYL_CU_MEMCPY_D2H);
+  else memcpy(red_ho, red_global, ncomp * sizeof(double));
 
   sunrealtype u_abs_max = -1.0;
-  for (sunindextype i = 0; i < ncomp; ++i) u_abs_max = fmax(u_abs_max, red_ho[i]);
+  for (sunindextype i = 0; i < ncomp; ++i)
+    u_abs_max = fmax(u_abs_max, red_ho[i]);
 
   if (use_gpu)
   {
