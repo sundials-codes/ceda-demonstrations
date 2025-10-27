@@ -56,6 +56,6 @@ for norm_type in sorted(norm_types):
             plt.tight_layout()
 
             # Save separate plot for each combination of k and user_dom_eig
-            filename = f"error_vs_h_k_{k_val}_userdom_{user_dom}.png"
+            filename = f"error_vs_runtime_k_{k_val}_userdom_{user_dom}.png"
             plt.savefig(filename, dpi=300)
             print(f"Plot saved as {filename}")
