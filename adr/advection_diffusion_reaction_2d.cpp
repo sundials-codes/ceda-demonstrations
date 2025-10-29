@@ -403,13 +403,25 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   flag = ARKodeSetUserData(*arkode_mem, &udata);
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
-  // Create linear solver
-  *LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, uopts.maxl, ctx);
-  if (check_ptr(*LS, "SUNLinSol_SPGMR")) { return 1; }
+  // Create and attach linear solver (and reaction preconditioner, if applicable)
+  if (udata.impl_reaction)
+  {
+    *LS = SUNLinSol_SPGMR(y, SUN_PREC_RIGHT, uopts.maxl, ctx);
+    if (check_ptr(*LS, "SUNLinSol_SPGMR")) { return 1; }
+    flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
+    if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
+    flag = ARKBBDPrecInit(*arkode_mem, udata.neq, 2, 2, 2, 2,
+                           ZERO, floc_reaction, nullptr);
+    if (check_flag(flag, "ARKBBDPrecInit")) { return 1; }
+  }
+  else
+  {
+    *LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, uopts.maxl, ctx);
+    if (check_ptr(*LS, "SUNLinSol_SPGMR")) { return 1; }
 
-  // Attach linear solver
-  flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
-  if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
+    flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
+    if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
+  }
 
   // Tighten implicit solver tolerances
   flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-2);
@@ -1522,6 +1534,13 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   }
 
   return 0;
+}
+
+// "Local" Reaction RHS function for BBD preconditioner
+int floc_reaction(sunindextype Nloc, sunrealtype t, N_Vector y, N_Vector f,
+                  void* user_data)
+{
+  return f_reaction(t, y, f, user_data);
 }
 
 // Advection-diffusion RHS function

@@ -28,6 +28,7 @@
 #include "sunlinsol/sunlinsol_spgmr.h"
 #include "sunlinsol/sunlinsol_band.h"
 #include "sunmatrix/sunmatrix_band.h"
+#include "arkode/arkode_bbdpre.h"
 
 // Macros for problem constants
 #define ZERO  SUN_RCONST(0.0)
@@ -204,6 +205,8 @@ int STSInnerStepper_Reset(MRIStepInnerStepper sts_mem, sunrealtype tR,
 int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
+int floc_reaction(sunindextype Nloc, sunrealtype t, N_Vector y,
+                  N_Vector f, void* user_data);
 
 int f_adv_diff(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_adv_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
