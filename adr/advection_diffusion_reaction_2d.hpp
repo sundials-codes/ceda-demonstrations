@@ -40,8 +40,8 @@
 #define WIDTH (10 + numeric_limits<sunrealtype>::digits10)
 
 // Macro to access each species at an x location
-#define UIDX(i, j, n) (NSPECIES * (i + j * n))
-#define VIDX(i, j, n) (NSPECIES * (i + j * n) + 1)
+#define UIDX(i, j, n) (NSPECIES * ((i) + (j) * (n)))
+#define VIDX(i, j, n) (NSPECIES * ((i) + (j) * (n)) + 1)
 
 using namespace std;
 
@@ -52,7 +52,7 @@ using namespace std;
 struct UserData
 {
   // RHS options
-  bool reaction = true;
+  bool impl_reaction = false;
   bool advection = true;
 
   // Advection and diffusion coefficients
@@ -60,29 +60,28 @@ struct UserData
   sunrealtype cuy = SUN_RCONST(1.0);
   sunrealtype cvx = SUN_RCONST(0.4);
   sunrealtype cvy = SUN_RCONST(0.7);
-  sunrealtype d   = SUN_RCONST(1.0e-1);
+  sunrealtype d   = SUN_RCONST(1.0e-2);
 
   // Feed and reaction rates
   sunrealtype A = SUN_RCONST(1.3);
-  sunrealtype B = SUN_RCONST(2.0 * 1e7);
-
-  // Stiffness parameter
-  sunrealtype eps = SUN_RCONST(1.0);
+  sunrealtype B = SUN_RCONST(1.0);
 
   // Final simulation time
-  sunrealtype tf = SUN_RCONST(2.0);
+  sunrealtype tf = SUN_RCONST(1.0);
 
   // Domain boundaries
   sunrealtype xl = ZERO;
   sunrealtype xu = ONE;
+  sunrealtype yl = ZERO;
+  sunrealtype yu = ONE;
 
   // Number of nodes
-  sunindextype nx = 200;
-  sunindextype ny = nx;
+  sunindextype nx = 400;
+  sunindextype ny = 400;
 
   // Mesh spacing
-  sunrealtype dx = (xu - xl) / (nx - 1);
-  sunrealtype dy = dx;
+  sunrealtype dx = (xu - xl) / (nx);
+  sunrealtype dy = (yu - yl) / (ny);
 
   // Number of equations
   sunindextype neq = NSPECIES * nx * ny;
@@ -153,16 +152,16 @@ struct UserOptions
   int extsts_method = 0;
 
   // Relative and absolute tolerances
-  sunrealtype rtol = SUN_RCONST(1.e-4);
-  sunrealtype atol = SUN_RCONST(1.e-9);
+  sunrealtype rtol = SUN_RCONST(1.e-3);
+  sunrealtype atol = SUN_RCONST(1.e-11);
 
   // Step size selection (ZERO = adaptive steps)
   sunrealtype fixed_h = ZERO;
 
-  int maxsteps      = 10000; // max steps between outputs
-  int predictor     = 0;     // predictor for nonlinear systems
-  int ls_setup_freq = 0;     // linear solver setup frequency
-  int maxl          = 0;     // maximum number of GMRES iterations
+  int maxsteps      = 100000; // max steps between outputs
+  int predictor     = 0;      // predictor for nonlinear systems
+  int ls_setup_freq = 0;      // linear solver setup frequency
+  int maxl          = 0;      // maximum number of GMRES iterations
 
   bool linear = false; // signal that the problem is linearly implicit
 
@@ -170,7 +169,7 @@ struct UserOptions
   bool write_solution = false;
 
   int output = 1;  // 0 = none, 1 = stats, 2 = disk, 3 = disk with tstop
-  int nout   = 10; // number of output times
+  int nout   = 1;  // number of output times
   ofstream uout;   // output file stream
 };
 
@@ -213,22 +212,9 @@ int f_adv_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 
 int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 
-// Jacobian of RHS functions
-int J_advection(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+// Jacobian of reaction RHS
 int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-int J_adv_diff(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-               void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-int J_adv_react(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-int J_diff_react(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                 void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-int J_adv_diff_react(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                     void* user_data, N_Vector tmp1, N_Vector tmp2,
-                     N_Vector tmp3);
 
 // Dominant eigenvalue function (for diffusion operator in LSRKStep)
 int diffusion_domeig(sunrealtype t, N_Vector y, N_Vector fn,
@@ -423,7 +409,7 @@ static void InputHelp()
   cout << endl;
   cout << "Command line options:" << endl;
   cout << "  --no-advection        : disable advection\n";
-  cout << "  --no-reaction         : disable reaction\n";
+  cout << "  --implicit-reaction   : treat reactions implicitly (otherwise explicit)\n";
   cout << "  --cux <real>          : u_x advection coefficient\n";
   cout << "  --cuy <real>          : u_y advection coefficient\n";
   cout << "  --cvx <real>          : v_x advection coefficient\n";
@@ -431,25 +417,27 @@ static void InputHelp()
   cout << "  --d <real>            : diffusion coefficient\n";
   cout << "  --A <real>            : species A concentration\n";
   cout << "  --B <real>            : species B concentration\n";
-  cout << "  --eps <real>          : stiffness parameter\n";
   cout << "  --tf <real>           : final time\n";
-  cout << "  --xl <real>           : domain lower boundary\n";
-  cout << "  --xu <real>           : domain upper boundary\n";
-  cout << "  --nx <int>            : number of mesh points in one direction\n";
+  cout << "  --xl <real>           : x-domain lower boundary\n";
+  cout << "  --xu <real>           : x-domain upper boundary\n";
+  cout << "  --yl <real>           : y-domain lower boundary\n";
+  cout << "  --yu <real>           : y-domain upper boundary\n";
+  cout << "  --nx <int>            : number of mesh points in x direction\n";
+  cout << "  --ny <int>            : number of mesh points in y direction\n";
   cout << "  --integrator <int>    : integrator option (0=ERK, 1=ARK, 2=ExtSTS, 3=Strang)\n";
   cout << "  --table_id <int>      : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
   cout << "  --order <int>         : method order\n";
   cout << "  --sts_method <int>    : STS method type (0=RKC, 1=RKL)\n";
   cout << "  --extsts_method <int> : ExtSTS method type\n";
-  cout << "                               advection+diffusion+reaction\n";
+  cout << "                               adv + diff + impl react\n";
   cout << "                                   0 = ARS(2,2,2)\n";
   cout << "                                   1 = Giraldo ARK2\n";
-  cout << "                               advection+diffusion\n";
+  cout << "                               adv + diff + expl react\n";
   cout << "                                   0 = ARS(2,2,2) ERK\n";
   cout << "                                   1 = Giraldo ERK2\n";
   cout << "                                   2 = Ralston\n";
   cout << "                                   3 = Heun-Euler\n";
-  cout << "                               diffusion+reaction\n";
+  cout << "                               diff + impl react\n";
   cout << "                                   0 = ARS(2,2,2) SDIRK\n";
   cout << "                                   1 = Giraldo DIRK2\n";
   cout << "                                   2 = SSP SDIRK 2\n";
@@ -528,7 +516,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
 
   // Problem parameters
   find_arg(args, "--no-advection", udata.advection, false);
-  find_arg(args, "--no-reaction", udata.reaction, false);
+  find_arg(args, "--implicit-reaction", udata.impl_reaction, false);
   find_arg(args, "--cux", udata.cux);
   find_arg(args, "--cuy", udata.cuy);
   find_arg(args, "--cvx", udata.cvx);
@@ -536,11 +524,13 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--d", udata.d);
   find_arg(args, "--A", udata.A);
   find_arg(args, "--B", udata.B);
-  find_arg(args, "--eps", udata.eps);
   find_arg(args, "--tf", udata.tf);
   find_arg(args, "--xl", udata.xl);
   find_arg(args, "--xu", udata.xu);
+  find_arg(args, "--yl", udata.yl);
+  find_arg(args, "--yu", udata.yu);
   find_arg(args, "--nx", udata.nx);
+  find_arg(args, "--ny", udata.ny);
 
   // Integrator options
   find_arg(args, "--integrator", uopts.integrator);
@@ -562,8 +552,8 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--nout", uopts.nout);
 
   // Recompute mesh spacing and total number of nodes
-  udata.dx  = (udata.xu - udata.xl) / (udata.nx - 1);
-  udata.dy  = udata.dx;
+  udata.dx  = (udata.xu - udata.xl) / (udata.nx);
+  udata.dy  = (udata.yu - udata.yl) / (udata.ny);
   udata.neq = NSPECIES * udata.nx * udata.ny;
 
   // Create workspace
@@ -581,12 +571,6 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   }
 
   // Input checks
-  if (!udata.reaction && !udata.advection)
-  {
-    cerr << "ERROR: Invalid problem configuration" << endl;
-    return -1;
-  }
-
   if (uopts.integrator < 0 || uopts.integrator > 3)
   {
     cerr << "ERROR: Invalid integrator option" << endl;
@@ -622,7 +606,6 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   cout << "  d                = " << udata.d << endl;
   cout << "  A                = " << udata.A << endl;
   cout << "  B                = " << udata.B << endl;
-  cout << "  eps              = " << udata.eps << endl;
   cout << " --------------------------------- " << endl;
   cout << "  tf               = " << udata.tf << endl;
   cout << "  xl               = " << udata.xl << endl;
@@ -638,8 +621,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     cout << "  integrator       = ERK" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
     else { cout << "  advection        = OFF" << endl; }
-    if (udata.reaction) {  cout << "  reaction         = Explicit" << endl; }
-    else { cout << "  reaction         = OFF" << endl; }
+    cout << "  reaction         = Explicit" << endl;
     cout << "  diffusion        = Explicit" << endl;
   }
   else if (uopts.integrator == 1)
@@ -647,8 +629,8 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     cout << "  integrator       = ARK" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
     else { cout << "  advection        = OFF" << endl; }
-    if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = OFF" << endl; }
+    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
+    else { cout << "  reaction         = Explicit" << endl; }
     cout << "  diffusion        = Implicit" << endl;
     cout << "  ARK table ID     = ";
     switch(uopts.table_id)
@@ -667,8 +649,8 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     cout << "  integrator       = ExtSTS" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
     else { cout << "  advection        = OFF" << endl; }
-    if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = OFF" << endl; }
+    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
+    else { cout << "  reaction         = Explicit" << endl; }
     cout << "  diffusion        = Explicit" << endl;
   }
   else if (uopts.integrator == 3)
@@ -676,8 +658,8 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     cout << "  integrator       = Strang" << endl;
     if (udata.advection) { cout << "  advection        = Explicit" << endl; }
     else { cout << "  advection        = OFF" << endl; }
-    if (udata.reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = OFF" << endl; }
+    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
+    else { cout << "  reaction         = Explicit" << endl; }
     cout << "  diffusion        = Explicit" << endl;
   }
   else
@@ -716,14 +698,14 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   if (uopts.integrator == 2)
   {
     cout << " --------------------------------- " << endl;
-    if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+    if (udata.advection && udata.impl_reaction)  // expl adv + STS diff + impl react
     {
       if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARKS(2,2,2)" << endl; }
+      { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
       else
       { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
     }
-    else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
+    else if (!udata.impl_reaction)  // expl adv + expl react + STS diff -or- just expl react + STS diff (both are fully explicit)
     {
       if (uopts.extsts_method == 0)
       { cout << "  ExtSTS method    = ARS(2,2,2) ERK" << endl; }
@@ -734,7 +716,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
       else
       { cout << "  ExtSTS method    = Heun-Euler" << endl; }
     }
-    else if (!udata.advection && udata.reaction)  // diffusion + reaction
+    else if (!udata.advection && udata.impl_reaction)  // STS diff + impl react
     {
       if (uopts.extsts_method == 0)
       { cout << "  ExtSTS method    = ARS(2,2,2) SDIRK" << endl; }
@@ -757,15 +739,19 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     cout << " --------------------------------- " << endl;
     cout << "  Strang:" << endl;
     cout << "     STS diffusion" << endl;
-    if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+    if (udata.advection && udata.impl_reaction)  // expl adv + STS diff + impl react
     {
       cout << "     ARS(2,2,2) ARK: implicit reaction + explicit advection" << endl;
     }
-    else if (!udata.reaction)  // advection + diffusion
+    else if (udata.advection && !udata.impl_reaction)  // expl adv + expl react + STS diff
     {
-      cout << "     ARS(2,2,2) ERK: explicit advection" << endl;
+      cout << "     ARS(2,2,2) ERK: explicit advection + explicit reaction" << endl;
     }
-    else if (!udata.advection && udata.reaction)  // diffusion + reaction
+    else if (!udata.advection && !udata.impl_reaction)  // expl react + STS diff
+    {
+      cout << "     ARS(2,2,2) ERK: explicit reaction" << endl;
+    }
+    else if (!udata.advection && udata.impl_reaction)  // STS diff + impl react
     {
       cout << "     ARS(2,2,2) DIRK: implicit reaction" << endl;
     }

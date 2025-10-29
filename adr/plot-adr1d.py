@@ -113,7 +113,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     stepsize = stsdata['fixedh'].to_numpy()
                     accuracy = stsdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-                    medrate = np.median(rates)
+                    medrate = np.nanmedian(rates)
                     ltext = '%s+%s+%s (rate = %.2f)' % (integrator,extsts,sts,medrate)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
@@ -127,7 +127,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
             stepsize = intdata['fixedh'].to_numpy()
             accuracy = intdata['Accuracy'].to_numpy()
             rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-            medrate = np.median(rates)
+            medrate = np.nanmedian(rates)
             ltext = '%s (rate = %.2f)' % (integrator,medrate)
             DoPlot = True
             if (integrators is not None):
@@ -142,7 +142,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                 stepsize = stsdata['fixedh'].to_numpy()
                 accuracy = stsdata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-                medrate = np.median(rates)
+                medrate = np.nanmedian(rates)
                 ltext = '%s+%s (rate = %.2f)' % (integrator,sts,medrate)
                 m,c = strang_line_style(sts)
                 DoPlot = True
@@ -158,7 +158,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                 stepsize = tabledata['fixedh'].to_numpy()
                 accuracy = tabledata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-                medrate = np.median(rates)
+                medrate = np.nanmedian(rates)
                 ltext = '%s (rate = %.2f)' % (ark_table_name(table_id),medrate)
                 m,c = rk_line_style(table_id)
                 DoPlot = True
@@ -459,18 +459,35 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
         plt.savefig(picname + '.pdf')
 
 
+# utility routine to extract a specific reaction network from a Pandas dataframe.
+# returns both the network name, and the dataframe subset
+def extract_RxNet(data, RxNetwork):
+    RxNetName = RxNetwork[0]
+    RxNetData = data.groupby(['A','B','eps']).get_group((RxNetwork[1],RxNetwork[2],RxNetwork[3]))
+    return RxNetName, RxNetData
+
+# Name reaction networks to plot them separately, each has the form [Name, A, B, eps]
+#RxNetworks = [['Stiff2', 1.3, 1e7, 1.0]]
+RxNetworks = [['Stiff1', 0.6, 2.0, 1e-2],
+              ['Stiff2', 1.3, 1e3, 1.0],
+              ['Nonstiff', 0.6, 2.0, 1.0]]
+
 # generate plots, loading data from stored output
 if (Plot_ADR):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')
-        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr_fixed_convergence')
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr_fixed_efficiency')
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr_fixed_runtime_efficiency')
+        for RxNet in RxNetworks:
+            netname,netdata = extract_RxNet(data, RxNet)
+            make_convergence_comparison_plot(netdata, netname + ' AdvDiffRx Convergence', 'adr_' + netname + '_fixed_convergence')
+            make_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Efficiency (Fixed)', 'adr_' + netname + '_fixed_efficiency')
+            make_runtime_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Runtime Efficiency (Fixed)', 'adr_' + netname + '_fixed_runtime_efficiency')
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx-adapt.xlsx')
-        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr_adaptive_accuracy')
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr_adaptive_efficiency')
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr_adaptive_runtime_efficiency')
+        for RxNet in RxNetworks:
+            netname,netdata = extract_RxNet(data, RxNet)
+            make_accuracy_comparison_plot(netdata, netname + ' AdvDiffRx Accuracy', 'adr_' + netname + '_adaptive_accuracy')
+            make_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Efficiency', 'adr_' + netname + '_adaptive_efficiency')
+            make_runtime_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Runtime Efficiency', 'adr_' + netname + '_adaptive_runtime_efficiency')
 
 if (Plot_AD):
     if (Plot_Fixed):
@@ -487,14 +504,18 @@ if (Plot_AD):
 if (Plot_RD):
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff-fixed.xlsx')
-        make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd_fixed_convergence')
-        make_efficiency_comparison_plot(data, 'RxDiff Efficiency (Fixed)', 'rd_fixed_efficiency', plot_adv=False)
-        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency (Fixed)', 'rd_fixed_runtime_efficiency')
+        for RxNet in RxNetworks:
+            netname,netdata = extract_RxNet(data, RxNet)
+            make_convergence_comparison_plot(netdata, netname + ' RxDiff Convergence', 'rd_' + netname + '_fixed_convergence')
+            make_efficiency_comparison_plot(netdata, netname + ' RxDiff Efficiency (Fixed)', 'rd_' + netname + '_fixed_efficiency', plot_adv=False)
+            make_runtime_efficiency_comparison_plot(netdata, netname + ' RxDiff Runtime Efficiency (Fixed)', 'rd_' + netname + '_fixed_runtime_efficiency')
 if (Plot_Adaptive):
         data=pd.read_excel('RxDiff-adapt.xlsx')
-        make_accuracy_comparison_plot(data, 'RxDiff Accuracy', 'rd_adaptive_accuracy')
-        make_efficiency_comparison_plot(data, 'RxDiff Efficiency', 'rd_adaptive_efficiency', plot_adv=False)
-        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency', 'rd_adaptive_runtime_efficiency')
+        for RxNet in RxNetworks:
+            netname,netdata = extract_RxNet(data, RxNet)
+            make_accuracy_comparison_plot(netdata, netname + ' RxDiff Accuracy', 'rd_' + netname + '_adaptive_accuracy')
+            make_efficiency_comparison_plot(netdata, netname + ' RxDiff Efficiency', 'rd_' + netname + '_adaptive_efficiency', plot_adv=False)
+            make_runtime_efficiency_comparison_plot(netdata, netname + ' RxDiff Runtime Efficiency', 'rd_' + netname + '_adaptive_runtime_efficiency')
 
 # display plots
 plt.show()

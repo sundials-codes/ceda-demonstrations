@@ -5,26 +5,25 @@ c ----- to integrate with pirock.f -----
       include 'pirock.f'
       include 'decsol.f'
 c --- Problem driver and dimension parameters
-	include 'pb_adr_1D.f'
+	include 'pb_bruss2dadv.f'
       program main
-      parameter(nsd=512,npdes=3,neqn=nsd*npdes)
+      parameter (nsd=400,npdes=0,neqn=nsd*nsd*2)
 c ----------------------------------------------------
 	implicit double precision (a-h,o-z)
-c --- common parameters for the problem -----
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
       external fd,fd2,fa,fr,fw
+c --- common parameters for the problem -----
+      common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
       integer iwork(25),idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
-      namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
-
+      namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
+     &    atol,rtol,h
 c --- read input from namelist file (if it exists) ---
-      open(10, file='adr_1D_pirock_params.txt', status='old', err=100)
-      read(10, nml=list1)
+      open(10, file='ad_2D_pirock_params.txt', status='old', err=100)
+      read(10, nml=inputs)
       close(10)
       goto 110
 
@@ -33,17 +32,13 @@ c --- read input from namelist file (if it exists) ---
 c ----- initial step size -----
   110	if (h .le. 0.d0) then
           fixedstep=.false.
-          h=1.d-3
+          h=1.d-5
           write(6,*) 'Initial step size h=',h
       else
           fixedstep=.true.
           write(6,*) 'Fixed step size h=',h
       end if
-c      write(6,*) 'advection driver:', uxadv,vxadv,wxadv
-c      write(6,*) 'diffusion driver:', alf
-c      write(6,*) 'reaction driver:', brussa,brussb,eps
-c --------------- multiplying by 1.d0 because of tests that are run from python script
-c --------------- because Python can't take in values with '.d'
+c --------------- multiplying by input tolerances by 1.d0 since Python doesn't write values with '.d'
       atol=atol*1.d0
       rtol=rtol*1.d0
 
@@ -57,9 +52,6 @@ c      iwork(4)=0  Atol and rtol are scalars.
       iwork(2)=1
       iwork(3)=0
       iwork(4)=0
-c c
-c       write(7,*) 'Starting values:'
-c       iwork(1) = iwork1
 c--------------------------------------------------------
 c     iwork(19)   =2 Stepsize control with  memory
 c                 =1 Stepsize control without memory
@@ -70,9 +62,6 @@ c     iwork(22)   =1 Enable F_W (noise, constant stepsize)
 c     iwork(23)   =1 Verbose (print stepsizes and errors)
 c     iwork(24)   =0 (symmetric diffusion operator)
 c--------------------------------------------------------
-c	 iwork(19)=2
-c	 iwork(23)=0
-c	 iwork(24)=0
       if (fixedstep) then
           iwork(19)=0
       else
@@ -81,11 +70,8 @@ c	 iwork(24)=0
 	iwork(23)=0
 	iwork(24)=0
 c
-c	 iwork(20)=1
-c	 iwork(21)=1
-c	 iwork(22)=0
-      iwork(20)=iwork20
-	iwork(21)=iwork21
+	iwork(20)=1
+	iwork(21)=0
 	iwork(22)=0
 
 c iwork for stats
@@ -98,10 +84,11 @@ c iwork for stats
 c ----- integration -----
 	write (6,*) 'rtol',rtol
 	write (6,*) 'atol',atol
+
 	CALL CPU_TIME(time0)
 c ----- to integrate with rock2.f
       call pirock(neqn,npdes,t,tend,h,y,fd,fd2,fa,fr,fw,atol,rtol,
-     &            frjac,ijac,work,iwork,idid)
+     &           frjac,ijac,work,iwork,idid)
       CALL CPU_TIME(time1)
 	write (6,*) 'CPU time',time1-time0
 c ----- print statistics -----
@@ -113,7 +100,7 @@ c ----- print statistics -----
       write(6,*) 'Max number of stages used=',iwork(10)
       write(6,*) 'Number of f eval. for the spectr. radius=',iwork(9)
 	write(6,*) 'Max number of iterations used=',iwork(13)
-      write (6,91) iwork(5),iwork(16),iwork(6),
+      write(6,91) iwork(5),iwork(16),iwork(6),
      &   iwork(7),iwork(8),iwork(13)
  91   format(' Number of f evaluations=',i7,' fA evaluations=',i7,
      &   ' steps=',i7,' accpt=',i7,' rejct=',i7,' max iter',i4)

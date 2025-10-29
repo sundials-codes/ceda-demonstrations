@@ -108,16 +108,16 @@ def calc_error(nx, solfile, reffile):
     return np.sqrt(np.dot(uerr,uerr) / nx / 3)
 
 # utility routine to run the C++ executable to generate a reference solution for a given problem configuration
-def generate_reference(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', c=1e-2, d=1e-1, eps=1e-2, nx=512):
-    runcommand = "%s --c %e --d %e --eps %e --nx %d --nout 1 --calc_error --write_solution" % (exe, c, d, eps, nx) + int_method(probtype, "ExtSTS", 'RKC', 'ARS', None)
+def generate_reference(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512):
+    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --nout 1 --calc_error --write_solution" % (exe, c, d, A, B, eps, nx) + int_method(probtype, "ExtSTS", 'RKC', 'ARS', None)
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
 
 
 # utility routine to run the PIROCK executable
-def runtest_pirock(exe='./bin/advection_diffusion_reaction_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
+def runtest_pirock(exe='./bin/advection_diffusion_reaction_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
     if (nx != 512):
         raise(ValueError, "To run without 512 spatial nodes, need to edit/recompile pb_adr_1D.f (and this error check)")
-    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': 0, 'Fails': 0, 'Accuracy': 0, 'AdvEvals': 0, 'DiffEvals': 0, 'RxEvals': 0}
+    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
 
     advec_iwork20 = 1  # True
     reac_iwork21 = 1   # True
@@ -136,8 +136,8 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_pirock', probtype='Ad
         namefile.write("   vyadv = 0.0\n")
         namefile.write("   wxadv = " + str(c) + "\n")
         namefile.write("   wyadv = 0.0\n")
-        namefile.write("   brussa = 0.6\n")
-        namefile.write("   brussb = 2.0\n")
+        namefile.write("   brussa = " + str(A) + "\n")
+        namefile.write("   brussb = " + str(B) + "\n")
         namefile.write("   eps = " + str(eps) + "\n")
         namefile.write("   atol = " + str(atol) + "\n")
         namefile.write("   rtol = " + str(rtol) + "\n")
@@ -180,9 +180,9 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_pirock', probtype='Ad
 
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
-def runtest(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
-    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': 0, 'Fails': 0, 'Accuracy': 0, 'AdvEvals': 0, 'DiffEvals': 0, 'RxEvals': 0}
-    runcommand = "%s --c %e --d %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
+def runtest(exe='./bin/advection_diffusion_reaction', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
+    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
@@ -317,75 +317,105 @@ RxDiffSolvers = [['ARK', None, None, 5],
                  ['ExtSTS', 'RKL', 'SSPSDIRK2', None]]
 StrangSolvers = [['Strang', 'RKC', None, None],
                  ['Strang', 'RKL', None, None]]
-c = 1e-2
+#c = 1e-2
+c = 0.5
 d = 1e-1
-eps = 1e-2
+#RxNetworks = [[1.3, 1e7, 1.0]]
+RxNetworks = [[0.6, 2.0, 1e-2], # A, B, eps
+              [0.6, 2.0, 1.0],
+              [1.3, 1e2, 1.0]]
 nx = 512
-rtol = [3e-3, 1e-3, 3e-4, 1e-4, 3e-5, 1e-5, 3e-6, 1e-6, 3e-7]
-atol = 1e-11
 fixed_maxl = 500
-fixedh = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 nout = 1
 
 # Advection-diffusion-reaction tests
 if (DoAdvDiffRx):
 
-    # generate reference solution for PIROCK error
-    generate_reference(Executable, probtype='AdvDiffRx', c=c, d=d, eps=eps, nx=nx)
-
     if (DoFixedTests):
-
         Stats = []
-        for solver in AdvDiffRxSolvers:
-            for h in fixedh:
-                Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], c=c, d=d, eps=eps,
-                                     nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-        for solver in StrangSolvers:
-            for h in fixedh:
-                Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], c=c, d=d, eps=eps,
-                                     nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-        for h in fixedh:
-            Stats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, eps=eps,
-                                 nx=nx, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
 
-        Df = pd.DataFrame.from_records(Stats)
-        print("Fixed step AdvDiffRx test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiffRx-fixed.xlsx', index=False)
+        # set step sizes for fixed-step ADR tests
+        fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+
+        for RxNet in RxNetworks:
+            A = RxNet[0]
+            B = RxNet[1]
+            eps = RxNet[2]
+
+            # generate reference solution for PIROCK error
+            generate_reference(Executable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B,
+                               eps=eps, nx=nx)
+
+            for solver in AdvDiffRxSolvers:
+                for h in fixedh:
+                    Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
+                                        nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+            for solver in StrangSolvers:
+                for h in fixedh_strang:
+                    Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
+                                        nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+            for h in fixedh_pirock:
+                Stats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B, eps=eps,
+                                    nx=nx, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+
+            Df = pd.DataFrame.from_records(Stats)
+            print("Fixed step AdvDiffRx test Df:")
+            print(Df)
+            print("Saving as Excel")
+            Df.to_excel('AdvDiffRx-fixed.xlsx', index=False)
 
     if (DoAdaptiveTests):
-
         Stats = []
-        for solver in AdvDiffRxSolvers:
-            for rt in rtol:
-                Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], c=c, d=d,
-                                     eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-        for rt in rtol:
-            Stats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d,
-                                        eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
 
-        Df = pd.DataFrame.from_records(Stats)
-        print("Adaptive step AdvDiffRx test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiffRx-adapt.xlsx', index=False)
+        # set tolerances for adaptive ADR tests
+        rtol = np.logspace(-2.5, -6.5, 7)
+        atol = 1e-11
+
+        for RxNet in RxNetworks:
+            A = RxNet[0]
+            B = RxNet[1]
+            eps = RxNet[2]
+
+            # generate reference solution for PIROCK error
+            generate_reference(Executable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B,
+                               eps=eps, nx=nx)
+
+            for solver in AdvDiffRxSolvers:
+                for rt in rtol:
+                    Stats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], c=c, d=d, A=A, B=B,
+                                        eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
+            for rt in rtol:
+                Stats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B,
+                                            eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
+
+            Df = pd.DataFrame.from_records(Stats)
+            print("Adaptive step AdvDiffRx test Df:")
+            print(Df)
+            print("Saving as Excel")
+            Df.to_excel('AdvDiffRx-adapt.xlsx', index=False)
 
 # Advection-diffusion tests
 if (DoAdvDiff):
 
-    # generate reference solution for PIROCK error
-    generate_reference(Executable, probtype='AdvDiff', c=c, d=d, eps=eps, nx=nx)
-
     if (DoFixedTests):
-
         Stats = []
+
+        # set step sizes for fixed-step AD tests
+        fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+
+        # generate reference solution for PIROCK error
+        generate_reference(Executable, probtype='AdvDiff', c=c, d=d, nx=nx)
+
         for solver in AdvDiffSolvers:
             for h in fixedh:
                 Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
@@ -393,12 +423,12 @@ if (DoAdvDiff):
                                      table_id=solver[3], c=c, d=d,
                                      nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
         for solver in StrangSolvers:
-            for h in fixedh:
+            for h in fixedh_strang:
                 Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
                                      ststype=solver[1], extststype=solver[2],
                                      table_id=solver[3], c=c, d=d,
                                      nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-        for h in fixedh:
+        for h in fixedh_pirock:
             Stats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
                                         nx=nx, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
 
@@ -409,8 +439,15 @@ if (DoAdvDiff):
         Df.to_excel('AdvDiff-fixed.xlsx', index=False)
 
     if (DoAdaptiveTests):
-
         Stats = []
+
+        # set tolerances for adaptive AD tests
+        rtol = np.logspace(-2.5, -6.5, 7)
+        atol = 1e-11
+
+        # generate reference solution for PIROCK error
+        generate_reference(Executable, probtype='AdvDiff', c=c, d=d, nx=nx)
+
         for solver in AdvDiffSolvers:
             for rt in rtol:
                 Stats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
@@ -430,51 +467,74 @@ if (DoAdvDiff):
 # Reaction-diffusion tests
 if (DoRxDiff):
 
-    # generate reference solution for PIROCK error
-    generate_reference(Executable, probtype='RxDiff', c=c, d=d, eps=eps, nx=nx)
-
     if (DoFixedTests):
-
         Stats = []
-        for solver in RxDiffSolvers:
-            for h in fixedh:
-                Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], d=d, eps=eps,
-                                     nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-        for solver in StrangSolvers:
-            for h in fixedh:
-                Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], d=d, eps=eps,
-                                     nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-        for h in fixedh:
-            Stats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d, eps=eps,
-                                        nx=nx, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
 
-        Df = pd.DataFrame.from_records(Stats)
-        print("Fixed step RxDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('RxDiff-fixed.xlsx', index=False)
+        # set step sizes for fixed-step RD tests
+        fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+        fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+
+        for RxNet in RxNetworks:
+            A = RxNet[0]
+            B = RxNet[1]
+            eps = RxNet[2]
+
+            # generate reference solution for PIROCK error
+            generate_reference(Executable, probtype='RxDiff', d=d, A=A, B=B,
+                               eps=eps, nx=nx)
+
+            for solver in RxDiffSolvers:
+                for h in fixedh:
+                    Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], d=d, A=A, B=B, eps=eps,
+                                        nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+            for solver in StrangSolvers:
+                for h in fixedh_strang:
+                    Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], d=d, A=A, B=B, eps=eps,
+                                        nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+            for h in fixedh_pirock:
+                Stats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d, A=A, B=B, eps=eps,
+                                            nx=nx, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+
+            Df = pd.DataFrame.from_records(Stats)
+            print("Fixed step RxDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            Df.to_excel('RxDiff-fixed.xlsx', index=False)
 
     if (DoAdaptiveTests):
-
         Stats = []
-        for solver in RxDiffSolvers:
-            for rt in rtol:
-                Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], d=d, eps=eps,
-                                     nx=nx, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-        for rt in rtol:
-            Stats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d,
-                                        eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
 
-        Df = pd.DataFrame.from_records(Stats)
-        print("Adaptive step RxDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('RxDiff-adapt.xlsx', index=False)
+        # set tolerances for adaptive RD tests
+        rtol = np.logspace(-2.5, -6.5, 7)
+        atol = 1e-11
+
+        for RxNet in RxNetworks:
+            A = RxNet[0]
+            B = RxNet[1]
+            eps = RxNet[2]
+
+            # generate reference solution for PIROCK error
+            generate_reference(Executable, probtype='RxDiff', d=d, A=A, B=B, eps=eps, nx=nx)
+
+            for solver in RxDiffSolvers:
+                for rt in rtol:
+                    Stats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                        ststype=solver[1], extststype=solver[2],
+                                        table_id=solver[3], d=d, A=A, B=B, eps=eps,
+                                        nx=nx, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
+            for rt in rtol:
+                Stats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d,
+                                            A=A, B=B, eps=eps, nx=nx, rtol=rt, atol=atol, fixedh=0.0))
+
+            Df = pd.DataFrame.from_records(Stats)
+            print("Adaptive step RxDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            Df.to_excel('RxDiff-adapt.xlsx', index=False)
 
 # end of script

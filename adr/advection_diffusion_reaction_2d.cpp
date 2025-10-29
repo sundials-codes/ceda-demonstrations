@@ -29,16 +29,20 @@
  *   1. An IMEX Runge-Kutta method with ARKStep.  Both reaction and diffusion
  *      are treated implicitly, while advection is evolved explicitly in time.
  *
- *      Note: either of the advection and reaction operators can be disabled
- *      using the flags --no-advection and/or --no-reaction.
+ *      Note1: the advection operator can be disabled using the --no-advection flag.
+ *      Note2: the reaction operator will be treated explicitly, unless the
+ *             --implicit-reaction flag is used, in which case the reaction terms are
+ *             treated implicitly.
  *
  *   2. An extended super-time-stepping method that combines MRIStep and LSRKStep.
  *      Here, diffusion is treated explicitly using a STS method, advection
  *      is treated explicitly using the ExtSTS method, and reaction is treated
  *      implicitly using the ExtSTS method.
  *
- *      Note: either of the advection and reaction operators can be disabled
- *      using the flags --no-advection and/or --no-reaction.
+ *      Note1: the advection operator can be disabled using the --no-advection flag.
+ *      Note2: the reaction operator will be treated explicitly, unless the
+ *             --implicit-reaction flag is used, in which case the reaction terms are
+ *             treated implicitly.
  *
  *   3. A second-order Strang operator splitting method that combines LSRKStep and
  *      ARKStep, where diffusion is treated explicitly using LSRKStep, advection is
@@ -47,8 +51,10 @@
  *      always use the ARS(2,2,2) table (whether it is run in ERK, DIRK, or ARK
  *      mode).
  *
- *      Note: either of the advection and reaction operators can be disabled
- *      using the flags --no-advection and/or --no-reaction.
+ *      Note1: the advection operator can be disabled using the --no-advection flag.
+ *      Note2: the reaction operator will be treated explicitly, unless the
+ *             --implicit-reaction flag is used, in which case the reaction terms are
+ *             treated implicitly.
  *
  * Several command line options are available to change the problem parameters
  * and integrator settings. Use the flag --help for more information.
@@ -303,25 +309,15 @@ int SetupERK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Problem configuration
   ARKRhsFn f_RHS; // explicit RHS function
 
-  if (udata.reaction && udata.advection)
+  if (udata.advection)
   {
     // Explicit -- advection-diffusion-reaction
     f_RHS = f_adv_diff_react;
   }
-  else if (!udata.reaction && udata.advection)
-  {
-    // Explicit -- advection-diffusion
-    f_RHS = f_adv_diff;
-  }
-  else if (udata.reaction && !udata.advection)
+  else
   {
     // Explicit -- diffusion-reaction
     f_RHS = f_diff_react;
-  }
-  else
-  {
-    cerr << "ERROR: Invalid problem configuration" << endl;
-    return -1;
   }
 
   // Create ERKStep memory
@@ -365,28 +361,28 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   ARKRhsFn fe_RHS; // explicit RHS function
   ARKRhsFn fi_RHS; // implicit RHS function
 
-  // advection-diffusion-reaction
-  if (udata.reaction && udata.advection)
+  // advection + diffusion + implicit reaction
+  if (udata.impl_reaction && udata.advection)
   {
     fe_RHS = f_advection;
     fi_RHS = f_diff_react;
   }
-  // advection-diffusion
-  else if (!udata.reaction && udata.advection)
+  // advection + diffusion + explicit reaction
+  else if (!udata.impl_reaction && udata.advection)
   {
-    fe_RHS = f_advection;
+    fe_RHS = f_adv_react;
     fi_RHS = f_diffusion;
   }
-  // diffusion-reaction
-  else if (udata.reaction && !udata.advection)
+  // diffusion + implicit reaction
+  else if (udata.impl_reaction && !udata.advection)
   {
     fe_RHS = nullptr;
     fi_RHS = f_diff_react;
   }
-  // diffusion
-  else if (!udata.reaction && !udata.advection)
+  // diffusion + explicit reaction
+  else if (!udata.impl_reaction && !udata.advection)
   {
-    fe_RHS = nullptr;
+    fe_RHS = f_reaction;
     fi_RHS = f_diffusion;
   }
   else
@@ -611,28 +607,28 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
   ARKRhsFn fe_RHS;   // explicit RHS function
   ARKRhsFn fi_RHS;   // implicit RHS function
 
-  // advection-diffusion-reaction
-  if (udata.reaction && udata.advection)
+  // advection + diffusion + implicit reaction
+  if (udata.impl_reaction && udata.advection)
   {
     fe_RHS = f_advection;
     fi_RHS = f_diff_react;
   }
-  // advection-diffusion
-  else if (!udata.reaction && udata.advection)
+  // advection + diffusion + explicit reaction
+  else if (!udata.impl_reaction && udata.advection)
   {
-    fe_RHS = f_advection;
+    fe_RHS = f_adv_react;
     fi_RHS = f_diffusion;
   }
-  // diffusion-reaction
-  else if (udata.reaction && !udata.advection)
+  // diffusion + implicit reaction
+  else if (udata.impl_reaction && !udata.advection)
   {
     fe_RHS = nullptr;
     fi_RHS = f_diff_react;
   }
-  // diffusion
-  else if (!udata.reaction && !udata.advection)
+  // diffusion + explicit reaction
+  else if (!udata.impl_reaction && !udata.advection)
   {
-    fe_RHS = nullptr;
+    fe_RHS = f_reaction;
     fi_RHS = f_diffusion;
   }
   else
@@ -710,9 +706,16 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   ARKRhsFn fi_RHS;   // implicit RHS function
   ARKLsJacFn Ji_RHS; // implicit RHS Jacobian function
 
-  fe_RHS = (udata.advection) ? f_advection : nullptr;
-  fi_RHS = (udata.reaction) ? f_reaction : nullptr;
-  Ji_RHS = (udata.reaction) ? J_reaction : nullptr;
+  fi_RHS = (udata.impl_reaction) ? f_reaction : nullptr;
+  Ji_RHS = (udata.impl_reaction) ? J_reaction : nullptr;
+  if (udata.advection)
+  {
+    fe_RHS = (udata.impl_reaction) ? f_advection : f_adv_react;
+  }
+  else
+  {
+    fe_RHS = (udata.impl_reaction) ? nullptr : f_reaction;
+  }
 
   // -------------------------------
   // Setup the custom STS integrator
@@ -794,7 +797,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
   // If implicit, setup solvers
-  if (udata.reaction)
+  if (udata.impl_reaction)
   {
     // Create banded matrix
     *A = SUNBandMatrix(udata.neq, 2, 2, ctx);
@@ -833,7 +836,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 
   // Select ExtSTS method via MRIStepCoupling structure
   MRIStepCoupling C;
-  if (udata.advection && udata.reaction) // advection + diffusion + reaction
+  if (udata.advection && udata.impl_reaction) // advection + diffusion + implicit reaction
   {
     if (uopts.extsts_method == 0) // ARS(2,2,2)
     {
@@ -902,7 +905,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
     }
   }
-  else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
+  else if (!udata.impl_reaction) // expl adv + STS diff + expl react -or- STS diff + expl react (both are fully explicit)
   {
     if (uopts.extsts_method == 0)  // ARS(2,2,2) ERK
     {
@@ -984,7 +987,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       C->W[0][2][1]           = one / two;
     }
   }
-  else if (!udata.advection && udata.reaction) // diffusion + reaction
+  else if (!udata.advection && udata.impl_reaction) // diffusion + implicit reaction
   {
     if (uopts.extsts_method == 0)  // ARS(2,2,2)
     {
@@ -1098,9 +1101,16 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   ARKRhsFn fi_RHS;     // implicit RHS function
   ARKLsJacFn Ji_RHS;   // implicit RHS Jacobian function
 
-  fe_RHS = (udata.advection) ? f_advection : nullptr;
-  fi_RHS = (udata.reaction)  ? f_reaction  : nullptr;
-  Ji_RHS = (udata.reaction)  ? J_reaction  : nullptr;
+  fi_RHS = (udata.impl_reaction) ? f_reaction : nullptr;
+  Ji_RHS = (udata.impl_reaction) ? J_reaction : nullptr;
+  if (udata.advection)
+  {
+    fe_RHS = (udata.impl_reaction) ? f_advection : f_adv_react;
+  }
+  else
+  {
+    fe_RHS = (udata.impl_reaction) ? nullptr : f_reaction;
+  }
 
   // -----------------------------
   // Setup the LSRKStep integrator
@@ -1167,7 +1177,7 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "ARKodeSetMaxNumSteps")) { return 1; }
 
   // If implicit or ImEx, setup solvers
-  if (udata.reaction)
+  if (udata.impl_reaction)
   {
     // Specify tolerances (relevant for nonlinear implicit solver)
     flag = ARKodeSStolerances(*arkstep_mem, uopts.rtol, uopts.atol);
@@ -1212,7 +1222,7 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Set the RK tables (no embeddings needed)
   ARKodeButcherTable Be = nullptr;
   ARKodeButcherTable Bi = nullptr;
-  if (udata.reaction)
+  if (udata.impl_reaction)
   {
     Bi = ARKodeButcherTable_Alloc(3, SUNFALSE);
     const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
@@ -1226,7 +1236,7 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     Bi->b[2] = gamma;
     Bi->q = 2;
   }
-  if (udata.advection)
+  if (udata.advection || !udata.impl_reaction)
   {
     Be = ARKodeButcherTable_Alloc(3, SUNFALSE);
     const sunrealtype gamma = (SUN_RCONST(2.0)-SUNRsqrt(SUN_RCONST(2.0)))/SUN_RCONST(2.0);
@@ -1379,9 +1389,9 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   // Compute advection RHS
   const sunrealtype cux = ONE * udata->cux / (TWO * udata->dx);
-  const sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dx);
+  const sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dy);
   const sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
-  const sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dx);
+  const sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dy);
   const sunindextype nx = udata->nx;
   const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
@@ -1421,7 +1431,9 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   if (check_ptr(fdata, "N_VGetArrayPointer")) { return -1; }
 
   // Compute diffusion RHS
-  const sunrealtype d = udata->d / (udata->dx * udata->dx); //dx=dy
+  const sunrealtype d = udata->d;
+  const sunrealtype dxinv2 = ONE / (udata->dx * udata->dx);
+  const sunrealtype dyinv2 = ONE / (udata->dy * udata->dy);
   const sunindextype nx = udata->nx;
   const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
@@ -1441,48 +1453,10 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
       const sunrealtype vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
       const sunrealtype vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
 
-      fdata[UIDX(i, j, nx)] = d * (ulx + urx + uby + uty - FOUR * uc);
-      fdata[VIDX(i, j, nx)] = d * (vlx + vrx + vby + vty - FOUR * vc);
-    }
-  }
-
-  return 0;
-}
-
-// Diffusion Jacobian function
-int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
-{
-  // Access problem data
-  UserData* udata = (UserData*)user_data;
-
-  // Set shortcut variables
-  const sunrealtype d = udata->d / (udata->dx * udata->dx);//dx=dy
-  const sunindextype nx = udata->nx;
-  const sunindextype ny = udata->ny;
-
-  SUNMatZero(J);
-  for (sunindextype j = 1; j < udata->ny - 1; j++)
-  {
-    for (sunindextype i = 1; i < udata->nx - 1; i++)
-    {
-      /* x-direction */
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i - 1, j, nx)) = d;
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j, nx))     = -d * TWO;
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i + 1, j, nx)) = d;
-
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i - 1, j, nx)) = d;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i + 1, j, nx)) = d;
-
-      /* y-direction */
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j - 1, nx)) = d;
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j, nx))     = -d * TWO;//SA: Jacobian will be bigger for 2D, with block matrices
-      SM_ELEMENT_B(J, UIDX(i, j, nx), UIDX(i, j + 1, nx)) = d;
-
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j - 1, nx)) = d;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j, nx))     = -d * TWO;
-      SM_ELEMENT_B(J, VIDX(i, j, nx), VIDX(i, j + 1, nx)) = d;
+      fdata[UIDX(i, j, nx)] = d * dxinv2 * (ulx + urx - TWO * uc)
+                            + d * dyinv2 * (uby + uty - TWO * uc);
+      fdata[VIDX(i, j, nx)] = d * dxinv2 * (vlx + vrx - TWO * vc)
+                            + d * dyinv2 * (vby + vty - TWO * vc);
     }
   }
 
@@ -1510,7 +1484,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
       const sunrealtype u = ydata[UIDX(i, j, udata->nx)];
       const sunrealtype v = ydata[VIDX(i, j, udata->nx)];
 
-      fdata[UIDX(i, j, udata->nx)] = udata->A  + u * u * v - (udata->B + ONE) * u;
+      fdata[UIDX(i, j, udata->nx)] = udata->A + u * u * v - (udata->B + ONE) * u;
       fdata[VIDX(i, j, udata->nx)] = udata->B * u - u * u * v;
     }
   }
@@ -1590,24 +1564,22 @@ int f_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   return 0;
 }
 
-// Diffusion-reaction Jacobian function
-int J_diff_react(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
-                 void* user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+// Advection-reaction RHS function
+int f_adv_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;
 
-  // Compute diffusion Jacobian
-  int flag = J_diffusion(t, y, fy, J, user_data, tmp1, tmp2, tmp3);
+  // Compute advection
+  int flag = f_advection(t, y, f, user_data);
   if (flag) { return flag; }
 
-  // Compute reaction Jacobian
-  flag = J_reaction(t, y, fy, udata->temp_J, user_data, tmp1, tmp2, tmp3);
+  // Compute reaction
+  flag = f_reaction(t, y, udata->temp_v, user_data);
   if (flag) { return flag; }
 
-  // Combine Jacobians
-  flag = SUNMatScaleAdd(ONE, J, udata->temp_J);
-  if (flag) { return -1; }
+  // Combine advection and reaction
+  N_VLinearSum(ONE, f, ONE, udata->temp_v, f);
 
   return 0;
 }
@@ -1665,7 +1637,8 @@ int diffusion_domeig(sunrealtype t, N_Vector y, N_Vector fn,
   UserData* udata = (UserData*)user_data;
 
   // Fill in spectral radius value
-  *lambdaR = -SUN_RCONST(4.0) * udata->d / udata->dx / udata->dx;
+  *lambdaR = -SUN_RCONST(4.0) * udata->d / udata->dx / udata->dx
+             -SUN_RCONST(4.0) * udata->d / udata->dy / udata->dy;
   *lambdaI = SUN_RCONST(0.0);
 
   return 0;
@@ -1677,14 +1650,13 @@ int SetIC(N_Vector y, UserData& udata)
   sunrealtype* ydata = N_VGetArrayPointer(y);
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
 
-  sunrealtype x;
-
   for (sunindextype j = 0; j < udata.ny; j++)
   {
+    const sunrealtype y = udata.yl + j * udata.dy;
     for (sunindextype i = 0; i < udata.nx; i++)
     {
-      x = udata.xl + i * udata.dx;//same for y
-      ydata[UIDX(i, j, udata.nx)] = 22.0 * x * SUNRpowerR((ONE - x), 1.5);
+      const sunrealtype x = udata.xl + i * udata.dx;
+      ydata[UIDX(i, j, udata.nx)] = 22.0 * y * SUNRpowerR((ONE - y), 1.5);
       ydata[VIDX(i, j, udata.nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
     }
   }

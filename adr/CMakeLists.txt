@@ -42,15 +42,17 @@ install(TARGETS ${target_2d} DESTINATION ${demonstration_bin})
 
 enable_language(Fortran)
 
-set(sources_pirock dr_adr_1D.f)
+set(sources_pirock_adr1D dr_adr_1D.f)
+set(target_pirock_adr1D advection_diffusion_reaction_pirock)
+add_executable(${target_pirock_adr1D} ${sources_pirock_adr1D})
 
-# set the target name
-set(target_pirock advection_diffusion_reaction_pirock)
+set(sources_pirock_bruss2dadv dr_bruss2dadv.f)
+set(target_pirock_bruss2dadv advection_diffusion_2d_pirock)
+add_executable(${target_pirock_bruss2dadv} ${sources_pirock_bruss2dadv})
 
-# create executable
-add_executable(${target_pirock} ${sources_pirock})
-
-#set_target_properties(${target} PROPERTIES LINKER_LANGUAGE Fortran)
+set(sources_pirock_bruss2dreac dr_bruss2dreac.f)
+set(target_pirock_bruss2dreac reaction_diffusion_2d_pirock)
+add_executable(${target_pirock_bruss2dreac} ${sources_pirock_bruss2dreac})
 
 # Detect compiler and set legacy flags accordingly
 get_filename_component(Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
@@ -61,7 +63,7 @@ if(Fortran_COMPILER_NAME MATCHES "gfortran.*")
 endif()
 
 #   request installation of the target into the overall "bin" folder
-install(TARGETS ${target_pirock} DESTINATION ${demonstration_bin})
+install(TARGETS ${target_pirock_adr1D} DESTINATION ${demonstration_bin})
 
 
 ### install testing scripts and input file ###

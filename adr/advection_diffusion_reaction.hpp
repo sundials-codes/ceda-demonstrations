@@ -702,7 +702,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     if (udata.advection && udata.reaction)  // advection + diffusion + reaction
     {
       if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARKS(2,2,2)" << endl; }
+      { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
       else
       { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
     }
