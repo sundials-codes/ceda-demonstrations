@@ -10,15 +10,37 @@ c --- Problem driver and dimension parameters
 c ----------------------------------------------------
 	implicit double precision (a-h,o-z)
       external fd,fd2,fa,fr,fw
+c --- common parameters for the problem -----
+      common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
       integer iwork(25),idid,ijac(neqn)
-c ----- required tolerance -----
-	atol=1.d-3
-	rtol=atol
+      logical fixedstep
+c --- namelist definition
+      namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
+     &    atol,rtol,h
+c --- read input from namelist file (if it exists) ---
+      open(10, file='rd_2D_pirock_params.txt', status='old', err=100)
+      read(10, nml=inputs)
+      close(10)
+      goto 110
+
+  100 continue
+      write(6,*) 'Could not open namelist file'
 c ----- initial step size -----
-	h=1.d-3
-	write (6,*) 'initial step size h=',h
+  110	if (h .le. 0.d0) then
+          fixedstep=.false.
+          h=1.d-3
+          write(6,*) 'Initial step size h=',h
+      else
+          fixedstep=.true.
+          write(6,*) 'Fixed step size h=',h
+      end if
+c --------------- multiplying by input tolerances by 1.d0 since Python doesn't write values with '.d'
+      atol=atol*1.d0
+      rtol=rtol*1.d0
+
 c--------------------------------------------------------
 c     Initialize iwork:
 c      iwork(1)=1  RHODIFF returns an upper bound for the spectral radius.
@@ -39,7 +61,11 @@ c     iwork(22)   =1 Enable F_W (noise, constant stepsize)
 c     iwork(23)   =1 Verbose (print stepsizes and errors)
 c     iwork(24)   =0 (symmetric diffusion operator)
 c--------------------------------------------------------
-	iwork(19)=2
+      if (fixedstep) then
+          iwork(19)=0
+      else
+          iwork(19)=2
+      end if
 	iwork(23)=0
 	iwork(24)=0
 c
@@ -55,7 +81,9 @@ c iwork for stats
       call init(nsd,t,tend,y)
 
 c ----- integration -----
-	write (6,*) 'tol',atol
+	write (6,*) 'rtol',rtol
+	write (6,*) 'atol',atol
+
 	CALL CPU_TIME(time0)
 c ----- to integrate with rock2.f
       call pirock(neqn,npdes,t,tend,h,y,fd,fd2,fa,fr,fw,atol,rtol,

@@ -4,7 +4,7 @@ set(sources ${shared_sources}
   advection_diffusion_reaction.cpp)
 
 # set the target name
-set(target advection_diffusion_reaction)
+set(target advection_diffusion_reaction_1D)
 
 # create executable
 add_executable(${target} ${sources})
@@ -24,7 +24,7 @@ set(sources_2d ${shared_sources}
   advection_diffusion_reaction_2d.cpp)
 
 # set the target name
-set(target_2d advection_diffusion_reaction_2d)
+set(target_2d advection_diffusion_reaction_2D)
 
 # create executable
 add_executable(${target_2d} ${sources_2d})
@@ -43,15 +43,15 @@ install(TARGETS ${target_2d} DESTINATION ${demonstration_bin})
 enable_language(Fortran)
 
 set(sources_pirock_adr1D dr_adr_1D.f)
-set(target_pirock_adr1D advection_diffusion_reaction_pirock)
+set(target_pirock_adr1D advection_diffusion_reaction_1D_pirock)
 add_executable(${target_pirock_adr1D} ${sources_pirock_adr1D})
 
 set(sources_pirock_bruss2dadv dr_bruss2dadv.f)
-set(target_pirock_bruss2dadv advection_diffusion_2d_pirock)
+set(target_pirock_bruss2dadv advection_diffusion_reaction_2D_pirock)
 add_executable(${target_pirock_bruss2dadv} ${sources_pirock_bruss2dadv})
 
 set(sources_pirock_bruss2dreac dr_bruss2dreac.f)
-set(target_pirock_bruss2dreac reaction_diffusion_2d_pirock)
+set(target_pirock_bruss2dreac reaction_diffusion_2D_pirock)
 add_executable(${target_pirock_bruss2dreac} ${sources_pirock_bruss2dreac})
 
 # Detect compiler and set legacy flags accordingly

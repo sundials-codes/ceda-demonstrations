@@ -516,7 +516,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
 
   // Problem parameters
   find_arg(args, "--no-advection", udata.advection, false);
-  find_arg(args, "--implicit-reaction", udata.impl_reaction, false);
+  find_arg(args, "--implicit-reaction", udata.impl_reaction, true);
   find_arg(args, "--cux", udata.cux);
   find_arg(args, "--cuy", udata.cuy);
   find_arg(args, "--cvx", udata.cvx);

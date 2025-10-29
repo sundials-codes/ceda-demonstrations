@@ -22,7 +22,7 @@ c --- namelist definition
       namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
      &    atol,rtol,h
 c --- read input from namelist file (if it exists) ---
-      open(10, file='ad_2D_pirock_params.txt', status='old', err=100)
+      open(10, file='adr_2D_pirock_params.txt', status='old', err=100)
       read(10, nml=inputs)
       close(10)
       goto 110

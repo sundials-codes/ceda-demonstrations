@@ -28,7 +28,7 @@ c--------------------------------------------------------
       double precision  y(*)
 
 c --- common parameters for the problem -----
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 
 c ----- dimensions -----
@@ -47,10 +47,28 @@ c ----- dimensions -----
 			brussb=2.0d7
 
       write(6,*) 'Integration of the '
-     &   ,'2-dim Brusselator problem, ns=',ns
+     &   ,'2-dim Brusselator reaction-diffusion problem'
+     &   ,', ns=',ns
+      write(6,*) 'u advection:', uxadv, uyadv
+      write(6,*) 'v advection:', vxadv, vyadv
+      write(6,*) 'diffusion:', alf
+      write(6,*) 'brusselator A:', brussa
+      write(6,*) 'brusselator B:', brussb
+c --------------- multiply by 1.d0 since Python doesn't write values with '.d'
+      alf=alf*1.d0
+      uxadv=uxadv*1.d0
+      uyadv=uyadv*1.d0
+      vxadv=vxadv*1.d0
+      vyadv=vyadv*1.d0
+      wxadv=wxadv*1.d0
+      wyadv=wyadv*1.d0
+      brussa=brussa*1.d0
+      brussb=brussb*1.d0
+
 c ----- initial and end point of integration -----
       t=0.0d0
       tend=2.d0
+
 c ----- initial values -----
       ans=ns
       do j=1,ns
@@ -74,7 +92,7 @@ c ----- initial values -----
       double precision  y(neqn),ytmp(neqn)
 
 c --- common parameters for the problem -----
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 
 c ----- file for solution -----
@@ -94,7 +112,7 @@ c     once.
 c--------------------------------------------------------
       double precision function rhodiff(neqn,t,y)
       implicit double precision (a-h,o-z)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
       rhodiff = 8.0d0*nssq*alf + 2.d0
       return
@@ -107,7 +125,7 @@ c     once.
 c--------------------------------------------------------
       double precision function rhoadv(neqn,t,y)
       implicit double precision (a-h,o-z)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
       rhoadv = 0.d0
       return
@@ -120,7 +138,7 @@ c--------------------------------------------------------
 c ----- brusselator with diffusion in 2 dim. space -----
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 c ----- constants for inhomogenity -----
       ans=ns
@@ -179,12 +197,12 @@ c--------------------------------------------------------
       subroutine fr(neqn,npdes,ieqn,x,y,f,frjac,is_frjac)
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 			logical is_frjac
 			uij=y(1)
       vij=y(2)
-      f(1)=brussa+uij*uij*vij-(brussb+1.d0)*uij
+      f(1)=brussa + uij*uij*vij - (brussb+1.d0)*uij
       f(2)=brussb*uij - uij*uij*vij
 			if (is_frjac) then
 			frjac(1,1)=2.d0*uij*vij-(brussb+1.d0)
@@ -202,7 +220,7 @@ c--------------------------------------------------------
       subroutine fw(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 
 		  do i=1,neqn
@@ -217,7 +235,7 @@ c--------------------------------------------------------
       subroutine fa(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 		  write (6,*) 'warning, dummy function fa called !!'
 			do i=1,neqn
@@ -232,7 +250,7 @@ c--------------------------------------------------------
       subroutine fd2(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 		  write (6,*) 'warning, dummy function fd2 called !!'
 			do i=1,neqn

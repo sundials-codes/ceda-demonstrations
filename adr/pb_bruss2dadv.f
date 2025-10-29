@@ -25,7 +25,7 @@ c
 c--------------------------------------------------------
 
       SUBROUTINE init(nsd,t,tend,y)
-		implicit double precision (a-h,o-z)
+		  implicit double precision (a-h,o-z)
       double precision  y(*)
 
 c --- common parameters for the problem -----
@@ -33,14 +33,15 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 
 c ----- dimensions -----
-		neqn   = nsd*nsd*2
-		ns     = nsd
+		  neqn   = nsd*nsd*2
+		  ns     = nsd
       nssq   = ns*ns
       nsnsm1 = ns*(ns-1)
       amult  = 1.d0
 
       write(6,*) 'Integration of the '
-     &   ,'2-dim Brusselator advection-diffusion problem, ns=',ns
+     &   ,'2-dim Brusselator advection-diffusion-reaction '
+     &   ,'problem, ns=',ns
       write(6,*) 'u advection:', uxadv, uyadv
       write(6,*) 'v advection:', vxadv, vyadv
       write(6,*) 'diffusion:', alf
@@ -76,13 +77,13 @@ c ----- initial values -----
         end do
       end do
 c
-		radadv=rhoadv(neqn,t,y)
-		write (6,*) 'amult',amult,'adv spectral radius',radadv
+		  radadv=rhoadv(neqn,t,y)
+		  write (6,*) 'amult',amult,'adv spectral radius',radadv
       return
       end
 
       SUBROUTINE solout(neqn,t,tend,y,ytmp)
-		implicit double precision (a-h,o-z)
+		  implicit double precision (a-h,o-z)
       double precision  y(neqn),ytmp(neqn)
 
 c --- common parameters for the problem -----
@@ -92,11 +93,11 @@ c --- common parameters for the problem -----
 c ----- file for solution -----
       open(8,file='sol.dat')
       rewind 8
-		write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
+		  write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
      &   ((y(((j-1)*ns+i)*2),i=1,ns),j=1,ns)
 
-		write(6,*) 'Solution is tabulated in file sol.dat'
-		close(8)
+		  write(6,*) 'Solution is tabulated in file sol.dat'
+		  close(8)
       return
       end
 c--------------------------------------------------------
@@ -227,11 +228,11 @@ c ----- upper neighbour -----
 c ----- the derivative -----
         uij=y(i*2-1)
         vij=y(i*2)
-		  f(i*2-1)=0.5d0*ns*(uxadv*(uright-uleft)+uyadv*(uup-ulow))
+		    f(i*2-1)=0.5d0*ns*(uxadv*(uright-uleft)+uyadv*(uup-ulow))
      &      + brussa + uij*uij*vij - (brussb+1.d0)*uij
         f(i*2)=0.5d0*ns*(vxadv*(vright-vleft)+vyadv*(vup-vlow))
      &      + brussb*uij - uij*uij*vij
-		end do
+		  end do
       return
       end
 c--------------------------------------------------------
@@ -243,11 +244,11 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-		write (6,*) 'warning, dummy function fd2 called !!'
-		do i=1,neqn
-		  f(i)=0.0d0
-		end do
-		return
+		  write (6,*) 'warning, dummy function fd2 called !!'
+		  do i=1,neqn
+		    f(i)=0.0d0
+		  end do
+		  return
       end
 c--------------------------------------------------------
 c     The subroutine FR (reaction terms)
@@ -258,18 +259,18 @@ c--------------------------------------------------------
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-		logical is_frjac
+		  logical is_frjac
       write (6,*) 'WARNING DUMMY FUNCTION FR CALLED'
-		f(1)=0.d0
-		f(2)=0.d0
-		if (is_frjac) then
-		  frjac(1,1)=0.d0
-		  frjac(2,1)=0.d0
-		  frjac(1,2)=0.d0
-		  frjac(2,2)=0.d0
-		end if
+		  f(1)=0.d0
+		  f(2)=0.d0
+		  if (is_frjac) then
+		    frjac(1,1)=0.d0
+		    frjac(2,1)=0.d0
+		    frjac(1,2)=0.d0
+		    frjac(2,2)=0.d0
+		  end if
 
-		return
+    	return
       end
 c--------------------------------------------------------
 c     The subroutine FW (noise terms)
@@ -280,9 +281,9 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-		write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
-		do i=1,neqn
-		  f(i)=0.d0
-		end do
-		return
+		  write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
+		  do i=1,neqn
+		    f(i)=0.d0
+		  end do
+		  return
       end
