@@ -78,7 +78,6 @@ for user_dom_eig in user_dom_eig_vals:
                     linewidth=1.5,
                     markersize=6,
                     color=color,
-                    label=f"{method}, eigsafety={eigsafety}"
                 )
                 plt.ylim(-0.1, 0.6)
 

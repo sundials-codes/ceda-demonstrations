@@ -46,7 +46,7 @@ df = df[~df["method"].str.contains("RKC", case=False, na=False)]
 methods = df["method"].unique()
 k_values = df["k"].unique()
 user_dom_opts = df["user_dom_eig"].unique()
-normtype_opts = df["normtype"].unique()
+normtype_opts = ["comp_norm", "cell_norm"]
 
 # Define a set of colors, markers and line styles to avoid overlap confusion
 colors = ['blue', 'orange', 'green', 'red']
@@ -72,7 +72,6 @@ for k_val in sorted(k_values):
                     linewidth=1.5,
                     markersize=6,
                     color=color,
-                    label=f"{method}, normtype={normtype}"
                 )
                 plt.ylim(1.0e-14, 1.0e-1)
         plt.xlabel("rtol")
@@ -97,7 +96,7 @@ for k_val in sorted(k_values):
                    marker='o',
                    linestyle='',
                    markersize=8,
-                   label=f"normtype={normtype}")
+                   label=f"{normtype}")
             for j, normtype in enumerate(normtype_opts)
         ]
 

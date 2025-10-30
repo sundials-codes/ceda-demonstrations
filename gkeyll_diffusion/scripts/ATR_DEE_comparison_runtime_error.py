@@ -38,14 +38,14 @@ error_col = "Accuracy"
 df = df[pd.to_numeric(df[error_col], errors='coerce').notnull()]
 df = df[df[error_col] < 1e20]  # remove blow-ups
 
-# Remove SSP results if present
+# Remove SSP and normtype 1 results if present
 df = df[~df["method"].str.contains("SSP", case=False, na=False)]
+df = df[df["normtype"] == 2]
 
 # Unique methods, k values, and eigsafety options
 methods = df["method"].unique()
 k_values = df["k"].unique()
-user_dom_opts = df["user_dom_eig"].unique()
-normtype_opts = df["normtype"].unique()
+user_dom_opts = ["$\\lambda_{user}$", "$\\lambda_{approx}$"]
 
 # Define a set of colors, markers and line styles to avoid overlap confusion
 colors = ['blue', 'orange', 'green', 'red']
@@ -53,13 +53,13 @@ markers = ["s", "D", "o", "^", "v", "<", ">", "p", "*", "X"]
 linestyles = ["-", "--", "-.", ":"]
 
 for k_val in sorted(k_values):
-    for normtype in normtype_opts:
+    for normtype in df["normtype"].unique():
         plt.figure(figsize=(10,6))
         df_subset = df[(df["k"] == k_val) & (df["normtype"] == normtype)]
 
         for i, method in enumerate(methods):
             df_method_subset = df_subset[df_subset["method"] == method]
-            for j, user_dom_eig in enumerate(user_dom_opts):
+            for j, user_dom_eig in enumerate(df["user_dom_eig"].unique()):
                 df_user_dom_eig = df_method_subset[df_method_subset["user_dom_eig"] == user_dom_eig]
                 marker = markers[i % len(markers)]
                 linestyle = linestyles[i % len(linestyles)]
@@ -72,7 +72,6 @@ for k_val in sorted(k_values):
                     linewidth=1.5,
                     markersize=6,
                     color=color,
-                    label=f"{method}, user_dom_eig={user_dom_eig}"
                 )
                 plt.ylim(1.0e-7, 1.0e-2)
         plt.xlabel("Runtime")
@@ -97,13 +96,13 @@ for k_val in sorted(k_values):
                    marker='o',
                    linestyle='',
                    markersize=8,
-                   label=f"user_dom_eig={user_dom_eig}")
+                   label=f"{user_dom_eig}")
             for j, user_dom_eig in enumerate(user_dom_opts)
         ]
 
-        first_legend = plt.legend(handles=method_handles, loc='lower left')
+        first_legend = plt.legend(handles=method_handles, loc='upper right')
         plt.gca().add_artist(first_legend)
-        plt.legend(handles=user_dom_eig_handles, loc='lower center')
+        plt.legend(handles=user_dom_eig_handles, loc='upper center')
 
         # Save separate plot for each combination of k and normtype
         filename = f"error_vs_Runtime_k_{k_val}_normtype_{normtype}.pdf"
