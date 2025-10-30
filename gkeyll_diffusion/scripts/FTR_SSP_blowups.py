@@ -22,8 +22,8 @@ plt.rcParams['axes.titlesize'] = 20
 plt.rcParams['axes.labelsize'] = 20
 
 # For tick labels specifically
-plt.rcParams['xtick.labelsize'] = 10
-plt.rcParams['ytick.labelsize'] = 10
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
 
 # Load data
 df = pd.read_excel("results_gk_diffusion_1x1v_p1_fixed.xlsx", sheet_name="Sheet1")
@@ -35,7 +35,7 @@ error_col = "Accuracy"
 df = df[pd.to_numeric(df[error_col], errors='coerce').notnull()]
 df = df[df[error_col] < 1e20]  # remove blow-ups
 
-# Unique methods
+# Unique methods, k values, normtypes and dom_eig options
 methods = df["method"].unique()
 k_values = df["k"].unique()
 norm_types = df["normtype"].unique()
@@ -54,8 +54,8 @@ for norm_type in sorted(norm_types):
             for i, method in enumerate(methods):
                 df_method = df_subset[df_subset["method"] == method]
                 for j, (eigsafety, group) in enumerate(df_method.groupby("eigsafety")):
-                    marker = markers[(i * 5 + j) % len(markers)]
-                    linestyle = linestyles[(i * 3 + j) % len(linestyles)]
+                    marker = markers[(i + j) % len(markers)]
+                    linestyle = linestyles[(i + j) % len(linestyles)]
                     plt.loglog(
                         group["h"],
                         group[error_col],
@@ -73,6 +73,6 @@ for norm_type in sorted(norm_types):
             plt.tight_layout()
 
             # Save separate plot for each combination of k and user_dom_eig
-            filename = f"error_vs_h_k_{k_val}_userdom_{user_dom}.png"
+            filename = f"error_vs_h_k_{k_val}_userdom_{user_dom}.pdf"
             plt.savefig(filename, dpi=300)
             print(f"Plot saved as {filename}")

@@ -49,7 +49,6 @@ eigsafety_opts = df["eigsafety"].unique()
 
 # Define a set of colors, markers and line styles to avoid overlap confusion
 colors = ['blue', 'orange', 'green', 'red']
-color_map = {e: colors[i % len(colors)] for i, e in enumerate(sorted(eigsafety_opts))}
 markers = ["s", "D", "o", "^", "v", "<", ">", "p", "*", "X"]
 linestyles = ["-", "--", "-.", ":"]
 
