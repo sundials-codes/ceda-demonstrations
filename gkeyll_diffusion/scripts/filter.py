@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+#------------------------------------------------------------
+# Programmer(s):  Mustafa Aggul @ SMU
+#------------------------------------------------------------
+# Copyright (c) 2025, Southern Methodist University
+# All rights reserved.
+# For details, see the LICENSE file.
+#------------------------------------------------------------
+
+# Filter datasets to include only 
+# STS methods with eigsafety = 1.1
+# SSP methods 
+# normtypes 1 and 2 only for adaptive runs
+
 import pandas as pd
 
 filename = "results_gk_diffusion_1x1v_p1_adaptive.xlsx"

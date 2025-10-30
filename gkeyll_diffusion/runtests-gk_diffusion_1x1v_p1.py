@@ -92,14 +92,14 @@ kvals = [0.1, 1.0, 10.0]
 rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7, 1.e-8]
 atol = 1e-12
 hvals = 0.1/np.array([10, 20, 40, 80, 160])
-normtypes = [1, 2, 3]
+normtypes = [1, 2]
 STSSolvers = [{'name': 'RKC', 'stages': 0},
               {'name': 'RKL', 'stages': 0}]
 SSPSolvers = [{'name': 'SSP2', 'stages': 2},
               {'name': 'SSP3', 'stages': 4},
               {'name': 'SSP4', 'stages': 10}]
 eigfreq = 0
-eigsafety = [1.01, 1.1, 1.15, 1.2]
+eigsafety = [1.01, 1.05, 1.1, 1.2]
 user_dom_eig = [False, True]
 dee_id = 0
 dee_init_wups = 0
