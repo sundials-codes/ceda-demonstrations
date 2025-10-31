@@ -2,7 +2,7 @@
 #------------------------------------------------------------
 # Programmer(s):  Daniel R. Reynolds @ UMBC
 #------------------------------------------------------------
-# Copyright (c) 2024, Southern Methodist University.
+# Copyright (c) 2025, University of Maryland Baltimore County
 # All rights reserved.
 # For details, see the LICENSE file.
 #------------------------------------------------------------
