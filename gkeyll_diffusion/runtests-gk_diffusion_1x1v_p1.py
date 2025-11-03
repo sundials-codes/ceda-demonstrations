@@ -74,8 +74,8 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
     return stats
 
 # filename to hold run statistics
-fname_fixed = "results_gk_diffusion_1x1v_p1_fixed.xlsx"
-fname_adaptive = "results_gk_diffusion_1x1v_p1_adaptive.xlsx"
+fname_fixed = "full_results_gk_diffusion_1x1v_p1_fixed.xlsx"
+fname_adaptive = "full_results_gk_diffusion_1x1v_p1_adaptive.xlsx"
 
 # executable
 exe = "./gk_diffusion_1x1v_p1"

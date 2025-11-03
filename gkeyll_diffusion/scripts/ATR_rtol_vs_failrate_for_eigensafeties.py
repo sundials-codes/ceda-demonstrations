@@ -28,7 +28,7 @@ plt.rcParams['xtick.labelsize'] = 14
 plt.rcParams['ytick.labelsize'] = 14
 
 # Load data
-df = pd.read_excel("results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
+df = pd.read_excel("full_results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
 
 # Use Accuracy column as error metric
 error_col = "rtol"
