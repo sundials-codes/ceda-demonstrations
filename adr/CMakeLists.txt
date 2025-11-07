@@ -62,9 +62,12 @@ if(Fortran_COMPILER_NAME MATCHES "gfortran.*")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=legacy")
 endif()
 
-#   request installation of the target into the overall "bin" folder
-install(TARGETS ${target_pirock_adr1D} DESTINATION ${demonstration_bin})
+#   request installation of the targets into the overall "bin" folder
+install(TARGETS ${target_pirock_adr1D} ${target_pirock_bruss2dadv} ${target_pirock_bruss2dreac}
+        DESTINATION ${demonstration_bin})
 
 
 ### install testing scripts and input file ###
-install(FILES runtests-adr1d.py plot-adr1d.py adr_1D_pirock_params.txt DESTINATION ${demonstration_bin})
+install(FILES runtests-adr1d.py plot-adr1d.py adr_1D_pirock_params.txt
+        runtests-adr2d.py plot-adr2d.py adr_2D_pirock_params.txt rd_2D_pirock_params.txt
+        DESTINATION ${demonstration_bin})
