@@ -157,11 +157,11 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
     stats['ReturnCode'] = result.returncode
     stats['RunTime'] = runtime
     if (result.returncode != 0):
-        print("Run command " + runcommand + " FAILURE: " + str(run_result.returncode))
+        print("Run command " + exe + " FAILURE: " + str(result.returncode))
         print(result.stderr)
     else:
         if(showcommand):
-            print("Run command: " + runcommand + " SUCCESS\n")
+            print("Run command: " + exe + " SUCCESS\n")
 
         # compute solution error and store this in the stats
         stats['Accuracy'] = calc_error(nx, "sol.dat", "adr_reference.dat")
@@ -213,11 +213,11 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
     stats['ReturnCode'] = result.returncode
     stats['RunTime'] = runtime
     if (result.returncode != 0):
-        print("Run command " + runcommand + " FAILURE: " + str(run_result.returncode))
+        print("Run command " + exe + " FAILURE: " + str(result.returncode))
         print(result.stderr)
     else:
         if(showcommand):
-            print("Run command: " + runcommand + " SUCCESS\n")
+            print("Run command: " + exe + " SUCCESS\n")
 
         # compute solution error and store this in the stats
         stats['Accuracy'] = calc_error(nx, "sol.dat", "rd_reference.dat")
