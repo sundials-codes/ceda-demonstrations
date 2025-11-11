@@ -15,6 +15,10 @@ import shlex
 import time
 import os
 
+
+# set maximum runtime before a test is considered a failure and canceled
+maxruntime = 1200 # seconds (20 min)
+
 #####################
 # utility routines
 
@@ -146,18 +150,21 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
-    result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    runtime = time.perf_counter() - tstart
+    try:
+        result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+        stats['ReturnCode'] = result.returncode
+    except subprocess.TimeoutExpired:
+        print('Test exceeded maximum run time and was terminated')
+        stats['ReturnCode'] = -1
+    stats['RunTime'] = time.perf_counter() - tstart
 
     # print output to screen if requested
     if (showoutput):
         print(result.stdout.decode())
 
     # process the run results
-    stats['ReturnCode'] = result.returncode
-    stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + exe + " FAILURE: " + str(result.returncode))
+    if (stats['ReturnCode'] != 0):
+        print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
         print(result.stderr)
     else:
         if(showcommand):
@@ -202,18 +209,21 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
-    result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    runtime = time.perf_counter() - tstart
+    try:
+        result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+        stats['ReturnCode'] = result.returncode
+    except subprocess.TimeoutExpired:
+        print('Test exceeded maximum run time and was terminated')
+        stats['ReturnCode'] = -1
+    stats['RunTime'] = time.perf_counter() - tstart
 
     # print output to screen if requested
     if (showoutput):
         print(result.stdout.decode())
 
     # process the run results
-    stats['ReturnCode'] = result.returncode
-    stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + exe + " FAILURE: " + str(result.returncode))
+    if (stats['ReturnCode'] != 0):
+        print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
         print(result.stderr)
     else:
         if(showcommand):
@@ -246,18 +256,21 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
-    result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    runtime = time.perf_counter() - tstart
+    try:
+        result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+        stats['ReturnCode'] = result.returncode
+    except subprocess.TimeoutExpired:
+        print('Test exceeded maximum run time and was terminated')
+        stats['ReturnCode'] = -1
+    stats['RunTime'] = time.perf_counter() - tstart
 
     # print output to screen if requested
     if (showoutput):
         print(result.stdout.decode())
 
     # process the run results
-    stats['ReturnCode'] = result.returncode
-    stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + runcommand + " FAILURE: " + str(result.returncode))
+    if (stats['ReturnCode'] != 0):
+        print("Run command " + runcommand + " FAILURE: " + str(stats['ReturnCode']))
     else:
         if (showcommand):
             print("Run command " + runcommand + " SUCCESS")
