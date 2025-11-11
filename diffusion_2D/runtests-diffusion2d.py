@@ -75,7 +75,8 @@ controller = " --controller 2"
 calcerror = " --error"
 precsetup = " --nonlinear --msbp 1"
 maxsteps = " --maxsteps 100000"
-common = homo + atol + controller + calcerror + precsetup + maxsteps
+eigest = " --internaleig"
+common = homo + atol + controller + calcerror + precsetup + maxsteps + eigest
 
 # parameter arrays to iterate over
 kxky = [{'kx': 0.1,  'ky': 0.0},
