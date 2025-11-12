@@ -114,7 +114,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-      rhodiff = 8.0d0*nssq*alf + 2.d0
+c      rhodiff = 8.0d0*nssq*alf + 2.d0
+      rhodiff = 8.0d0*nssq*alf
       return
       end
 c--------------------------------------------------------
