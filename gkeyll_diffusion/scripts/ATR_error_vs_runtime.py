@@ -17,15 +17,15 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D  # <-- Added for custom legend handles
 
 # Set a global default font size for all text elements
-plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 24
 
 # Set specific global font sizes for titles and axis labels
-plt.rcParams['axes.titlesize'] = 20
-plt.rcParams['axes.labelsize'] = 20
+plt.rcParams['axes.titlesize'] = 34
+plt.rcParams['axes.labelsize'] = 34
 
 # For tick labels specifically
-plt.rcParams['xtick.labelsize'] = 14
-plt.rcParams['ytick.labelsize'] = 14
+plt.rcParams['xtick.labelsize'] = 24
+plt.rcParams['ytick.labelsize'] = 24
 
 # Load data
 df = pd.read_excel("results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
@@ -53,7 +53,7 @@ colors = ['blue', 'orange', 'green', 'red']
 markers = ["s", "D", "o", "^", "v", "<", ">", "p", "*", "X"]
 linestyles = ["-", "--", "-.", ":"]
 
-for k_val in sorted(k_values):
+for idk, k_val in enumerate(k_values):
     for user_dom in user_dom_opts:
         plt.figure(figsize=(10,6))
         df_subset = df[(df["k"] == k_val) & (df["user_dom_eig"] == user_dom)]
@@ -80,30 +80,31 @@ for k_val in sorted(k_values):
         plt.grid(True, which="both", ls="--", alpha=0.5)
         plt.tight_layout()
 
-        method_handles = [
-            Line2D([0], [0],
-                   color='black',
-                   marker=markers[i % len(markers)],
-                   linestyle=linestyles[i % len(linestyles)],
-                   linewidth=1.5,
-                   markersize=6,
-                   label=method)
-            for i, method in enumerate(methods)
-        ]
+        if idk == 0:
+            method_handles = [
+                Line2D([0], [0],
+                    color='black',
+                    marker=markers[i % len(markers)],
+                    linestyle=linestyles[i % len(linestyles)],
+                    linewidth=1.5,
+                    markersize=6,
+                    label=method)
+                for i, method in enumerate(methods)
+            ]
 
-        normtype_handles = [
-            Line2D([0], [0],
-                   color=colors[j % len(colors)],
-                   marker='o',
-                   linestyle='',
-                   markersize=8,
-                   label=f"{normtype}")
-            for j, normtype in enumerate(normtype_opts)
-        ]
+            normtype_handles = [
+                Line2D([0], [0],
+                    color=colors[j % len(colors)],
+                    marker='o',
+                    linestyle='',
+                    markersize=8,
+                    label=f"{normtype}")
+                for j, normtype in enumerate(normtype_opts)
+            ]
 
-        first_legend = plt.legend(handles=method_handles, loc='lower left')
-        plt.gca().add_artist(first_legend)
-        plt.legend(handles=normtype_handles, loc='lower center')
+            first_legend = plt.legend(handles=method_handles, loc='lower left')
+            plt.gca().add_artist(first_legend)
+            plt.legend(handles=normtype_handles, loc='lower right')
 
         # Save separate plot for each combination of k and user_dom_eig
         filename = f"error_vs_Runtime_k_{k_val}_userdom_{user_dom}.pdf"

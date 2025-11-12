@@ -17,15 +17,15 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D  # <-- Added for custom legend handles
 
 # Set a global default font size for all text elements
-plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 24
 
 # Set specific global font sizes for titles and axis labels
-plt.rcParams['axes.titlesize'] = 20
-plt.rcParams['axes.labelsize'] = 20
+plt.rcParams['axes.titlesize'] = 34
+plt.rcParams['axes.labelsize'] = 34
 
 # For tick labels specifically
-plt.rcParams['xtick.labelsize'] = 14
-plt.rcParams['ytick.labelsize'] = 14
+plt.rcParams['xtick.labelsize'] = 24
+plt.rcParams['ytick.labelsize'] = 24
 
 # Load data
 df = pd.read_excel("full_results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
@@ -48,7 +48,7 @@ k_values = df["k"].unique()
 eigsafety_opts = df["eigsafety"].unique()
 
 # Define a set of colors, markers and line styles to avoid overlap confusion
-colors = ['blue', 'orange', 'green', 'red']
+colors = ['blue', 'orange', 'green', 'red', 'red', 'brown', 'pink', 'gray']
 markers = ["s", "D", "o", "^", "v", "<", ">", "p", "*", "X"]
 linestyles = ["-", "--", "-.", ":"]
 
@@ -57,7 +57,7 @@ user_dom_eig_vals = df["user_dom_eig"].unique()
 for user_dom_eig in user_dom_eig_vals:
     df_subset = df[df["user_dom_eig"] == user_dom_eig]
 
-    for k_val in sorted(k_values):
+    for idx, k_val in enumerate(k_values):
         plt.figure(figsize=(10,6))
         df_k_subset = df_subset[df_subset["k"] == k_val]
 
@@ -107,9 +107,10 @@ for user_dom_eig in user_dom_eig_vals:
             for j, eigsafety in enumerate(eigsafety_opts)
         ]
 
-        first_legend = plt.legend(handles=method_handles, loc='upper left')
-        plt.gca().add_artist(first_legend)
-        plt.legend(handles=eigsafety_handles, loc='upper right')
+        if idx == 0:
+            first_legend = plt.legend(handles=method_handles, loc='upper left')
+            plt.gca().add_artist(first_legend)
+            plt.legend(handles=eigsafety_handles, loc='upper right')
 
         # Save the plot for this combination of k and user_dom_eig
         filename = f"eigensafety_rtol_vs_FR_k_{k_val}.pdf"
