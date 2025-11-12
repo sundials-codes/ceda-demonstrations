@@ -466,28 +466,18 @@ def extract_RxNet(data, RxNetwork):
     RxNetData = data.groupby(['A','B','eps']).get_group((RxNetwork[1],RxNetwork[2],RxNetwork[3]))
     return RxNetName, RxNetData
 
-# Name reaction networks to plot them separately, each has the form [Name, A, B, eps]
-#RxNetworks = [['Stiff2', 1.3, 1e7, 1.0]]
-RxNetworks = [['Stiff1', 0.6, 2.0, 1e-2],
-              ['Stiff2', 1.3, 1e3, 1.0],
-              ['Nonstiff', 0.6, 2.0, 1.0]]
-
 # generate plots, loading data from stored output
 if (Plot_ADR):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')
-        for RxNet in RxNetworks:
-            netname,netdata = extract_RxNet(data, RxNet)
-            make_convergence_comparison_plot(netdata, netname + ' AdvDiffRx Convergence', 'adr_' + netname + '_fixed_convergence')
-            make_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Efficiency (Fixed)', 'adr_' + netname + '_fixed_efficiency')
-            make_runtime_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Runtime Efficiency (Fixed)', 'adr_' + netname + '_fixed_runtime_efficiency')
+        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr_fixed_convergence')
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr_fixed_efficiency')
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr_fixed_runtime_efficiency')
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx-adapt.xlsx')
-        for RxNet in RxNetworks:
-            netname,netdata = extract_RxNet(data, RxNet)
-            make_accuracy_comparison_plot(netdata, netname + ' AdvDiffRx Accuracy', 'adr_' + netname + '_adaptive_accuracy')
-            make_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Efficiency', 'adr_' + netname + '_adaptive_efficiency')
-            make_runtime_efficiency_comparison_plot(netdata, netname + ' AdvDiffRx Runtime Efficiency', 'adr_' + netname + '_adaptive_runtime_efficiency')
+        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr_adaptive_accuracy')
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr_adaptive_efficiency')
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr_adaptive_runtime_efficiency')
 
 if (Plot_AD):
     if (Plot_Fixed):
@@ -504,18 +494,14 @@ if (Plot_AD):
 if (Plot_RD):
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff-fixed.xlsx')
-        for RxNet in RxNetworks:
-            netname,netdata = extract_RxNet(data, RxNet)
-            make_convergence_comparison_plot(netdata, netname + ' RxDiff Convergence', 'rd_' + netname + '_fixed_convergence')
-            make_efficiency_comparison_plot(netdata, netname + ' RxDiff Efficiency (Fixed)', 'rd_' + netname + '_fixed_efficiency', plot_adv=False)
-            make_runtime_efficiency_comparison_plot(netdata, netname + ' RxDiff Runtime Efficiency (Fixed)', 'rd_' + netname + '_fixed_runtime_efficiency')
+        make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd_fixed_convergence')
+        make_efficiency_comparison_plot(data, 'RxDiff Efficiency (Fixed)', 'rd_fixed_efficiency', plot_adv=False)
+        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency (Fixed)', 'rd_fixed_runtime_efficiency')
 if (Plot_Adaptive):
         data=pd.read_excel('RxDiff-adapt.xlsx')
-        for RxNet in RxNetworks:
-            netname,netdata = extract_RxNet(data, RxNet)
-            make_accuracy_comparison_plot(netdata, netname + ' RxDiff Accuracy', 'rd_' + netname + '_adaptive_accuracy')
-            make_efficiency_comparison_plot(netdata, netname + ' RxDiff Efficiency', 'rd_' + netname + '_adaptive_efficiency', plot_adv=False)
-            make_runtime_efficiency_comparison_plot(netdata, netname + ' RxDiff Runtime Efficiency', 'rd_' + netname + '_adaptive_runtime_efficiency')
+        make_accuracy_comparison_plot(data, 'RxDiff Accuracy', 'rd_adaptive_accuracy')
+        make_efficiency_comparison_plot(data, 'RxDiff Efficiency', 'rd_adaptive_efficiency', plot_adv=False)
+        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency', 'rd_adaptive_runtime_efficiency')
 
 # display plots
 plt.show()
