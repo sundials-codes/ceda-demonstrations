@@ -17,7 +17,7 @@ import os
 
 
 # set maximum runtime before a test is considered a failure and canceled
-maxruntime = 1200 # seconds (20 min)
+maxruntime = 30*60 # 30 minutes, converted to seconds
 
 #####################
 # utility routines
@@ -153,14 +153,13 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
     try:
         result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
         stats['ReturnCode'] = result.returncode
+        # print output to screen if requested
+        if (showoutput):
+            print(result.stdout.decode())
     except subprocess.TimeoutExpired:
         print('Test exceeded maximum run time and was terminated')
         stats['ReturnCode'] = -1
     stats['RunTime'] = time.perf_counter() - tstart
-
-    # print output to screen if requested
-    if (showoutput):
-        print(result.stdout.decode())
 
     # process the run results
     if (stats['ReturnCode'] != 0):
@@ -212,14 +211,13 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
     try:
         result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
         stats['ReturnCode'] = result.returncode
+        # print output to screen if requested
+        if (showoutput):
+            print(result.stdout.decode())
     except subprocess.TimeoutExpired:
         print('Test exceeded maximum run time and was terminated')
         stats['ReturnCode'] = -1
     stats['RunTime'] = time.perf_counter() - tstart
-
-    # print output to screen if requested
-    if (showoutput):
-        print(result.stdout.decode())
 
     # process the run results
     if (stats['ReturnCode'] != 0):
@@ -259,14 +257,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
     try:
         result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
         stats['ReturnCode'] = result.returncode
+        # print output to screen if requested
+        if (showoutput):
+            print(result.stdout.decode())
     except subprocess.TimeoutExpired:
         print('Test exceeded maximum run time and was terminated')
+        print('Run command was: ' + runcommand)
         stats['ReturnCode'] = -1
     stats['RunTime'] = time.perf_counter() - tstart
-
-    # print output to screen if requested
-    if (showoutput):
-        print(result.stdout.decode())
 
     # process the run results
     if (stats['ReturnCode'] != 0):
@@ -342,23 +340,24 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 # testing setup
 
 # Flags to enable/disable categories of tests
-DoAdvDiffRx = True
-DoRxDiff = True
 DoImplicitRx = True
 DoExplicitRx = True
-DoFixedTests = True
-DoAdaptiveTests = True
+DoADRFixedTests = True
+DoRDFixedTests = True
+DoADRAdaptiveTests = True
+DoRDAdaptiveTests = True
 ShowCommand = True
 ShowOutput = True
 
 # Shared testing parameters: [inttype, ststype, extststype, table_id]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
-                    ['ARK', None, None, 2],
-                    ['ExtSTS', 'RKC', 'ARS', None],
-                    ['ExtSTS', 'RKL', 'ARS', None],
-                    ['ExtSTS', 'RKC', 'Giraldo', None],
-                    ['ExtSTS', 'RKL', 'Giraldo', None]]
-AdvDiffRxSolversExpOnly = [['ExtSTS', 'RKC', 'Ralston', None],
+                    ['ARK', None, None, 2]]
+AdvDiffRxSolversExpOnly = [
+                           ['ExtSTS', 'RKC', 'ARS', None],
+                           ['ExtSTS', 'RKL', 'ARS', None],
+                           ['ExtSTS', 'RKC', 'Giraldo', None],
+                           ['ExtSTS', 'RKL', 'Giraldo', None],
+                           ['ExtSTS', 'RKC', 'Ralston', None],
                            ['ExtSTS', 'RKL', 'Ralston', None],
                            ['ExtSTS', 'RKC', 'Heun-Euler', None],
                            ['ExtSTS', 'RKL', 'Heun-Euler', None]]
@@ -377,12 +376,12 @@ RDStrangSolvers = [['Strang', 'RKC', None, None],
                    ['Strang', 'RKL', None, None]]
 
 # Advection-diffusion-reaction tests
-if (DoAdvDiffRx):
+if (DoADRFixedTests or DoADRAdaptiveTests):
 
     # generate reference solution
     generate_ADR_reference()
 
-    if (DoFixedTests):
+    if (DoADRFixedTests):
         Stats = []
 
         # set step sizes for fixed-step ADR tests
@@ -437,7 +436,7 @@ if (DoAdvDiffRx):
         print("Saving as Excel")
         Df.to_excel('AdvDiffRx2D-fixed.xlsx', index=False)
 
-    if (DoAdaptiveTests):
+    if (DoADRAdaptiveTests):
         Stats = []
 
         # set tolerances for adaptive ADR tests
@@ -477,7 +476,7 @@ if (DoAdvDiffRx):
 
 
 # Reaction-diffusion tests
-if (DoRxDiff):
+if (DoRDFixedTests or DoRDAdaptiveTests):
 
     # shared problem parameters
     d = 0.1
@@ -491,7 +490,7 @@ if (DoRxDiff):
     # generate reference solution
     generate_RD_reference(d=d, A=A, B=B)
 
-    if (DoFixedTests):
+    if (DoRDFixedTests):
         Stats = []
 
         # set step sizes for fixed-step RD tests
@@ -522,7 +521,7 @@ if (DoRxDiff):
         print("Saving as Excel")
         Df.to_excel('RxDiff2D-fixed.xlsx', index=False)
 
-    if (DoAdaptiveTests):
+    if (DoRDAdaptiveTests):
         Stats = []
 
         # set tolerances for adaptive RD tests
