@@ -121,8 +121,8 @@ def print_failed_tests(fname):
         print(failed)
 
 kxvals = [0.1, 1.0, 10.0]
-#grids = [32, 64, 128, 256]
-grids = [32, 64]
+grids = [32, 64, 128, 256]
+#grids = [32, 64]
 
 ## Adaptive test results
 fname = "results_diffusion_2D.xlsx"

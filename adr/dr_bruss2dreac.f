@@ -18,8 +18,7 @@ c ----- to integrate with pirock.f
       integer iwork(25),idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
-      namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
-     &    atol,rtol,h
+      namelist /inputs/ alf,brussa,brussb,atol,rtol,h
 c --- read input from namelist file (if it exists) ---
       open(10, file='rd_2D_pirock_params.txt', status='old', err=100)
       read(10, nml=inputs)

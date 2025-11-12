@@ -68,6 +68,10 @@ ERK4Solver = bindir + "diffusion_2D_mpi --integrator erk --order -4"
 RKCSolver = bindir + "diffusion_2D_mpi --integrator rkc"
 RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
+# test groups to run
+RunAdaptiveTests = True
+RunFixedStepTests = True
+
 # common testing parameters
 homo = " --inhomogeneous"
 atol = " --atol 1.e-11"
@@ -75,7 +79,8 @@ controller = " --controller 2"
 calcerror = " --error"
 precsetup = " --nonlinear --msbp 1"
 maxsteps = " --maxsteps 100000"
-common = homo + atol + controller + calcerror + precsetup + maxsteps
+eigest = " --internaleig"
+common = homo + atol + controller + calcerror + precsetup + maxsteps + eigest
 
 # parameter arrays to iterate over
 kxky = [{'kx': 0.1,  'ky': 0.0},
@@ -98,35 +103,37 @@ solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
               {'name': 'rkl', 'exe': RKLSolver}]
 
 # run adaptive tests and collect results as a pandas data frame
-fname = "results_diffusion_2D.xlsx"
-RunStats = []
-for kxy in kxky:
-    for rtol in rtols:
-        for pg in procgrids:
-            for solver in solvertype:
-                stat = runtest(solver, pg, rtol, 0.0, kxy, common)
-                RunStats.append(stat)
-RunStatsDf = pd.DataFrame.from_records(RunStats)
+if (RunAdaptiveTests):
+    fname = "results_diffusion_2D.xlsx"
+    RunStats = []
+    for kxy in kxky:
+        for rtol in rtols:
+            for pg in procgrids:
+                for solver in solvertype:
+                    stat = runtest(solver, pg, rtol, 0.0, kxy, common)
+                    RunStats.append(stat)
+    RunStatsDf = pd.DataFrame.from_records(RunStats)
 
-# save dataframe as Excel file
-print("RunStatsDf object (adaptive step):")
-print(RunStatsDf)
-print("Saving as Excel")
-RunStatsDf.to_excel(fname, index=False)
+    # save dataframe as Excel file
+    print("RunStatsDf object (adaptive step):")
+    print(RunStatsDf)
+    print("Saving as Excel")
+    RunStatsDf.to_excel(fname, index=False)
 
 # run fixed-step tests and collect results as a pandas data frame
-fname = "results_diffusion_2D_fixedstep.xlsx"
-RunStats = []
-for kxy in kxky:
-    for h in hvals:
-        for pg in procgrids:
-            for solver in solvertype:
-                stat = runtest(solver, pg, 1.e-9, h, kxy, common)
-                RunStats.append(stat)
-RunStatsDf = pd.DataFrame.from_records(RunStats)
+if (RunFixedStepTests):
+    fname = "results_diffusion_2D_fixedstep.xlsx"
+    RunStats = []
+    for kxy in kxky:
+        for h in hvals:
+            for pg in procgrids:
+                for solver in solvertype:
+                    stat = runtest(solver, pg, 1.e-9, h, kxy, common)
+                    RunStats.append(stat)
+    RunStatsDf = pd.DataFrame.from_records(RunStats)
 
-# save dataframe as Excel file
-print("RunStatsDf object (fixed step):")
-print(RunStatsDf)
-print("Saving as Excel")
-RunStatsDf.to_excel(fname, index=False)
+    # save dataframe as Excel file
+    print("RunStatsDf object (fixed step):")
+    print(RunStatsDf)
+    print("Saving as Excel")
+    RunStatsDf.to_excel(fname, index=False)

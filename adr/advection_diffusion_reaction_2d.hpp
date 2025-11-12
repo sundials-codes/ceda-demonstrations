@@ -124,11 +124,10 @@ struct UserOptions
   // Table ID for ARK methods:
   //   0 = default
   //   1 = ARS(2,2,2)
-  //   2 = Giraldo ARK2
+  //   2 = Giraldo
   //   3 = Ralston
   //   4 = Heun-Euler
   //   5 = SSP SDIRK 2
-  //   6 = Giraldo DIRK2
   int table_id = 0;
 
   // Method order
@@ -137,18 +136,11 @@ struct UserOptions
   // ExtSTS method options
   //   sts_method = 0 (RKC) or 1 (RKL)
   //   extsts_method:
-  //   * advection+diffusion+reaction
   //         0 = ARS(2,2,2)
-  //         1 = Giraldo ARK2
-  //   * advection+diffusion
-  //         0 = ARS(2,2,2) ERK
-  //         1 = Giraldo ERK2
+  //         1 = Giraldo
   //         2 = Ralston
   //         3 = Heun-Euler
-  //   * diffusion+reaction
-  //         0 = ARS(2,2,2) SDIRK
-  //         1 = Giraldo DIRK2
-  //         2 = SSP SDIRK 2
+  //         4 = SSP SDIRK 2
   int sts_method    = 0;
   int extsts_method = 0;
 
@@ -427,23 +419,26 @@ static void InputHelp()
   cout << "  --yu <real>           : y-domain upper boundary\n";
   cout << "  --nx <int>            : number of mesh points in x direction\n";
   cout << "  --ny <int>            : number of mesh points in y direction\n";
-  cout << "  --integrator <int>    : integrator option (0=ERK, 1=ARK, 2=ExtSTS, 3=Strang)\n";
-  cout << "  --table_id <int>      : ARK table ID (0=default, 1=ARS, 2=GiraldoARK2, 3=Ralston, 4=Heun-Euler, 5=SSPSDIRK2, 6=GiraldoDIRK2)\n";
+  cout << "  --integrator <int>    : integrator option\n";
+  cout << "                               0 = ERK\n";
+  cout << "                               1 = ARK\n";
+  cout << "                               2 = ExtSTS\n";
+  cout << "                               3 = Strang\n";
+  cout << "  --table_id <int>      : ARK table ID\n";
+  cout << "                               0 = default\n";
+  cout << "                               1 = ARS\n";
+  cout << "                               2 = Giraldo\n";
+  cout << "                               3 = Ralston\n";
+  cout << "                               4 = Heun-Euler\n";
+  cout << "                               5 = SSPSDIRK2\n";
   cout << "  --order <int>         : method order\n";
   cout << "  --sts_method <int>    : STS method type (0=RKC, 1=RKL)\n";
   cout << "  --extsts_method <int> : ExtSTS method type\n";
-  cout << "                               adv + diff + impl react\n";
-  cout << "                                   0 = ARS(2,2,2)\n";
-  cout << "                                   1 = Giraldo ARK2\n";
-  cout << "                               adv + diff + expl react\n";
-  cout << "                                   0 = ARS(2,2,2) ERK\n";
-  cout << "                                   1 = Giraldo ERK2\n";
-  cout << "                                   2 = Ralston\n";
-  cout << "                                   3 = Heun-Euler\n";
-  cout << "                               diff + impl react\n";
-  cout << "                                   0 = ARS(2,2,2) SDIRK\n";
-  cout << "                                   1 = Giraldo DIRK2\n";
-  cout << "                                   2 = SSP SDIRK 2\n";
+  cout << "                               0 = ARS(2,2,2)\n";
+  cout << "                               1 = Giraldo ARK2\n";
+  cout << "                               2 = Ralston\n";
+  cout << "                               3 = Heun-Euler\n";
+  cout << "                               4 = SSP SDIRK 2\n";
   cout << "  --rtol <real>         : relative tolerance\n";
   cout << "  --atol <real>         : absolute tolerance\n";
   cout << "  --fixed_h <real>      : fixed step size\n";
@@ -560,12 +555,9 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   udata.neq = NSPECIES * udata.nx * udata.ny;
 
   // Create workspace
-  if ((uopts.integrator < 2) || uopts.calc_error)
-  {
-    udata.temp_v = N_VNew_Serial(udata.neq, ctx);
-    if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
-    N_VConst(ZERO, udata.temp_v);
-  }
+  udata.temp_v = N_VNew_Serial(udata.neq, ctx);
+  if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
+  N_VConst(ZERO, udata.temp_v);
   if (uopts.calc_error)
   {
     udata.temp_J = SUNBandMatrix(udata.neq, 3, 3, ctx);
@@ -580,7 +572,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
     return -1;
   }
 
-  if (uopts.table_id < 0 || uopts.table_id > 6)
+  if (uopts.table_id < 0 || uopts.table_id > 5)
   {
     cerr << "ERROR: Invalid ARK table ID" << endl;
     return -1;
@@ -622,47 +614,46 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   if (uopts.integrator == 0)
   {
     cout << "  integrator       = ERK" << endl;
-    if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection        = OFF" << endl; }
+    cout << "  advection        = "
+         << ((udata.advection) ? "Explicit" : "OFF") << endl;
     cout << "  reaction         = Explicit" << endl;
     cout << "  diffusion        = Explicit" << endl;
   }
   else if (uopts.integrator == 1)
   {
     cout << "  integrator       = ARK" << endl;
-    if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection        = OFF" << endl; }
-    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = Explicit" << endl; }
+    cout << "  advection        = "
+         << ((udata.advection) ? "Explicit" : "OFF") << endl;
+    cout << "  reaction         = "
+         << ((udata.impl_reaction) ? "Implicit" : "Explicit") << endl;
     cout << "  diffusion        = Implicit" << endl;
     cout << "  ARK table ID     = ";
     switch(uopts.table_id)
     {
       case 1: cout << "ARS(2,2,2)" << endl; break;
-      case 2: cout << "Giraldo ARK2" << endl; break;
+      case 2: cout << "Giraldo" << endl; break;
       case 3: cout << "Ralston" << endl; break;
       case 4: cout << "Heun-Euler" << endl; break;
       case 5: cout << "SSP SDIRK 2" << endl; break;
-      case 6: cout << "Giraldo DIRK2" << endl; break;
       default: cout << "default" << endl;
     }
   }
   else if (uopts.integrator == 2)
   {
     cout << "  integrator       = ExtSTS" << endl;
-    if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection        = OFF" << endl; }
-    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = Explicit" << endl; }
+    cout << "  advection        = "
+         << ((udata.advection) ? "Explicit" : "OFF") << endl;
+    cout << "  reaction         = "
+         << ((udata.impl_reaction) ? "Implicit" : "Explicit") << endl;
     cout << "  diffusion        = Explicit" << endl;
   }
   else if (uopts.integrator == 3)
   {
     cout << "  integrator       = Strang" << endl;
-    if (udata.advection) { cout << "  advection        = Explicit" << endl; }
-    else { cout << "  advection        = OFF" << endl; }
-    if (udata.impl_reaction) {  cout << "  reaction         = Implicit" << endl; }
-    else { cout << "  reaction         = Explicit" << endl; }
+    cout << "  advection        = "
+         << ((udata.advection) ? "Explicit" : "OFF") << endl;
+    cout << "  reaction         = "
+         << ((udata.impl_reaction) ? "Implicit" : "Explicit") << endl;
     cout << "  diffusion        = Explicit" << endl;
   }
   else
@@ -701,41 +692,20 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   if (uopts.integrator == 2)
   {
     cout << " --------------------------------- " << endl;
-    if (udata.advection && udata.impl_reaction)  // expl adv + STS diff + impl react
-    {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
-      else
-      { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
-    }
-    else if (!udata.impl_reaction)  // expl adv + expl react + STS diff -or- just expl react + STS diff (both are fully explicit)
-    {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2) ERK" << endl; }
-      else if (uopts.extsts_method == 1)
-      { cout << "  ExtSTS method    = Giraldo ERK2" << endl; }
-      else if (uopts.extsts_method == 2)
-      { cout << "  ExtSTS method    = Ralston" << endl; }
-      else
-      { cout << "  ExtSTS method    = Heun-Euler" << endl; }
-    }
-    else if (!udata.advection && udata.impl_reaction)  // STS diff + impl react
-    {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2) SDIRK" << endl; }
-      else if (uopts.extsts_method == 1)
-      { cout << "  ExtSTS method    = Giraldo DIRK2" << endl; }
-      else
-      { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
-    }
+    if (uopts.extsts_method == 0)
+    { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
+    else if (uopts.extsts_method == 1)
+    { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
+    else if (uopts.extsts_method == 2)
+    { cout << "  ExtSTS method    = Ralston" << endl; }
+    else if (uopts.extsts_method == 3)
+    { cout << "  ExtSTS method    = Heun-Euler" << endl; }
+    else if (uopts.extsts_method == 4)
+    { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
     if (uopts.sts_method == 0)
-    {
-      cout << "  STS method       = RKC" << endl;
-    }
+    { cout << "  STS method       = RKC" << endl; }
     else
-    {
-      cout << "  STS method       = RKL" << endl;
-    }
+    { cout << "  STS method       = RKL" << endl; }
   }
   if (uopts.integrator == 3)
   {
@@ -794,25 +764,6 @@ static int OpenOutput(UserData& udata, UserOptions& uopts)
     cout << "-------------------------" << endl;
   }
 
-  // Open output stream and output problem information
-  if (uopts.output >= 2)
-  {
-    // Open output stream
-    stringstream fname;
-    fname << "advection_diffusion_reaction_2d.out";
-    uopts.uout.open(fname.str());
-
-    uopts.uout << scientific;
-    uopts.uout << setprecision(numeric_limits<sunrealtype>::digits10);
-    uopts.uout << "# title 2D Advection-Diffusion-Reaction (Brusselator)" << endl;
-    uopts.uout << "# nvar 2" << endl;
-    uopts.uout << "# vars u v" << endl;
-    uopts.uout << "# nt " << uopts.nout + 1 << endl;
-    uopts.uout << "# nx " << udata.nx << endl;
-    uopts.uout << "# xl " << udata.xl << endl;
-    uopts.uout << "# xu " << udata.xu << endl;
-  }
-
   return 0;
 }
 
@@ -822,62 +773,32 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
 {
   if (uopts.output)
   {
-    // Compute rms norm of the state
-    sunrealtype urms = sqrt(N_VDotProd(y, y) / (udata.nx * udata.ny));
-    cout << setw(22) << t << setw(25) << urms << endl;
-
-    // Write solution to disk
-    if (uopts.output >= 2)
+    sunrealtype* ydata = N_VGetArrayPointer(y);
+    if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
+    stringstream fname;
+    fname << "solution.dat";
+    ofstream usol;
+    usol.open(fname.str());
+    usol << setprecision(numeric_limits<sunrealtype>::digits10) << t;
+    for (sunindextype j = 0; j< udata.ny; j++)
     {
-      sunrealtype* ydata = N_VGetArrayPointer(y);
-      if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
-
-      uopts.uout << t;
-      for (sunindextype j = 0; j < udata.ny; j++)
+      for (sunindextype i = 0; i< udata.nx; i++)
       {
-        for (sunindextype i = 0; i < udata.nx; i++)
-        {
-          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, udata.nx)];
-          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, udata.nx)];
-        }
+        usol << setprecision(numeric_limits<sunrealtype>::digits10)
+            << " " << ydata[UIDX(i, j, udata.nx)];
       }
-      uopts.uout << endl;
     }
-  }
-
-  return 0;
-}
-
-// Write output
-static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
-                       UserData& udata, UserOptions& uopts)
-{
-  if (uopts.output)
-  {
-    // Compute rms norm of the state and error
-    sunrealtype urms = sqrt(N_VDotProd(y, y) / (udata.nx * udata.ny) / 2);
-    sunrealtype erms = sqrt(N_VDotProd(yerr, yerr) / (udata.nx * udata.ny)  / 2);
-    cout << setw(22) << t << setw(25) << urms
-         << setprecision(2) << setw(12) << erms
-         << setprecision(numeric_limits<sunrealtype>::digits10) << endl;
-
-    // Write solution to disk
-    if (uopts.output >= 2)
+    for (sunindextype j = 0; j< udata.ny; j++)
     {
-      sunrealtype* ydata = N_VGetArrayPointer(y);
-      if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
-
-      uopts.uout << t;
-      for (sunindextype j = 0; j < udata.ny; j++)
+      for (sunindextype i = 0; i< udata.nx; i++)
       {
-        for (sunindextype i = 0; i < udata.nx; i++)
-        {
-          uopts.uout << setw(WIDTH) << ydata[UIDX(i, j, udata.nx)];
-          uopts.uout << setw(WIDTH) << ydata[VIDX(i, j, udata.nx)];
-        }
+        usol << setprecision(numeric_limits<sunrealtype>::digits10)
+            << " " << ydata[VIDX(i, j, udata.nx)];
       }
-      uopts.uout << endl;
     }
+    usol << endl;
+    usol.close();
+    cout << "Solution is written to solution.dat" << endl;
   }
 
   return 0;
@@ -885,7 +806,7 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
 
 // Write solution to disk
 static int WriteSolution(sunrealtype t, N_Vector y,
-                        UserData& udata, UserOptions& uopts)
+                         UserData& udata, UserOptions& uopts)
 {
   if (uopts.write_solution)
   {
