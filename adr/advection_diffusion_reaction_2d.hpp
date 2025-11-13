@@ -518,7 +518,7 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--cux", udata.cux);
   find_arg(args, "--cuy", udata.cuy);
   find_arg(args, "--cvx", udata.cvx);
-  find_arg(args, "--cvy", udata.cuy);
+  find_arg(args, "--cvy", udata.cvy);
   find_arg(args, "--d", udata.d);
   find_arg(args, "--A", udata.A);
   find_arg(args, "--B", udata.B);
