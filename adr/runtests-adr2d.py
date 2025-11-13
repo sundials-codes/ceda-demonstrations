@@ -364,8 +364,8 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 # Flags to enable/disable categories of tests
 DoImplicitRx = True
 DoExplicitRx = True
-DoADRFixedTests = False
-DoADRAdaptiveTests = False
+DoADRFixedTests = True
+DoADRAdaptiveTests = True
 DoRDFixedTests = True
 DoRDAdaptiveTests = True
 ShowCommand = True
@@ -426,12 +426,9 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
         runtest_pirock_args = []
 
         # set step sizes for fixed-step ADR tests
-        # fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-        # fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-        # fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh        = 0.01 / np.array([64], dtype=float)
-        fixedh_strang = 0.01 / np.array([64], dtype=float)
-        fixedh_pirock = 0.01 / np.array([64], dtype=float)
+        fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
 
         # set up tests that treat reactions implicitly
         if (DoImplicitRx):
@@ -501,8 +498,7 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
         runtest_pirock_args = []
 
         # set tolerances for adaptive ADR tests
-        #rtol = np.logspace(-2.5, -6.5, 9)
-        rtol = [1e-5]
+        rtol = np.logspace(-2.5, -6.5, 9)
         atol = 1e-11
 
         # set up tests that treat reactions implicitly
@@ -583,12 +579,9 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
         runtest_pirock_args = []
 
         # set step sizes for fixed-step RD tests
-        # fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-        # fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-        # fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh        = 0.001 / np.array([64], dtype=float)
-        fixedh_strang = 0.001 / np.array([64], dtype=float)
-        fixedh_pirock = 0.001 / np.array([64], dtype=float)
+        fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
 
         for solver in RxDiffSolvers:
             for h in fixedh:
@@ -636,8 +629,7 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
         runtest_pirock_args = []
 
         # set tolerances for adaptive RD tests
-        # rtol = np.logspace(-2.5, -6.5, 9)
-        rtol = [1e-5]
+        rtol = np.logspace(-2.5, -6.5, 9)
         atol = 1e-11
 
         for solver in RxDiffSolvers:
