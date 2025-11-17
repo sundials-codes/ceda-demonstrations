@@ -86,6 +86,8 @@ def comparison_plot(fname, kx, tol, titleprefix, picname):
     fig.legend(handles, labels, loc='upper left', bbox_to_anchor=[0.725, 0.92])
     plt.savefig(picname)
 
+efficiency_figsize = (10,4)
+efficiency_bbox = (0.55, 0.95)
 def efficiency_plot(fname, kx, grid, titleprefix, picname):
     """
     Generates an "efficiency plot" that shows the relative solution error versus runtime for all methods at a given spatial grid size, for a given diffusion coefficient and a given relative tolerance.  Saves the graphic to the requested filename.
@@ -95,7 +97,9 @@ def efficiency_plot(fname, kx, grid, titleprefix, picname):
     data = pd.read_excel(fname)
 
     # iterate over all methods, adding data to plot
-    fig = plt.figure()
+    fig = plt.figure(figsize=efficiency_figsize)
+    gs = GridSpec(1, 2, figure=fig)
+    ax1 = fig.add_subplot(gs[0,0])
     for method in data['method'].sort_values().unique():
 
         # extract relevant data arrays
@@ -103,14 +107,16 @@ def efficiency_plot(fname, kx, grid, titleprefix, picname):
         runtime = (data.groupby(['method','kx','grid']).get_group((method,kx,grid)))['Runtime']
 
         # add data to plot
-        plt.loglog(runtime, relerr, marker='o', ls='-', label=mname(method))
+        ax1.loglog(runtime, relerr, marker='o', ls='-', label=mname(method))
 
-    plt.title(titleprefix + ' computational efficiency (kx = ' + repr(kx) + ', grid = ' + repr(grid) + ')')
-    plt.xlabel('runtime (sec)')
-    plt.ylabel('temporal relative error')
-    plt.ylim([None, 1.0])
-    plt.grid(linestyle='--', linewidth=0.5)
-    plt.legend()
+    handles, labels = ax1.get_legend_handles_labels()
+    ax1.set_xlabel('runtime (sec)')
+    ax1.set_ylabel('temporal relative error')
+    titletxt = titleprefix + r' efficiency ($\nu_x$ = ' + repr(kx) + ', ' + repr(grid) + r'$^2$ grid)'
+    ax1.set_title(titletxt)
+    ax1.set_ylim([None, 1.0])
+    ax1.grid(linestyle='--', linewidth=0.5)
+    fig.legend(handles, labels, loc='upper left', bbox_to_anchor=efficiency_bbox)
     plt.savefig(picname)
 
 def print_failed_tests(fname):
