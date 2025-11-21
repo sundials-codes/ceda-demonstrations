@@ -22,7 +22,7 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
              'eigsafety': eigsafety, 'user_dom_eig': user_dom_eig, 'dee_id': dee_id,
              'dee_init_wups': dee_init_wups, 'dee_succ_wups': dee_succ_wups,
              'dee_maxiters': dee_maxiters, 'dee_reltol': dee_reltol,
-             'ReturnCode': 0, 'Steps': 0, 'Fails': 0, 'Accuracy': 0.0,
+             'ReturnCode': 0, 'Steps': 0, 'Fails': 0, 'Accuracy': 0.0, 'Accuracy_Tf': 0.0,
              'RHSEvals': 0, 'RHSEvalsDEE': 0, 'MaxStages': 0, 'MaxSpectralRadius': 0,
              'Runtime': 0.0, 'commonargs': commonargs}
     if (method['name'] == 'RKC'):
@@ -55,7 +55,9 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
                 stats['Steps'] = int(txt[2])
             elif (("Error" in txt) and ("test" in txt)):
                 stats['Fails'] = int(txt[4])
-            elif ("max-in-space" in txt):
+            elif (("max-in-space" in txt) and ("at" in txt)):
+                stats['Accuracy_Tf'] = float(txt[3])
+            elif (("max-in-time" in txt) and ("max-in-space" in txt)):
                 stats['Accuracy'] = float(txt[5])
             elif (("RHS" in txt) and ("fn" in txt)):
                 stats['RHSEvals'] += int(txt[4])
@@ -72,8 +74,8 @@ def runtest(exe, k, rtol, atol, h, normtype, method, eigfreq, eigsafety, user_do
     return stats
 
 # filename to hold run statistics
-fname_fixed = "results_gk_diffusion_1x1v_p1_fixed.xlsx"
-fname_adaptive = "results_gk_diffusion_1x1v_p1_adaptive.xlsx"
+fname_fixed = "full_results_gk_diffusion_1x1v_p1_fixed.xlsx"
+fname_adaptive = "full_results_gk_diffusion_1x1v_p1_adaptive.xlsx"
 
 # executable
 exe = "./gk_diffusion_1x1v_p1"
@@ -86,9 +88,9 @@ maxsteps = " --maxsteps 100000"
 common = tf + maxstages + nout + maxsteps
 
 # parameter arrays to iterate over
-kvals = [0.1,  1.0, 10.0]
-rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
-atol = 1e-9
+kvals = [0.1, 1.0, 10.0]
+rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6, 1.e-7, 1.e-8]
+atol = 1e-12
 hvals = 0.1/np.array([10, 20, 40, 80, 160])
 normtypes = [1, 2]
 STSSolvers = [{'name': 'RKC', 'stages': 0},
@@ -102,7 +104,7 @@ user_dom_eig = [False, True]
 dee_id = 0
 dee_init_wups = 0
 dee_succ_wups = 0
-dee_maxiters_val = [100, 1000]
+dee_maxiters_val = [100]
 dee_reltol = 1e-1
 
 # flags to enable/disable classes of tests
@@ -133,7 +135,7 @@ if (DoFixedTests):
             # SSP methods
             for method in SSPSolvers:
                 stat = runtest(exe, k, 1e-4, atol, h, 1, method,
-                               eigfreq, 1.01, False,
+                               eigfreq, 1.15, False,
                                dee_id, dee_init_wups, dee_succ_wups,
                                100, dee_reltol, common)
                 FixedStats.append(stat)
@@ -170,7 +172,7 @@ if (DoAdaptiveTests):
                 # SSP methods
                 for method in SSPSolvers:
                     stat = runtest(exe, k, rtol, atol, 0.0, normtype,
-                                   method, eigfreq, 1.01, False,
+                                   method, eigfreq, 1.15, False,
                                    dee_id, dee_init_wups, dee_succ_wups,
                                    100, dee_reltol, common)
                     AdaptiveStats.append(stat)
