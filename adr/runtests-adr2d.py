@@ -14,10 +14,18 @@ import subprocess
 import shlex
 import time
 import os
+import multiprocessing
+import tempfile
 
 
 # set maximum runtime before a test is considered a failure and canceled
-maxruntime = 30*60 # 30 minutes, converted to seconds
+maxruntime = 60*60 # 60 minutes, converted to seconds
+
+# Directory from which the script is being run
+topdir = os.getcwd()
+
+# Maximum number of processes to use for multiprocessor tests
+maxprocs = 60
 
 #####################
 # utility routines
@@ -131,61 +139,65 @@ def generate_RD_reference(exe='./bin/advection_diffusion_reaction_2D', d=0.1, A=
 def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 400):
         raise(ValueError, "To run without 400 spatial nodes, need to edit/recompile pb_bruss2dadv.f (and this error check)")
-    stats = {'probtype': 'AdvDiffRx', 'implicitrx': False, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': 'AdvDiffRx', 'implicitrx': False, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
 
-    # modify parameters in namelist file and turn on/off advection/reaction
-    with open("adr_2D_pirock_params.txt",'w') as namefile:
-        namefile.write("&inputs\n")
-        namefile.write("   alf = " + str(d) + "\n")
-        namefile.write("   uxadv = " + str(cux) + "\n")
-        namefile.write("   uyadv = " + str(cuy) + "\n")
-        namefile.write("   vxadv = " + str(cvx) + "\n")
-        namefile.write("   vyadv = " + str(cvy) + "\n")
-        namefile.write("   brussa = " + str(A) + "\n")
-        namefile.write("   brussb = " + str(B) + "\n")
-        namefile.write("   atol = " + str(atol) + "\n")
-        namefile.write("   rtol = " + str(rtol) + "\n")
-        namefile.write("   h = " + str(fixedh) + "\n")
-        namefile.write("/\n")
+    # create a temporary directory to run the test
+    with tempfile.TemporaryDirectory() as tempdir:
+        pwd = os.getcwd()
+        os.chdir(tempdir)
 
-    # run the test (and determine runtime)
-    tstart = time.perf_counter()
-    try:
-        result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
-        stats['ReturnCode'] = result.returncode
-        # print output to screen if requested
-        if (showoutput):
-            print(result.stdout.decode())
-    except subprocess.TimeoutExpired:
-        print('Test exceeded maximum run time and was terminated')
-        stats['ReturnCode'] = -1
-    stats['RunTime'] = time.perf_counter() - tstart
+        # modify parameters in namelist file and turn on/off advection/reaction
+        with open("adr_2D_pirock_params.txt",'w') as namefile:
+            namefile.write("&inputs\n")
+            namefile.write("   alf = " + str(d) + "\n")
+            namefile.write("   uxadv = " + str(cux) + "\n")
+            namefile.write("   uyadv = " + str(cuy) + "\n")
+            namefile.write("   vxadv = " + str(cvx) + "\n")
+            namefile.write("   vyadv = " + str(cvy) + "\n")
+            namefile.write("   brussa = " + str(A) + "\n")
+            namefile.write("   brussb = " + str(B) + "\n")
+            namefile.write("   atol = " + str(atol) + "\n")
+            namefile.write("   rtol = " + str(rtol) + "\n")
+            namefile.write("   h = " + str(fixedh) + "\n")
+            namefile.write("/\n")
 
-    # process the run results
-    if (stats['ReturnCode'] != 0):
-        print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-        print(result.stderr)
-    else:
-        if(showcommand):
-            print("Run command: " + exe + " SUCCESS\n")
+        # run the test (and determine runtime)
+        tstart = time.perf_counter()
+        try:
+            result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+            stats['ReturnCode'] = result.returncode
+            # print output to screen if requested
+            if (showoutput):
+                print(result.stdout.decode())
+        except subprocess.TimeoutExpired:
+            print('Test exceeded maximum run time and was terminated')
+            stats['ReturnCode'] = -1
+        stats['RunTime'] = time.perf_counter() - tstart
 
-        # compute solution error and store this in the stats
-        stats['Accuracy'] = calc_error(nx, "sol.dat", "adr_reference.dat")
-        if os.path.isfile("sol.dat"):
-            os.remove("sol.dat")
+        # process the run results
+        if (stats['ReturnCode'] != 0):
+            print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
+            print(result.stderr)
+        else:
+            if(showcommand):
+                print("Run command: " + exe + " SUCCESS\n")
 
-        # get remaining stats from stdout
-        lines = str(result.stdout).split('\\n')
-        for line in lines:
-            if 'Number of f evaluations' in line:
-                txt = line.split()
-                stats['DiffEvals'] = int(txt[4])
-                stats['AdvEvals'] = int(txt[7])
-                stats['Steps'] = int(txt[9])
-                stats['Fails'] = int(txt[13])
-            elif 'Number of reaction VF' in line:
-                txt = line.split()
-                stats['RxEvals'] = int(txt[5])
+            # compute solution error and store this in the stats
+            stats['Accuracy'] = calc_error(nx, "sol.dat", topdir + "/adr_reference.dat")
+
+            # get remaining stats from stdout
+            lines = str(result.stdout).split('\\n')
+            for line in lines:
+                if 'Number of f evaluations' in line:
+                    txt = line.split()
+                    stats['DiffEvals'] = int(txt[4])
+                    stats['AdvEvals'] = int(txt[7])
+                    stats['Steps'] = int(txt[9])
+                    stats['Fails'] = int(txt[13])
+                elif 'Number of reaction VF' in line:
+                    txt = line.split()
+                    stats['RxEvals'] = int(txt[5])
+        os.chdir(pwd)
     return stats
 
 
@@ -193,146 +205,156 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
 def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B=2.e7, nx=200, ny=200, tf=2.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 200):
         raise(ValueError, "To run without 200 spatial nodes, need to edit/recompile pb_bruss2dreac.f (and this error check)")
-    stats = {'probtype': 'RxDiff', 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'cux': 0.0, 'cuy': 0.0, 'cvx': 0.0, 'cvy': 0.0, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': 'RxDiff', 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': 0.0, 'cuy': 0.0, 'cvx': 0.0, 'cvy': 0.0, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
 
-    # modify parameters in namelist file and turn on/off advection/reaction
-    with open("rd_2D_pirock_params.txt",'w') as namefile:
-        namefile.write("&inputs\n")
-        namefile.write("   alf = " + str(d) + "\n")
-        namefile.write("   brussa = " + str(A) + "\n")
-        namefile.write("   brussb = " + str(B) + "\n")
-        namefile.write("   atol = " + str(atol) + "\n")
-        namefile.write("   rtol = " + str(rtol) + "\n")
-        namefile.write("   h = " + str(fixedh) + "\n")
-        namefile.write("/\n")
+    # create a temporary directory to run the test
+    with tempfile.TemporaryDirectory() as tempdir:
+        pwd = os.getcwd()
+        os.chdir(tempdir)
 
-    # run the test (and determine runtime)
-    tstart = time.perf_counter()
-    try:
-        result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
-        stats['ReturnCode'] = result.returncode
-        # print output to screen if requested
-        if (showoutput):
-            print(result.stdout.decode())
-    except subprocess.TimeoutExpired:
-        print('Test exceeded maximum run time and was terminated')
-        stats['ReturnCode'] = -1
-    stats['RunTime'] = time.perf_counter() - tstart
+        # modify parameters in namelist file and turn on/off advection/reaction
+        with open("rd_2D_pirock_params.txt",'w') as namefile:
+            namefile.write("&inputs\n")
+            namefile.write("   alf = " + str(d) + "\n")
+            namefile.write("   brussa = " + str(A) + "\n")
+            namefile.write("   brussb = " + str(B) + "\n")
+            namefile.write("   atol = " + str(atol) + "\n")
+            namefile.write("   rtol = " + str(rtol) + "\n")
+            namefile.write("   h = " + str(fixedh) + "\n")
+            namefile.write("/\n")
 
-    # process the run results
-    if (stats['ReturnCode'] != 0):
-        print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-        print(result.stderr)
-    else:
-        if(showcommand):
-            print("Run command: " + exe + " SUCCESS\n")
+        # run the test (and determine runtime)
+        tstart = time.perf_counter()
+        try:
+            result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+            stats['ReturnCode'] = result.returncode
+            # print output to screen if requested
+            if (showoutput):
+                print(result.stdout.decode())
+        except subprocess.TimeoutExpired:
+            print('Test exceeded maximum run time and was terminated')
+            stats['ReturnCode'] = -1
+        stats['RunTime'] = time.perf_counter() - tstart
 
-        # compute solution error and store this in the stats
-        stats['Accuracy'] = calc_error(nx, "sol.dat", "rd_reference.dat")
-        if os.path.isfile("sol.dat"):
-            os.remove("sol.dat")
+        # process the run results
+        if (stats['ReturnCode'] != 0):
+            print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
+            print(result.stderr)
+        else:
+            if(showcommand):
+                print("Run command: " + exe + " SUCCESS\n")
 
-        # get remaining stats from stdout
-        lines = str(result.stdout).split('\\n')
-        for line in lines:
-            if 'Number of f evaluations' in line:
-                txt = line.split()
-                stats['DiffEvals'] = int(txt[4])
-                stats['AdvEvals'] = int(txt[7])
-                stats['Steps'] = int(txt[9])
-                stats['Fails'] = int(txt[13])
-            elif 'Number of reaction VF' in line:
-                txt = line.split()
-                stats['RxEvals'] = int(txt[5])
+            # compute solution error and store this in the stats
+            stats['Accuracy'] = calc_error(nx, "sol.dat", topdir + "/rd_reference.dat")
+
+            # get remaining stats from stdout
+            lines = str(result.stdout).split('\\n')
+            for line in lines:
+                if 'Number of f evaluations' in line:
+                    txt = line.split()
+                    stats['DiffEvals'] = int(txt[4])
+                    stats['AdvEvals'] = int(txt[7])
+                    stats['Steps'] = int(txt[9])
+                    stats['Fails'] = int(txt[13])
+                elif 'Number of reaction VF' in line:
+                    txt = line.split()
+                    stats['RxEvals'] = int(txt[5])
+        os.chdir(pwd)
     return stats
 
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
-def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
-    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
-    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 1000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
+def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
+    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 1000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
 
-    # run the test (and determine runtime)
-    tstart = time.perf_counter()
-    try:
-        result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
-        stats['ReturnCode'] = result.returncode
-        # print output to screen if requested
-        if (showoutput):
-            print(result.stdout.decode())
-    except subprocess.TimeoutExpired:
-        print('Test exceeded maximum run time and was terminated')
-        print('Run command was: ' + runcommand)
-        stats['ReturnCode'] = -1
-    stats['RunTime'] = time.perf_counter() - tstart
+    # create a temporary directory to run the test
+    with tempfile.TemporaryDirectory() as tempdir:
+        pwd = os.getcwd()
+        os.chdir(tempdir)
 
-    # process the run results
-    if (stats['ReturnCode'] != 0):
-        print("Run command " + runcommand + " FAILURE: " + str(stats['ReturnCode']))
-    else:
-        if (showcommand):
-            print("Run command " + runcommand + " SUCCESS")
+        # run the test (and determine runtime)
+        tstart = time.perf_counter()
+        try:
+            result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
+            stats['ReturnCode'] = result.returncode
+            # print output to screen if requested
+            if (showoutput):
+                print(result.stdout.decode())
+        except subprocess.TimeoutExpired:
+            print('Test exceeded maximum run time and was terminated')
+            print('Run command was: ' + runcommand)
+            stats['ReturnCode'] = -1
+        stats['RunTime'] = time.perf_counter() - tstart
 
-        # compute solution error and store this in the stats
-        if (probtype == "AdvDiffRx"):
-            stats['Accuracy'] = calc_error(nx, "solution.dat", "adr_reference.dat")
+        # process the run results
+        if (stats['ReturnCode'] != 0):
+            print("Run command " + runcommand + " FAILURE: " + str(stats['ReturnCode']))
         else:
-            stats['Accuracy'] = calc_error(nx, "solution.dat", "rd_reference.dat")
-        if os.path.isfile("solution.dat"):
-            os.remove("solution.dat")
+            if (showcommand):
+                print("Run command " + runcommand + " SUCCESS")
 
-        lines = str(result.stdout).split('\\n')
-        if (inttype == "ARK"):
-            for line in lines:
-                txt = line.split()
-                if ("Steps" in txt):
-                    stats['Steps'] = int(txt[2])
-                if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
-                    stats['Fails'] = int(txt[4])
-                elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
-                        stats['AdvEvals'] = int(txt[4])
-                    if (probtype == "AdvDiff"):
-                        stats['AdvEvals'] = int(txt[4])
-                elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+            # compute solution error and store this in the stats
+            if (probtype == "AdvDiffRx"):
+                stats['Accuracy'] = calc_error(nx, "solution.dat", topdir + "/adr_reference.dat")
+            else:
+                stats['Accuracy'] = calc_error(nx, "solution.dat", topdir + "/rd_reference.dat")
+
+            lines = str(result.stdout).split('\\n')
+            if (inttype == "ARK"):
+                for line in lines:
+                    txt = line.split()
+                    if ("Steps" in txt):
+                        stats['Steps'] = int(txt[2])
+                    if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
+                        stats['Fails'] = int(txt[4])
+                    elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+                            stats['AdvEvals'] = int(txt[4])
+                            if (implicitrx == False):
+                                stats['RxEvals'] = int(txt[4])
+                    elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+                            stats['DiffEvals'] = int(txt[4])
+                            if (implicitrx == True):
+                                stats['RxEvals'] = int(txt[4])
+            elif (inttype == "Strang"):
+                for line in lines:
+                    txt = line.split()
+                    if ("Steps" in txt and np.isnan(stats['Steps'])):
+                        stats['Steps'] = int(txt[2])
+                    if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
+                        stats['Fails'] = int(txt[4])
+                    elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        if (probtype == "AdvDiffRx"):
+                            stats['AdvEvals'] = int(txt[5])
+                            if (implicitrx == False):
+                                stats['RxEvals'] = int(txt[5])
+                        else:
+                            stats['AdvEvals'] = 0
+                    elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
+                            stats['RxEvals'] = int(txt[5])
+                        else:
+                            stats['RxEvals'] = 0
+                    elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                         stats['DiffEvals'] = int(txt[4])
-                        stats['RxEvals'] = int(txt[4])
-                    if (probtype == "AdvDiff"):
+            else:
+                for line in lines:
+                    txt = line.split()
+                    if ("Steps" in txt and np.isnan(stats['Steps'])):
+                        stats['Steps'] = int(txt[2])
+                    if (("Error" in txt) and ("test" in txt) and ("fails" in txt) and np.isnan(stats['Fails'])):
+                        stats['Fails'] = int(txt[4])
+                    elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        stats['AdvEvals'] = int(txt[6])
+                        if (implicitrx == False):
+                            stats['RxEvals'] = int(txt[6])
+                    elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
+                        stats['RxEvals'] = int(txt[6])
+                    elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                         stats['DiffEvals'] = int(txt[4])
-                        stats['RxEvals'] = 0
-        elif (inttype == "Strang"):
-            for line in lines:
-                txt = line.split()
-                if ("Steps" in txt and stats['Steps'] == 1e10):
-                    stats['Steps'] = int(txt[2])
-                if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
-                    stats['Fails'] = int(txt[4])
-                elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    if (probtype == "AdvDiffRx" or probtype == "AdvDiff"):
-                        stats['AdvEvals'] = int(txt[5])
-                    else:
-                        stats['AdvEvals'] = 0
-                elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
-                        stats['RxEvals'] = int(txt[5])
-                    else:
-                        stats['RxEvals'] = 0
-                elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
-                    stats['DiffEvals'] = int(txt[4])
-        else:
-            for line in lines:
-                txt = line.split()
-                if ("Steps" in txt and stats['Steps'] == 1e10):
-                    stats['Steps'] = int(txt[2])
-                if (("Error" in txt) and ("test" in txt) and ("fails" in txt) and stats['Fails'] == 1e10):
-                    stats['Fails'] = int(txt[4])
-                elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    stats['AdvEvals'] = int(txt[6])
-                elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
-                    stats['RxEvals'] = int(txt[6])
-                elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
-                    stats['DiffEvals'] = int(txt[4])
+        os.chdir(pwd)
     return stats
 
 
@@ -343,11 +365,12 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 DoImplicitRx = True
 DoExplicitRx = True
 DoADRFixedTests = True
-DoRDFixedTests = True
 DoADRAdaptiveTests = True
+DoRDFixedTests = True
 DoRDAdaptiveTests = True
 ShowCommand = True
 ShowOutput = True
+ShowArgs = True
 
 # Shared testing parameters: [inttype, ststype, extststype, table_id]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
@@ -378,56 +401,89 @@ RDStrangSolvers = [['Strang', 'RKC', None, None],
 # Advection-diffusion-reaction tests
 if (DoADRFixedTests or DoADRAdaptiveTests):
 
+    # shared problem parameters
+    adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+    adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+    probtype='AdvDiffRx'
+    cux=-0.5
+    cuy=1.0
+    cvx=0.4
+    cvy=0.7
+    d=1e-2
+    A=1.3
+    B=1.0
+    nx=400
+    ny=400
+    tf=1.0
+    atol=1e-9
+
     # generate reference solution
     generate_ADR_reference()
 
     if (DoADRFixedTests):
         Stats = []
+        runtest_args = []
+        runtest_pirock_args = []
 
         # set step sizes for fixed-step ADR tests
         fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
         fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
         fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
 
-        # run solvers, treating reactions implicitly
+        # set up tests that treat reactions implicitly
         if (DoImplicitRx):
             for solver in AdvDiffRxSolvers:
                 for h in fixedh:
-                    Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0], ststype=solver[1],
-                                        extststype=solver[2], table_id=solver[3],
-                                        implicitrx=True, fixedh=h, rtol=max(1e-3*(h*h),1e-9),
-                                        showcommand=ShowCommand, showoutput=ShowOutput))
+                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                         ShowCommand, ShowOutput))
             for solver in ADRStrangSolvers:
                 for h in fixedh_strang:
-                    Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0], ststype=solver[1],
-                                        extststype=solver[2], table_id=solver[3], implicitrx=True,
-                                        fixedh=h, rtol=max(1e-3*(h*h),1e-9),
-                                        showcommand=ShowCommand, showoutput=ShowOutput))
+                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                         ShowCommand, ShowOutput))
 
-        # run solvers, treating reactions explicitly
+        # set up tests that treat reactions explicitly
         if (DoExplicitRx):
             for solver in AdvDiffRxSolvers:
                 for h in fixedh:
-                    Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0], ststype=solver[1],
-                                        extststype=solver[2], table_id=solver[3], implicitrx=False,
-                                        fixedh=h, rtol=max(1e-3*(h*h),1e-9),
-                                        showcommand=ShowCommand, showoutput=ShowOutput))
+                    runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
+                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                         ShowCommand, ShowOutput))
             for solver in AdvDiffRxSolversExpOnly:
                 for h in fixedh:
-                    Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0], ststype=solver[1],
-                                        extststype=solver[2], table_id=solver[3], implicitrx=False,
-                                        fixedh=h, rtol=max(1e-3*(h*h),1e-9),
-                                        showcommand=ShowCommand, showoutput=ShowOutput))
+                    runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
+                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                         ShowCommand, ShowOutput))
             for solver in ADRStrangSolvers:
                 for h in fixedh_strang:
-                    Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0], ststype=solver[1],
-                                        extststype=solver[2], table_id=solver[3], implicitrx=False,
-                                        fixedh=h, rtol=max(1e-3*(h*h),1e-9),
-                                        showcommand=ShowCommand, showoutput=ShowOutput))
+                    runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
+                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                         ShowCommand, ShowOutput))
 
             for h in fixedh_pirock:
-                Stats.append(runtest_ADR_pirock(rtol=max(1e-3*(h*h),1e-9), fixedh=h,
-                                                showcommand=ShowCommand, showoutput=ShowOutput))
+                runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                            max(1e-3*(h*h),1e-9), atol, h, ShowCommand, ShowOutput))
+
+        # output argument lists if requested
+        if (ShowArgs):
+            print("ADR Fixed Tests:")
+            print("runtest_args:")
+            for argset in runtest_args:
+                print(argset)
+            print("runtest_pirock_args:")
+            for argset in runtest_pirock_args:
+                print(argset)
+
+        # run tests in parallel
+        with multiprocessing.Pool(processes=maxprocs) as pool:
+            ar = []
+            for args in runtest_args:
+                ar.append(pool.apply_async(runtest, args=args))
+            for args in runtest_pirock_args:
+                ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
+            for a in ar:
+                Stats.append(a.get())
 
         # store results
         Df = pd.DataFrame.from_records(Stats)
@@ -438,35 +494,55 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
 
     if (DoADRAdaptiveTests):
         Stats = []
+        runtest_args = []
+        runtest_pirock_args = []
 
         # set tolerances for adaptive ADR tests
-        rtol = np.logspace(-2.5, -6.5, 7)
+        rtol = np.logspace(-2.5, -6.5, 9)
         atol = 1e-11
 
-        # run solvers, treating reactions implicitly
+        # set up tests that treat reactions implicitly
         for solver in AdvDiffRxSolvers:
             for rt in rtol:
-                Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], implicitrx=True, rtol=rt,
-                                     atol=atol, showcommand=ShowCommand, showoutput=ShowOutput))
+                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
+                                     ShowCommand, ShowOutput))
 
-        # run solvers, treating reactions explicitly
+        # set up tests that treat reactions explicitly
         for solver in AdvDiffRxSolvers:
             for rt in rtol:
-                Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], implicitrx=False, rtol=rt,
-                                     atol=atol, showcommand=ShowCommand, showoutput=ShowOutput))
+                runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
+                                     ShowCommand, ShowOutput))
         for solver in AdvDiffRxSolversExpOnly:
             for rt in rtol:
-                Stats.append(runtest(probtype='AdvDiffRx', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], implicitrx=False, rtol=rt,
-                                     atol=atol, showcommand=ShowCommand, showoutput=ShowOutput))
+                runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
+                                     ShowCommand, ShowOutput))
 
         for rt in rtol:
-            Stats.append(runtest_ADR_pirock(rtol=rt, atol=atol, showcommand=ShowCommand, showoutput=ShowOutput))
+            runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                        rt, atol, 0.0, ShowCommand, ShowOutput))
+
+        # output argument lists if requested
+        if (ShowArgs):
+            print("ADR Adaptive Tests:")
+            print("runtest_args:")
+            for argset in runtest_args:
+                print(argset)
+            print("runtest_pirock_args:")
+            for argset in runtest_pirock_args:
+                print(argset)
+
+        # run tests in parallel
+        with multiprocessing.Pool(processes=maxprocs) as pool:
+            ar = []
+            for args in runtest_args:
+                ar.append(pool.apply_async(runtest, args=args))
+            for args in runtest_pirock_args:
+                ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
+            for a in ar:
+                Stats.append(a.get())
 
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step AdvDiffRx2D test Df:")
@@ -479,41 +555,67 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
 if (DoRDFixedTests or DoRDAdaptiveTests):
 
     # shared problem parameters
-    d = 0.1
-    cux = 0.0
-    cuy = 0.0
-    cvx = 0.0
-    cvy = 0.0
-    A = 1.3
-    B = 2.e7
+    adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+    rdpirockexe=topdir + '/bin/reaction_diffusion_2D_pirock'
+    probtype='RxDiff'
+    cux=0.0
+    cuy=0.0
+    cvx=0.0
+    cvy=0.0
+    d=0.1
+    A=1.3
+    B=2.e7
+    nx=200
+    ny=200
+    tf=2.0
+    atol=1e-9
 
     # generate reference solution
     generate_RD_reference(d=d, A=A, B=B)
 
     if (DoRDFixedTests):
         Stats = []
+        runtest_args = []
+        runtest_pirock_args = []
 
         # set step sizes for fixed-step RD tests
-        fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
 
         for solver in RxDiffSolvers:
             for h in fixedh:
-                Stats.append(runtest(probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], implicitrx=True,
-                                     cux=cux, cuy=cuy, cvx=cvx, cvy=cvy,
-                                     d=d, A=A, B=B, fixedh=h, rtol=max(1e-3*(h*h),1e-9)))
+                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                     ShowCommand, ShowOutput))
         for solver in RDStrangSolvers:
             for h in fixedh_strang:
-                Stats.append(runtest(probtype='RxDiff', inttype=solver[0],
-                                    ststype=solver[1], extststype=solver[2],
-                                    table_id=solver[3], implicitrx=True,
-                                    cux=cux, cuy=cuy, cvx=cvx, cvy=cvy,
-                                    d=d, A=A, B=B, fixedh=h, rtol=max(1e-3*(h*h),1e-9)))
+                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                     ShowCommand, ShowOutput))
         for h in fixedh_pirock:
-            Stats.append(runtest_RD_pirock(d=d, A=A, B=B, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+            runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                        ShowCommand, ShowOutput))
+
+        # output argument lists if requested
+        if (ShowArgs):
+            print("RD Fixed Tests:")
+            print("runtest_args:")
+            for argset in runtest_args:
+                print(argset)
+            print("runtest_pirock_args:")
+            for argset in runtest_pirock_args:
+                print(argset)
+
+        # run tests in parallel
+        with multiprocessing.Pool(processes=maxprocs) as pool:
+            ar = []
+            for args in runtest_args:
+                ar.append(pool.apply_async(runtest, args=args))
+            for args in runtest_pirock_args:
+                ar.append(pool.apply_async(runtest_RD_pirock, args=args))
+            for a in ar:
+                Stats.append(a.get())
 
         Df = pd.DataFrame.from_records(Stats)
         print("Fixed step RxDiff2D test Df:")
@@ -523,20 +625,41 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
 
     if (DoRDAdaptiveTests):
         Stats = []
+        runtest_args = []
+        runtest_pirock_args = []
 
         # set tolerances for adaptive RD tests
-        rtol = np.logspace(-2.5, -6.5, 7)
+        rtol = np.logspace(-2.5, -6.5, 9)
         atol = 1e-11
 
         for solver in RxDiffSolvers:
             for rt in rtol:
-                Stats.append(runtest(probtype='RxDiff', inttype=solver[0],
-                                     ststype=solver[1], extststype=solver[2],
-                                     table_id=solver[3], implicitrx=True,
-                                     cux=cux, cuy=cuy, cvx=cvx, cvy=cvy,
-                                     d=d, A=A, B=B, rtol=rt, atol=atol))
+                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
+                                     cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
+                                     ShowCommand, ShowOutput))
         for rt in rtol:
-            Stats.append(runtest_RD_pirock(d=d, A=A, B=B, rtol=rt, atol=atol))
+            runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, rt, atol,
+                                        0.0, ShowCommand, ShowOutput))
+
+        # output argument lists if requested
+        if (ShowArgs):
+            print("RD Adaptive Tests:")
+            print("runtest_args:")
+            for argset in runtest_args:
+                print(argset)
+            print("runtest_pirock_args:")
+            for argset in runtest_pirock_args:
+                print(argset)
+
+        # run tests in parallel
+        with multiprocessing.Pool(processes=maxprocs) as pool:
+            ar = []
+            for args in runtest_args:
+                ar.append(pool.apply_async(runtest, args=args))
+            for args in runtest_pirock_args:
+                ar.append(pool.apply_async(runtest_RD_pirock, args=args))
+            for a in ar:
+                Stats.append(a.get())
 
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step RxDiff2D test Df:")

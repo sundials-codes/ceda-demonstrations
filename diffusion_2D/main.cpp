@@ -242,10 +242,15 @@ int main(int argc, char* argv[])
       arkode_mem = ARKStepCreate(nullptr, diffusion, ZERO, u, ctx);
       if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
     }
-    else if (expl)
+    else if (expl && uopts.order >= 0)
     {
       arkode_mem = ARKStepCreate(diffusion, nullptr, ZERO, u, ctx);
       if (check_flag((void*)arkode_mem, "ARKStepCreate", 0)) { return 1; }
+    }
+    else if (expl && uopts.order < 0)
+    {
+      arkode_mem = LSRKStepCreateSSP(diffusion, ZERO, u, ctx);
+      if (check_flag((void*)arkode_mem, "LSRKStepCreateSSP", 0)) { return 1; }
     }
     else
     {
@@ -269,64 +274,23 @@ int main(int argc, char* argv[])
     }
     if (expl) // order: -2,-3,-4 indicate use of SSPRK methods
     {
-      ARKodeButcherTable B = nullptr;
-      if (uopts.order == -2)
+      if (uopts.order < 0)
       {
-        B          = ARKodeButcherTable_Alloc(2, SUNTRUE);
-        B->q       = 2;
-        B->p       = 1;
-        B->A[1][0] = SUN_RCONST(1.0);
-        B->b[0]    = SUN_RCONST(0.5);
-        B->b[1]    = SUN_RCONST(0.5);
-        B->d[0]    = SUN_RCONST(0.694021459207626);
-        B->d[1]    = SUN_RCONST(1.0) - SUN_RCONST(0.694021459207626);
-        B->c[1]    = SUN_RCONST(1.0);
-      }
-      else if (uopts.order == -3)
-      {
-        B          = ARKodeButcherTable_Alloc(3, SUNTRUE);
-        B->q       = 2;
-        B->p       = 1;
-        B->A[1][0] = SUN_RCONST(0.5);
-        B->A[2][0] = SUN_RCONST(0.5);
-        B->A[2][1] = SUN_RCONST(0.5);
-        B->b[0]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
-        B->b[1]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
-        B->b[2]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
-        B->d[0]    = SUN_RCONST(4.0) / SUN_RCONST(9.0);
-        B->d[1]    = SUN_RCONST(1.0) / SUN_RCONST(3.0);
-        B->d[2]    = SUN_RCONST(2.0) / SUN_RCONST(9.0);
-        B->c[1]    = SUN_RCONST(0.5);
-        B->c[2]    = SUN_RCONST(1.0);
-      }
-      else if (uopts.order == -4)
-      {
-        B                       = ARKodeButcherTable_Alloc(4, SUNTRUE);
-        const sunrealtype third = SUN_RCONST(1.0) / SUN_RCONST(3.0);
-        B->q                    = 2;
-        B->p                    = 1;
-        B->A[1][0]              = third;
-        B->A[2][0]              = third;
-        B->A[2][1]              = third;
-        B->A[3][0]              = third;
-        B->A[3][1]              = third;
-        B->A[3][2]              = third;
-        B->b[0]                 = SUN_RCONST(0.25);
-        B->b[1]                 = SUN_RCONST(0.25);
-        B->b[2]                 = SUN_RCONST(0.25);
-        B->b[3]                 = SUN_RCONST(0.25);
-        B->d[0]                 = SUN_RCONST(5.0) / SUN_RCONST(16.0);
-        B->d[1]                 = SUN_RCONST(1.0) / SUN_RCONST(4.0);
-        B->d[2]                 = SUN_RCONST(1.0) / SUN_RCONST(4.0);
-        B->d[3]                 = SUN_RCONST(3.0) / SUN_RCONST(16.0);
-        B->c[1]                 = third;
-        B->c[2]                 = SUN_RCONST(2.0) * third;
-        B->c[3]                 = SUN_RCONST(1.0);
-      }
-      if (B != nullptr)
-      {
-        flag = ARKStepSetTables(arkode_mem, B->q, B->p, nullptr, B);
-        if (check_flag(&flag, "ARKodeSetOrder", 1)) { return 1; }
+        ARKODE_LSRKMethodType type;
+        int num_stages;
+        switch (uopts.order)
+        {
+        case -2: type = ARKODE_LSRK_SSP_S_2;  num_stages = 2;  break;
+        case -3: type = ARKODE_LSRK_SSP_S_3;  num_stages = 4;  break;
+        case -4: type = ARKODE_LSRK_SSP_10_4; num_stages = 10; break;
+        default:
+          cerr << "ERROR: illegal SSPRK order" << endl;
+          return 1;
+        }
+        flag = LSRKStepSetSSPMethod(arkode_mem, type);
+        if (check_flag(&flag, "LSRKStepSetSSPMethod", 1)) { return 1; }
+        flag = LSRKStepSetNumSSPStages(arkode_mem, num_stages);
+        if (check_flag(&flag, "LSRKStepSetNumSSPStages", 1)) { return 1; }
       }
       else
       {

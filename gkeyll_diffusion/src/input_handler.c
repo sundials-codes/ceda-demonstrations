@@ -232,7 +232,7 @@ void InputHelp(void)
   printf("  --fixedstep <step>          : used fixed step size\n");
   printf("  --wrms_norm_type <type>     : WRMS norm type (componentwise: 1, "
          "cellwise norm:2)\n");
-  printf("  --method <mth>              : LSRK method choice (0:RCK, 1:RKL, "
+  printf("  --method <mth>              : LSRK method choice (0:RKC, 1:RKL, "
          "2:SSP2, 3:SSP3, 4:SSP4)\n");
   printf(
     "  --eigfrequency <nst>        : dominant eigenvalue update frequency\n");
