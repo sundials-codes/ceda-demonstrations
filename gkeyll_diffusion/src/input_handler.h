@@ -45,6 +45,10 @@ typedef struct
   int maxsteps;       // max number of steps between outputs
   int wrms_norm_type; // wrms norm type (1:componentwise 2:cellwise)
 
+  // Insert Gkyl's default SSP33 into ARKODE
+  sunbooleantype is_SSP33;
+  ARKodeButcherTable B_ssp33;
+
   // LSRKStep options
   ARKODE_LSRKMethodType method; // LSRK method choice
   long int eigfrequency;        // dominant eigenvalue update frequency

@@ -40,6 +40,10 @@ int InitUserData(UserData* udata)
   udata->maxsteps       = 100000;             // max steps between outputs
   udata->wrms_norm_type = 2;                  // cellwise wrms norm
 
+  // Insert Gkyl's default SSP33 into ARKODE
+  udata->is_SSP33 = SUNFALSE;
+  udata->B_ssp33  = NULL;
+
   // LSRKStep options
   udata->method          = ARKODE_LSRK_RKL_2; // RKL
   udata->eigfrequency    = 0;   // 0 refers to constant dominant eigenvalue
@@ -125,6 +129,10 @@ int ReadInputs(int argc, char** argv, UserData* udata)
     else if (strcmp(arg, "--fixedstep") == 0)
     {
       udata->hfixed = atof(argv[arg_idx++]);
+    }
+    else if (strcmp(arg, "--is_SSP33") == 0)
+    {
+      udata->is_SSP33 = SUNTRUE;
     }
     else if (strcmp(arg, "--method") == 0)
     {
@@ -232,6 +240,7 @@ void InputHelp(void)
   printf("  --fixedstep <step>          : used fixed step size\n");
   printf("  --wrms_norm_type <type>     : WRMS norm type (componentwise: 1, "
          "cellwise norm:2)\n");
+  printf("  --is_SSP33                  : Insert Gkyl's default SSP33 into ARKODE\n");
   printf("  --method <mth>              : LSRK method choice (0:RKC, 1:RKL, "
          "2:SSP2, 3:SSP3, 4:SSP4)\n");
   printf(
@@ -266,6 +275,12 @@ int PrintUserData(UserData* udata, int rank)
     printf(" tf                = %g\n", udata->tf);
     printf(" nout              = %d\n", udata->nout);
     printf(" ------------------------------------ \n");
+    printf(" is_SSP33          = %d\n", udata->is_SSP33);
+    if (udata->is_SSP33)
+    {
+      printf("    Gkyl's default SSP33 method inserted into ARKODE \n");
+      return 0;
+    }
     printf(" rtol              = %.2e\n", udata->rtol);
     printf(" atol              = %.2e\n", udata->atol);
     printf(" hfixed            = %.2e\n", udata->hfixed);

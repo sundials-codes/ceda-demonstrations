@@ -781,6 +781,16 @@ static int dom_eig(sunrealtype t, N_Vector y, N_Vector fn, sunrealtype* lambdaR,
   return 0; /* return with success */
 }
 
+// TODO: update the function as needed
+static int CFLstab_h(N_Vector y, sunrealtype t, sunrealtype *hstab, void *user_data)
+{
+  struct gkyl_diffusion_app* app = (struct gkyl_diffusion_app*)user_data;
+  
+  *hstab = 0.0001; // update based on the CFL condition
+
+  return 0; /* return with success */
+}
+
 sunrealtype reltol; /* tolerances */
 sunrealtype abstol;
 
@@ -921,6 +931,74 @@ int SSP_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y,
   /* Specify max number of steps allowed */
   flag = ARKodeSetMaxNumSteps(*arkode_mem, udata->maxsteps);
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+
+  return 0;
+}
+
+int SSP33_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y,
+                void** arkode_mem)
+{
+  /* Check if *y is NULL */
+  if (*y == NULL)
+  {
+    fprintf(stderr, "\nERROR: *y is NULL\n");
+    return 1;
+  }
+
+  /* Call ERKStepCreate to initialize the ARK timestepper module and
+     specify the right-hand side function in y'=f(t,y), the initial time
+     T0, and the initial dependent variable vector y. */
+  *arkode_mem = ERKStepCreate(f, T0, *y, (*y)->sunctx);
+  if (check_flag((void*)*arkode_mem, "ERKStepCreate", 0)) { return 1; }
+
+  /* Set routines */
+  flag = ARKodeSetUserData(*arkode_mem, (void*)app); /* Pass the user data */
+  if (check_flag(&flag, "ARKodeSetUserData", 1)) { return 1; }
+
+  /* Specify tolerances */
+  flag = ARKodeSStolerances(*arkode_mem, udata->rtol, udata->atol);
+  if (check_flag(&flag, "ARKodeSStolerances", 1)) { return 1; }
+
+  sunrealtype hstab;
+  /* Estimate the initial stable time step size */
+  flag = CFLstab_h(*y, T0, &hstab, (void*)app);
+  if (check_flag(&flag, "CFLstab_h", 1)) { return 1; }
+
+  /* Set the initial step size */
+  flag = ARKodeSetInitStep(*arkode_mem, hstab);
+  if (check_flag(&flag, "ARKodeSetInitStep", 1)) { return 1; }
+
+  /* Set CFL stable time step size function */
+  flag = ARKodeSetStabilityFn(*arkode_mem, CFLstab_h, (void*)app);
+  if (check_flag(&flag, "ARKodeSetStabilityFn", 1)) { return 1; }
+
+  /* Set CFL safety factor one to ensure exact use of the stable time step size */
+  flag = ARKodeSetCFLFraction(*arkode_mem, ONE);
+  if (check_flag(&flag, "ARKodeSetCFLFraction", 1)) { return 1; }
+
+  /* Specify max number of steps allowed */
+  flag = ARKodeSetMaxNumSteps(*arkode_mem, udata->maxsteps);
+  if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
+
+  // Insert the SSP33 Butcher tableau
+  udata->B_ssp33 = ARKodeButcherTable_Alloc(3, SUNTRUE);
+  if (check_flag((void*)(udata->B_ssp33), "ARKodeButcherTable_Alloc", 0)) { return 1; }
+  udata->B_ssp33->A[1][0] = SUN_RCONST(1.0);
+  udata->B_ssp33->A[2][0] = SUN_RCONST(0.25);
+  udata->B_ssp33->A[2][1] = SUN_RCONST(0.25);
+  udata->B_ssp33->b[0]    = SUN_RCONST(1.0/6.0);
+  udata->B_ssp33->b[1]    = SUN_RCONST(1.0/6.0);
+  udata->B_ssp33->b[2]    = SUN_RCONST(2.0/3.0);
+  udata->B_ssp33->c[1]    = ONE;
+  udata->B_ssp33->c[2]    = SUN_RCONST(0.5);
+  udata->B_ssp33->q       = 3;
+  udata->B_ssp33->p       = 3;    // dummy embedding order
+  udata->B_ssp33->d[0]    = SUN_RCONST(1.0/6.0 + udata->rtol); // dummy embedding
+  udata->B_ssp33->d[1]    = SUN_RCONST(1.0/6.0);
+  udata->B_ssp33->d[2]    = SUN_RCONST(2.0/3.0);
+
+  flag = ERKStepSetTable(*arkode_mem, udata->B_ssp33);
+  if (check_flag(&flag, "ERKStepSetTable", 1)) { return 1; }
 
   return 0;
 }
@@ -1083,7 +1161,12 @@ int main(int argc, char* argv[])
   reltol     = udata->rtol;
   abstol     = udata->atol;
 
-  if (udata->method == ARKODE_LSRK_RKC_2 || udata->method == ARKODE_LSRK_RKL_2)
+  if(udata->is_SSP33)
+  {
+    is_SSP = SUNTRUE;
+    udata->num_SSP_stages = 3;
+  }
+  else if (udata->method == ARKODE_LSRK_RKC_2 || udata->method == ARKODE_LSRK_RKL_2)
   {
     is_SSP = SUNFALSE;
   }
@@ -1233,7 +1316,7 @@ int main(int argc, char* argv[])
     flag = LSRKStepSetSTSMethod(arkode_mem, udata->method);
     if (check_flag(&flag, "LSRKStepSetSTSMethod", 1)) { return 1; }
   }
-  else if (is_SSP)
+  else if (!udata->is_SSP33)
   {
     int flag;
     flag = SSP_init(app, udata, &y, &arkode_mem);
@@ -1246,6 +1329,12 @@ int main(int argc, char* argv[])
     /* Specify the number of SSP stages */
     flag = LSRKStepSetNumSSPStages(arkode_mem, udata->num_SSP_stages);
     if (check_flag(&flag, "LSRKStepSetNumSSPStages", 1)) { return 1; }
+  }
+  else if (udata->is_SSP33)
+  {
+    int flag;
+    flag = SSP33_init(app, udata, &y, &arkode_mem);
+    if (check_flag(&flag, "SSP33_init", 1)) { return 1; }
   }
 
   /* Attach the error function */
@@ -1344,6 +1433,16 @@ int main(int argc, char* argv[])
   // Free the app.
   gkyl_array_release(fref);
   gkyl_diffusion_app_release(app);
+
+  // Free ARKode memory.
+  ARKodeFree(&arkode_mem);
+  ARKodeFree(&arkode_mem_ref);
+  N_VDestroy(y);
+  N_VDestroy(yref);
+  SUNContext_Free(&sunctx);
+  ARKodeButcherTable_Free(udata->B_ssp33);
+  // Free user data.
+  free(udata);
 
 #ifdef GKYL_HAVE_MPI
   if (app_args.use_mpi) { MPI_Finalize(); }
