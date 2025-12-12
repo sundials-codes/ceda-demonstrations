@@ -19,7 +19,7 @@ import tempfile
 
 
 # set maximum runtime before a test is considered a failure and canceled
-maxruntime = 60*60 # 60 minutes, converted to seconds
+maxruntime = 90*60 # 90 minutes, converted to seconds
 
 # Directory from which the script is being run
 topdir = os.getcwd()
@@ -34,7 +34,8 @@ maxprocs = 60
 def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
     flags = ""
     if (probtype == "RxDiff"):
-        flags += " --no-advection"
+        #flags += " --no-advection "
+        flags += " "
     elif (probtype == "AdvDiffRx"):
         flags += " "
     else:
@@ -46,7 +47,7 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
         raise(ValueError, msg)
 
     if (implicitrx):
-        flags += " --implicit-reaction"
+        flags += " --implicit-reaction --maxnewt 10 --nlscoef 0.01 --error_bias 2.0"
 
     if (inttype == "ARK"):
         flags += " --integrator 1 --table_id %d" % table_id
@@ -251,11 +252,18 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
             lines = str(result.stdout).split('\\n')
             for line in lines:
                 if 'Number of f evaluations' in line:
-                    txt = line.split()
-                    stats['DiffEvals'] = int(txt[4])
-                    stats['AdvEvals'] = int(txt[7])
-                    stats['Steps'] = int(txt[9])
-                    stats['Fails'] = int(txt[13])
+                    try:
+                        txt = line.split()
+                        stats['DiffEvals'] = int(txt[4])
+                        stats['AdvEvals'] = int(txt[7])
+                        stats['Steps'] = int(txt[9])
+                        stats['Fails'] = int(txt[13])
+                    except (IndexError, ValueError):
+                        print("Error parsing f evaluations line: " + line)
+                        print("current namelist file:")
+                        with open("rd_2D_pirock_params.txt",'r') as namefile:
+                            print(namefile.read())
+                        raise(ValueError,"Aborting due to parse error")
                 elif 'Number of reaction VF' in line:
                     txt = line.split()
                     stats['RxEvals'] = int(txt[5])
@@ -266,7 +274,7 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
 # utility routine to run a single C++ test, storing the run options and solver statistics
 def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
-    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 1000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
+    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
 
     # create a temporary directory to run the test
     with tempfile.TemporaryDirectory() as tempdir:
@@ -364,8 +372,8 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 # Flags to enable/disable categories of tests
 DoImplicitRx = True
 DoExplicitRx = True
-DoADRFixedTests = True
-DoADRAdaptiveTests = True
+DoADRFixedTests = False
+DoADRAdaptiveTests = False
 DoRDFixedTests = True
 DoRDAdaptiveTests = True
 ShowCommand = True
@@ -483,7 +491,9 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
             for args in runtest_pirock_args:
                 ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
             for a in ar:
-                Stats.append(a.get())
+                st = a.get()
+                print(st)
+                Stats.append(st)
 
         # store results
         Df = pd.DataFrame.from_records(Stats)
@@ -542,7 +552,9 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
             for args in runtest_pirock_args:
                 ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
             for a in ar:
-                Stats.append(a.get())
+                st = a.get()
+                print(st)
+                Stats.append(st)
 
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step AdvDiffRx2D test Df:")
@@ -579,9 +591,12 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
         runtest_pirock_args = []
 
         # set step sizes for fixed-step RD tests
-        fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-        fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        # fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        # fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        # fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+        fixedh        = 0.001 / np.array([32, 64, 128, 256], dtype=float)
+        fixedh_strang = 0.001 / np.array([64, 128, 256], dtype=float)
+        fixedh_pirock = 0.001 / np.array([32, 64, 128, 256], dtype=float)
 
         for solver in RxDiffSolvers:
             for h in fixedh:
@@ -615,7 +630,9 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
             for args in runtest_pirock_args:
                 ar.append(pool.apply_async(runtest_RD_pirock, args=args))
             for a in ar:
-                Stats.append(a.get())
+                st = a.get()
+                print(st)
+                Stats.append(st)
 
         Df = pd.DataFrame.from_records(Stats)
         print("Fixed step RxDiff2D test Df:")
@@ -659,7 +676,9 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
             for args in runtest_pirock_args:
                 ar.append(pool.apply_async(runtest_RD_pirock, args=args))
             for a in ar:
-                Stats.append(a.get())
+                st = a.get()
+                print(st)
+                Stats.append(st)
 
         Df = pd.DataFrame.from_records(Stats)
         print("Adaptive step RxDiff2D test Df:")
