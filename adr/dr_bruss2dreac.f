@@ -100,8 +100,8 @@ c ----- print statistics -----
 	write(6,*) 'Max number of iterations used=',iwork(13)
       write (6,91) iwork(5),iwork(16),iwork(6),
      &   iwork(7),iwork(8),iwork(13)
- 91   format(' Number of f evaluations=',i7,' fA evaluations=',i7,
-     &   ' steps=',i7,' accpt=',i7,' rejct=',i7,' max iter',i4)
+ 91   format(' Number of f evaluations=',i10,' fA evaluations=',i10,
+     &   ' steps=',i10,' accpt=',i10,' rejct=',i10,' max iter',i4)
 
 	write (6,*) 'Number of reaction VF',
      &   iwork(17),(iwork(17)*npdes)/neqn

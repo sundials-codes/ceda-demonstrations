@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
   {
     flag = SetupReference(ctx, udata, uopts, yref, &LSref, &arkref_mem);
     if (check_flag(flag, "Reference solver setup")) { return 1; }
-    flag = ARKodeSStolerances(arkref_mem, 1e-10, uopts.atol);
+    flag = ARKodeSStolerances(arkref_mem, uopts.rtol/100, uopts.atol);
     if (check_flag(flag, "ARKodeSStolerances")) { return 1; }
     flag = ARKodeSetOrder(arkref_mem, 4);
     if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
@@ -147,14 +147,8 @@ int main(int argc, char* argv[])
   // Evolve problem in time
   // ----------------------
 
-  // Initial time, time between outputs, output time
-  sunrealtype t     = ZERO;
-  sunrealtype t2    = ZERO;
-  sunrealtype dTout = udata.tf / uopts.nout;
-  sunrealtype tout  = dTout;
-
-  // Accumulated error
-  sunrealtype total_error = ZERO;
+  // Initial time
+  sunrealtype t  = ZERO;
 
   // Initial output
   flag = OpenOutput(udata, uopts);
@@ -164,41 +158,71 @@ int main(int argc, char* argv[])
   sunrealtype ref_time = 0.0;
   sunrealtype solve_time = 0.0;
 
-  // Loop over output times
-  for (int iout = 0; iout < uopts.nout; iout++)
+  // Either perform normal or one-step evolution, based on calc_error flag
+  if (uopts.calc_error)      // one step mode
   {
-    // Evolve
-    if ((uopts.output == 3) || (uopts.calc_error))
-    {
-      // Stop at output time (do not interpolate output)
-      flag = ARKodeSetStopTime(arkode_mem, tout);
-      if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
-    }
+    sunrealtype t2 = ZERO;
+    sunrealtype total_error = ZERO;
+    uopts.nout = 0;
 
-    //   Advance in time
-    auto solver_start = chrono::high_resolution_clock::now();
-    flag = ARKodeEvolve(arkode_mem, tout, y, &t, ARK_NORMAL);
-    if (check_flag(flag, "ARKodeEvolve")) { return 1; }
-    auto solver_end = chrono::high_resolution_clock::now();
-    solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+    // Set stop time for solution end
+    flag = ARKodeSetStopTime(arkode_mem, udata.tf);
+    if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
 
-    // Advance reference solution and compute error
-    if (uopts.calc_error)
+    // Loop over internal time steps
+    while (udata.tf - t > std::sqrt(std::numeric_limits<sunrealtype>::epsilon()))
     {
-      flag = ARKodeSetStopTime(arkref_mem, tout);
+      // Call "test" solver in one-step mode
+      auto solver_start = chrono::high_resolution_clock::now();
+      flag = ARKodeEvolve(arkode_mem, udata.tf, y, &t, ARK_ONE_STEP);
+      if (check_flag(flag, "ARKodeEvolve")) { return 1; }
+      auto solver_end = chrono::high_resolution_clock::now();
+      solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+
+      // Advance reference solution to identical time and accumulate error
+      flag = ARKodeSetStopTime(arkref_mem, t);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
       auto reference_start = chrono::high_resolution_clock::now();
-      flag = ARKodeEvolve(arkref_mem, tout, yref, &t2, ARK_NORMAL);
+      flag = ARKodeEvolve(arkref_mem, t, yref, &t2, ARK_NORMAL);
       if (check_flag(flag, "ARKodeEvolve (ref)")) { return 1; }
       auto reference_end = chrono::high_resolution_clock::now();
       ref_time += chrono::duration<sunrealtype>(reference_end - reference_start).count();
       N_VLinearSum(1.0, y, -1.0, yref, yerr);
-      total_error += N_VDotProd(yerr, yerr);
+      sunrealtype curr_error = N_VDotProd(yerr, yerr);
+      total_error += curr_error;
+      uopts.nout++;
+      long int nst_ref;
+      flag = ARKodeGetNumSteps(arkref_mem, &nst_ref);
+      if (check_flag(flag, "ARKodeGetNumSteps")) { return -1; }
+      std::cout << " t = " << t << ", ||err_curr|| = " << std::sqrt(curr_error / udata.nx / 3)
+                << ", ||err_tot|| = " << std::sqrt(total_error / uopts.nout / udata.nx / 3)
+                << ", reference steps = " << nst_ref << std::endl;
     }
+  }
+  else                       // normal mode
+  {
+    sunrealtype dTout = udata.tf / uopts.nout;
+    sunrealtype tout  = dTout;
+    for (int iout = 0; iout < uopts.nout; iout++)
+    {
+      if (uopts.output == 3)
+      {
+        // Stop at output time (do not interpolate output)
+        flag = ARKodeSetStopTime(arkode_mem, tout);
+        if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
+      }
 
-    // Update output time
-    tout += dTout;
-    tout = (tout > udata.tf) ? udata.tf : tout;
+      //   Advance in time
+      auto solver_start = chrono::high_resolution_clock::now();
+      flag = ARKodeEvolve(arkode_mem, tout, y, &t, ARK_NORMAL);
+      if (check_flag(flag, "ARKodeEvolve")) { return 1; }
+      auto solver_end = chrono::high_resolution_clock::now();
+      solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+
+      // Update output time
+      tout += dTout;
+      tout = (tout > udata.tf) ? udata.tf : tout;
+    }
   }
 
   // Output solution
@@ -222,11 +246,6 @@ int main(int argc, char* argv[])
     cout << "Final integrator statistics:" << endl;
     cout << "  Total solve time   = " << setprecision(2) << solve_time << endl;
     cout << "  Reference time     = " << setprecision(2) << ref_time << endl;
-    if (uopts.calc_error)
-    {
-      cout << "  Solution error     = " << setprecision(2)
-           << sqrt(total_error / uopts.nout / udata.nx / 3) << endl;
-    }
     switch (uopts.integrator)
     {
     case (0): flag = OutputStatsERK(arkode_mem, udata); break;
@@ -406,10 +425,12 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
   }
 
-  // Tighten implicit solver tolerances
-  flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-2);
+  // Tighten implicit solver tolerances and allow more Newton iterations
+  flag = ARKodeSetMaxNonlinIters(*arkode_mem, uopts.maxnewt);
+  if (check_flag(flag, "ARKodeSetMaxNonlinIters")) { return 1; }
+  flag = ARKodeSetNonlinConvCoef(*arkode_mem, uopts.nlscoef);
   if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
-  flag = ARKodeSetEpsLin(*arkode_mem, 1.e-2);
+  flag = ARKodeSetEpsLin(*arkode_mem, uopts.epslin);
   if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
 
   // Use "deduce implicit RHS" option
@@ -569,11 +590,16 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
   }
 
-  // Set fixed step size
+  // Set fixed step size, or error bias if using adaptive time stepping
   if (uopts.fixed_h > ZERO)
   {
     flag = ARKodeSetFixedStep(*arkode_mem, uopts.fixed_h);
     if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+  }
+  else
+  {
+    flag = ARKodeSetErrorBias(*arkode_mem, uopts.error_bias);
+    if (check_flag(flag, "ARKodeSetErrorBias")) { return 1; }
   }
 
   // Set max steps between outputs
@@ -644,10 +670,12 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
   flag = ARKodeSetLinearSolver(*arkode_mem, *LS, nullptr);
   if (check_flag(flag, "ARKodeSetLinearSolver")) { return 1; }
 
-  // Tighten implicit solver tolerances
-  flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-1);
+  // Tighten implicit solver tolerances and allow more Newton iterations
+  flag = ARKodeSetMaxNonlinIters(*arkode_mem, uopts.maxnewt);
+  if (check_flag(flag, "ARKodeSetMaxNonlinIters")) { return 1; }
+  flag = ARKodeSetNonlinConvCoef(*arkode_mem, uopts.nlscoef);
   if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
-  flag = ARKodeSetEpsLin(*arkode_mem, 1.e-1);
+  flag = ARKodeSetEpsLin(*arkode_mem, uopts.epslin);
   if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
 
   // Use "deduce implicit RHS" option
@@ -764,15 +792,20 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Setup the MRI integrator
   // -------------------------
 
-  // Create slow integrator for diffusion and attach fast integrator
+  // Create "slow" integrator for advection+reaction and attach "fast" integrator for diffusion
   *arkode_mem = MRIStepCreate(fe_RHS, fi_RHS, ZERO, y, *sts_mem, ctx);
   if (check_ptr(*arkode_mem, "MRIStepCreate")) { return 1; }
 
-  // Set fixed step size
+  // Set fixed step size, or temporal adaptivity error bias
   if (uopts.fixed_h > ZERO)
   {
     flag = ARKodeSetFixedStep(*arkode_mem, uopts.fixed_h);
     if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
+  }
+  else
+  {
+    flag = ARKodeSetErrorBias(*arkode_mem, uopts.error_bias);
+    if (check_flag(flag, "ARKodeSetErrorBias")) { return 1; }
   }
 
   // Specify tolerances
@@ -806,15 +839,15 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     flag = ARKodeSetLSetupFrequency(*arkode_mem, uopts.ls_setup_freq);
     if (check_flag(flag, "ARKodeSetLSetupFrequency")) { return 1; }
 
-    // Tighten implicit solver tolerances
-    flag = ARKodeSetNonlinConvCoef(*arkode_mem, 1.e-1);
+    // Tighten implicit solver tolerances and allow more Newton iterations
+    flag = ARKodeSetMaxNonlinIters(*arkode_mem, uopts.maxnewt);
+    if (check_flag(flag, "ARKodeSetMaxNonlinIters")) { return 1; }
+    flag = ARKodeSetNonlinConvCoef(*arkode_mem, uopts.nlscoef);
     if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
-    flag = ARKodeSetEpsLin(*arkode_mem, 1.e-1);
-    if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
 
-    // Use "deduce implicit RHS" option
-    flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
-    if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
+    // // Use "deduce implicit RHS" option
+    // flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
+    // if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
 
     // Set the predictor method
     flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
@@ -1187,11 +1220,11 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     flag = ARKodeSetLSetupFrequency(*arkstep_mem, uopts.ls_setup_freq);
     if (check_flag(flag, "ARKodeSetLSetupFrequency")) { return 1; }
 
-    // Tighten implicit solver tolerances
-    flag = ARKodeSetNonlinConvCoef(*arkstep_mem, 1.e-1);
+    // Tighten implicit solver tolerances and allow more Newton iterations
+    flag = ARKodeSetMaxNonlinIters(*arkstep_mem, uopts.maxnewt);
+    if (check_flag(flag, "ARKodeSetMaxNonlinIters")) { return 1; }
+    flag = ARKodeSetNonlinConvCoef(*arkstep_mem, uopts.nlscoef);
     if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
-    flag = ARKodeSetEpsLin(*arkstep_mem, 1.e-1);
-    if (check_flag(flag, "ARKodeSetEpsLin")) { return 1; }
 
     // Use "deduce implicit RHS" option
     flag = ARKodeSetDeduceImplicitRhs(*arkstep_mem, SUNTRUE);

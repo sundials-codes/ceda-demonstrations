@@ -144,17 +144,22 @@ struct UserOptions
   int sts_method    = 0;
   int extsts_method = 0;
 
-  // Relative and absolute tolerances
+  // Relative and absolute tolerances, and temporal error bias
   sunrealtype rtol = SUN_RCONST(1.e-3);
   sunrealtype atol = SUN_RCONST(1.e-11);
+  sunrealtype error_bias = SUN_RCONST(1.0);
 
   // Step size selection (ZERO = adaptive steps)
   sunrealtype fixed_h = ZERO;
 
-  int maxsteps      = 100000; // max steps between outputs
-  int predictor     = 0;      // predictor for nonlinear systems
-  int ls_setup_freq = 0;      // linear solver setup frequency
-  int maxl          = 0;      // maximum number of GMRES iterations
+  // Implicit algebraic solver parameters
+  int maxsteps      = 100000;             // max steps between outputs
+  int predictor     = 0;                  // predictor for nonlinear systems
+  int ls_setup_freq = 0;                  // linear solver setup frequency
+  int maxl          = 0;                  // maximum number of GMRES iterations
+  int maxnewt       = 10;                 // maximum number of Newton iterations
+  sunrealtype nlscoef = SUN_RCONST(0.01); // nonlinear solver convergence coefficient
+  sunrealtype epslin  = SUN_RCONST(0.01); // linear solver convergence coefficient
 
   bool linear = false; // signal that the problem is linearly implicit
 
@@ -441,10 +446,14 @@ static void InputHelp()
   cout << "                               4 = SSP SDIRK 2\n";
   cout << "  --rtol <real>         : relative tolerance\n";
   cout << "  --atol <real>         : absolute tolerance\n";
+  cout << "  --error_bias <real>   : temporal error bias\n";
   cout << "  --fixed_h <real>      : fixed step size\n";
   cout << "  --predictor <int>     : nonlinear solver predictor\n";
   cout << "  --lssetupfreq <int>   : LS setup frequency\n";
   cout << "  --maxl <int>          : max GMRES iterations\n";
+  cout << "  --maxnewt <int>       : max Newton iterations\n";
+  cout << "  --nlscoef <real>      : nonlinear solver convergence coefficient\n";
+  cout << "  --epslin <real>       : linear solver convergence coefficient\n";
   cout << "  --maxsteps <int>      : max steps between outputs\n";
   cout << "  --linear              : linearly implicit\n";
   cout << "  --calc_error          : use reference solution to compute solution error\n";
@@ -538,10 +547,14 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--extsts_method", uopts.extsts_method);
   find_arg(args, "--rtol", uopts.rtol);
   find_arg(args, "--atol", uopts.atol);
+  find_arg(args, "--error_bias", uopts.error_bias);
   find_arg(args, "--fixed_h", uopts.fixed_h);
   find_arg(args, "--predictor", uopts.predictor);
   find_arg(args, "--lssetupfreq", uopts.ls_setup_freq);
   find_arg(args, "--maxl", uopts.maxl);
+  find_arg(args, "--maxnewt", uopts.maxnewt);
+  find_arg(args, "--nlscoef", uopts.nlscoef);
+  find_arg(args, "--epslin", uopts.epslin);
   find_arg(args, "--maxsteps", uopts.maxsteps);
   find_arg(args, "--linear", uopts.linear);
   find_arg(args, "--calc_error", uopts.calc_error);
@@ -665,6 +678,7 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   cout << "  order            = " << uopts.order << endl;
   cout << "  rtol             = " << uopts.rtol << endl;
   cout << "  atol             = " << uopts.atol << endl;
+  cout << "  error bias       = " << uopts.error_bias << endl;
   cout << "  fixed h          = " << uopts.fixed_h << endl;
   if (uopts.integrator > 0)
   {
@@ -685,9 +699,12 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
       cout << "  predictor        = cutoff order" << endl;
     }
     else { cout << "  predictor        = " << uopts.predictor << endl; }
+    cout << "  linear           = " << uopts.linear << endl;
     cout << "  ls setup freq    = " << uopts.ls_setup_freq << endl;
     cout << "  max GMRES iters  = " << uopts.maxl << endl;
-    cout << "  linear           = " << uopts.linear << endl;
+    cout << "  max Newton iters = " << uopts.maxnewt << endl;
+    cout << "  nls coef         = " << uopts.nlscoef << endl;
+    cout << "  eps lin          = " << uopts.epslin << endl;
   }
   if (uopts.integrator == 2)
   {
