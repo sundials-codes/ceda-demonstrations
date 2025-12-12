@@ -981,24 +981,28 @@ int SSP33_init(struct gkyl_diffusion_app* app, UserData* udata, N_Vector* y,
   if (check_flag(&flag, "ARKodeSetMaxNumSteps", 1)) { return 1; }
 
   // Insert the SSP33 Butcher tableau
-  udata->B_ssp33 = ARKodeButcherTable_Alloc(3, SUNTRUE);
-  if (check_flag((void*)(udata->B_ssp33), "ARKodeButcherTable_Alloc", 0)) { return 1; }
-  udata->B_ssp33->A[1][0] = SUN_RCONST(1.0);
-  udata->B_ssp33->A[2][0] = SUN_RCONST(0.25);
-  udata->B_ssp33->A[2][1] = SUN_RCONST(0.25);
-  udata->B_ssp33->b[0]    = SUN_RCONST(1.0/6.0);
-  udata->B_ssp33->b[1]    = SUN_RCONST(1.0/6.0);
-  udata->B_ssp33->b[2]    = SUN_RCONST(2.0/3.0);
-  udata->B_ssp33->c[1]    = ONE;
-  udata->B_ssp33->c[2]    = SUN_RCONST(0.5);
-  udata->B_ssp33->q       = 3;
-  udata->B_ssp33->p       = 3;    // dummy embedding order
-  udata->B_ssp33->d[0]    = SUN_RCONST(1.0/6.0 + udata->rtol); // dummy embedding
-  udata->B_ssp33->d[1]    = SUN_RCONST(1.0/6.0);
-  udata->B_ssp33->d[2]    = SUN_RCONST(2.0/3.0);
+  ARKodeButcherTable B_ssp33;
+  B_ssp33 = ARKodeButcherTable_Alloc(3, SUNTRUE);
+  if (check_flag((void*)(B_ssp33), "ARKodeButcherTable_Alloc", 0)) { return 1; }
+  B_ssp33->A[1][0] = SUN_RCONST(1.0);
+  B_ssp33->A[2][0] = SUN_RCONST(0.25);
+  B_ssp33->A[2][1] = SUN_RCONST(0.25);
+  B_ssp33->b[0]    = SUN_RCONST(1.0/6.0);
+  B_ssp33->b[1]    = SUN_RCONST(1.0/6.0);
+  B_ssp33->b[2]    = SUN_RCONST(2.0/3.0);
+  B_ssp33->c[1]    = ONE;
+  B_ssp33->c[2]    = SUN_RCONST(0.5);
+  B_ssp33->q       = 3;
+  B_ssp33->p       = 3;    // dummy embedding order
+  B_ssp33->d[0]    = SUN_RCONST(1.0/6.0); // dummy embedding
+  B_ssp33->d[1]    = SUN_RCONST(1.0/6.0);
+  B_ssp33->d[2]    = SUN_RCONST(2.0/3.0);
 
-  flag = ERKStepSetTable(*arkode_mem, udata->B_ssp33);
+  flag = ERKStepSetTable(*arkode_mem, B_ssp33);
   if (check_flag(&flag, "ERKStepSetTable", 1)) { return 1; }
+
+  /* Free the Butcher tableau */
+  ARKodeButcherTable_Free(B_ssp33);
 
   return 0;
 }
@@ -1440,7 +1444,6 @@ int main(int argc, char* argv[])
   N_VDestroy(y);
   N_VDestroy(yref);
   SUNContext_Free(&sunctx);
-  ARKodeButcherTable_Free(udata->B_ssp33);
   // Free user data.
   free(udata);
 

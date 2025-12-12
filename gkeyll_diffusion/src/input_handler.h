@@ -47,7 +47,6 @@ typedef struct
 
   // Insert Gkyl's default SSP33 into ARKODE
   sunbooleantype is_SSP33;
-  ARKodeButcherTable B_ssp33;
 
   // LSRKStep options
   ARKODE_LSRKMethodType method; // LSRK method choice

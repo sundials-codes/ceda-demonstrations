@@ -40,9 +40,8 @@ int InitUserData(UserData* udata)
   udata->maxsteps       = 100000;             // max steps between outputs
   udata->wrms_norm_type = 2;                  // cellwise wrms norm
 
-  // Insert Gkyl's default SSP33 into ARKODE
+  // Insert Gkyl's default SSP33 into ARKODE flag
   udata->is_SSP33 = SUNFALSE;
-  udata->B_ssp33  = NULL;
 
   // LSRKStep options
   udata->method          = ARKODE_LSRK_RKL_2; // RKL
