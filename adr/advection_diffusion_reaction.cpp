@@ -849,242 +849,255 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
 
   // Select ExtSTS method via MRIStepCoupling structure
   MRIStepCoupling C;
-  if (udata.advection && udata.reaction) // advection + diffusion + reaction
+  if (uopts.extsts_method < 0)  // use abs(method) to get MRI table
   {
-    if (uopts.extsts_method == 0) // ARS(2,2,2)
+    ARKODE_MRITableID mri_table = static_cast<ARKODE_MRITableID>(-uopts.extsts_method);
+    C = MRIStepCoupling_LoadTable(mri_table);
+    if (C == nullptr)
     {
-      C                       = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMEX);
-      const sunrealtype one   = SUN_RCONST(1.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      const sunrealtype delta = one - one / (SUN_RCONST(2.0) * gamma);
-      const sunrealtype three = SUN_RCONST(3.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->W[0][1][0] = gamma;
-      C->W[0][3][0] = delta - gamma;
-      C->W[0][3][2] = one - delta;
-      C->W[0][5][0] = -delta;
-      C->W[0][5][2] = delta - SUN_RCONST(0.4);
-      C->W[0][5][4] = SUN_RCONST(0.4);
-      C->G[0][1][0] =  gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] =  gamma;
-      C->G[0][3][2] =  one - gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] =  gamma;
-      C->G[0][5][2] = -SUN_RCONST(0.4);
-      C->G[0][5][4] =  SUN_RCONST(0.4);
-    }
-    else // Giraldo ARK2
-    {
-      C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMEX);
-      const sunrealtype one   = SUN_RCONST(1.0);
-      const sunrealtype two   = SUN_RCONST(2.0);
-      const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four  = SUN_RCONST(4.0);
-      const sunrealtype six   = SUN_RCONST(6.0);
-      const sunrealtype eight = SUN_RCONST(8.0);
-      const sunrealtype sqrt2 = SUNRsqrt(two);
-      C->q                    = 2;
-      C->p                    = 1;
-      C->c[1]                 = two - sqrt2;
-      C->c[2]                 = two - sqrt2;
-      C->c[3]                 = one;
-      C->c[4]                 = one;
-      C->c[5]                 = one;
-      C->W[0][1][0]           = two - sqrt2;
-      C->W[0][3][0]           = (three - two * sqrt2) / six - (two - sqrt2);
-      C->W[0][3][2]           = (three + two * sqrt2) / six;
-      C->W[0][5][0] = one / (two * sqrt2) - (three - two * sqrt2) / six;
-      C->W[0][5][2] = one / (two * sqrt2) - (three + two * sqrt2) / six;
-      C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2) / six;
-      C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2) / six;
-      C->W[0][6][4] = one / (two * sqrt2);
-      C->G[0][1][0] = two - sqrt2;
-      C->G[0][2][0] = one - one / sqrt2 - (two - sqrt2);
-      C->G[0][2][2] = one - one / sqrt2;
-      C->G[0][3][0] = one / sqrt2 - one;
-      C->G[0][3][2] = one / sqrt2;
-      C->G[0][4][0] = one / (two * sqrt2);
-      C->G[0][4][2] = one / (two * sqrt2) - one;
-      C->G[0][4][4] = one - one / sqrt2;
-      C->G[0][6][0] = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
+      cerr << "ERROR: Unable to load MRI table " << mri_table << endl;
+      return -1;
     }
   }
-  else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
+  else  // custom ExtSTS coupling
   {
-    if (uopts.extsts_method == 0)  // ARS(2,2,2) ERK
+    if (udata.advection && udata.reaction) // advection + diffusion + reaction
     {
-      C = MRIStepCoupling_Alloc(1, 5, MRISTEP_EXPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
-      const sunrealtype three = SUN_RCONST(3.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->W[0][1][0] = gamma;
-      C->W[0][3][0] = delta - gamma;
-      C->W[0][3][2] = one - delta;
-      C->W[0][5][0] = -delta;
-      C->W[0][5][2] = delta - SUN_RCONST(0.4);
-      C->W[0][5][4] = SUN_RCONST(0.4);
+      if (uopts.extsts_method == 0) // ARS(2,2,2)
+      {
+        C                       = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMEX);
+        const sunrealtype one   = SUN_RCONST(1.0);
+        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
+        const sunrealtype delta = one - one / (SUN_RCONST(2.0) * gamma);
+        const sunrealtype three = SUN_RCONST(3.0);
+        C->q = 2;
+        C->p = 1;
+        C->c[1] = gamma;
+        C->c[2] = gamma;
+        C->c[3] = one;
+        C->c[4] = one;
+        C->W[0][1][0] = gamma;
+        C->W[0][3][0] = delta - gamma;
+        C->W[0][3][2] = one - delta;
+        C->W[0][5][0] = -delta;
+        C->W[0][5][2] = delta - SUN_RCONST(0.4);
+        C->W[0][5][4] = SUN_RCONST(0.4);
+        C->G[0][1][0] =  gamma;
+        C->G[0][2][0] = -gamma;
+        C->G[0][2][2] =  gamma;
+        C->G[0][3][2] =  one - gamma;
+        C->G[0][4][2] = -gamma;
+        C->G[0][4][4] =  gamma;
+        C->G[0][5][2] = -SUN_RCONST(0.4);
+        C->G[0][5][4] =  SUN_RCONST(0.4);
+      }
+      else // Giraldo ARK2
+      {
+        C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMEX);
+        const sunrealtype one   = SUN_RCONST(1.0);
+        const sunrealtype two   = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        const sunrealtype four  = SUN_RCONST(4.0);
+        const sunrealtype six   = SUN_RCONST(6.0);
+        const sunrealtype eight = SUN_RCONST(8.0);
+        const sunrealtype sqrt2 = SUNRsqrt(two);
+        C->q                    = 2;
+        C->p                    = 1;
+        C->c[1]                 = two - sqrt2;
+        C->c[2]                 = two - sqrt2;
+        C->c[3]                 = one;
+        C->c[4]                 = one;
+        C->c[5]                 = one;
+        C->W[0][1][0]           = two - sqrt2;
+        C->W[0][3][0]           = (three - two * sqrt2) / six - (two - sqrt2);
+        C->W[0][3][2]           = (three + two * sqrt2) / six;
+        C->W[0][5][0] = one / (two * sqrt2) - (three - two * sqrt2) / six;
+        C->W[0][5][2] = one / (two * sqrt2) - (three + two * sqrt2) / six;
+        C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
+        C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2) / six;
+        C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2) / six;
+        C->W[0][6][4] = one / (two * sqrt2);
+        C->G[0][1][0] = two - sqrt2;
+        C->G[0][2][0] = one - one / sqrt2 - (two - sqrt2);
+        C->G[0][2][2] = one - one / sqrt2;
+        C->G[0][3][0] = one / sqrt2 - one;
+        C->G[0][3][2] = one / sqrt2;
+        C->G[0][4][0] = one / (two * sqrt2);
+        C->G[0][4][2] = one / (two * sqrt2) - one;
+        C->G[0][4][4] = one - one / sqrt2;
+        C->G[0][6][0] = (four - sqrt2) / eight - one / (two * sqrt2);
+        C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
+        C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
+      }
     }
-    else if (uopts.extsts_method == 1)  // Giraldo ERK2
+    else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
     {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_EXPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
-      const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four = SUN_RCONST(4.0);
-      const sunrealtype six = SUN_RCONST(6.0);
-      const sunrealtype eight = SUN_RCONST(8.0);
-      const sunrealtype sqrt2 = SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = two - sqrt2;
-      C->c[2] = two - sqrt2;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->c[5] = one;
-      C->W[0][1][0] = two - sqrt2;
-      C->W[0][3][0] = (three - two * sqrt2)/six - (two - sqrt2);
-      C->W[0][3][2] = (three + two * sqrt2)/six;
-      C->W[0][5][0] = one/(two * sqrt2) - (three - two * sqrt2)/six;
-      C->W[0][5][2] = one/(two * sqrt2) - (three + two * sqrt2)/six;
-      C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2)/six;
-      C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2)/six;
-      C->W[0][6][4] = one / (two * sqrt2);
+      if (uopts.extsts_method == 0)  // ARS(2,2,2) ERK
+      {
+        C = MRIStepCoupling_Alloc(1, 5, MRISTEP_EXPLICIT);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
+        const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
+        const sunrealtype three = SUN_RCONST(3.0);
+        C->q = 2;
+        C->p = 1;
+        C->c[1] = gamma;
+        C->c[2] = gamma;
+        C->c[3] = one;
+        C->c[4] = one;
+        C->W[0][1][0] = gamma;
+        C->W[0][3][0] = delta - gamma;
+        C->W[0][3][2] = one - delta;
+        C->W[0][5][0] = -delta;
+        C->W[0][5][2] = delta - SUN_RCONST(0.4);
+        C->W[0][5][4] = SUN_RCONST(0.4);
+      }
+      else if (uopts.extsts_method == 1)  // Giraldo ERK2
+      {
+        C = MRIStepCoupling_Alloc(1, 6, MRISTEP_EXPLICIT);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype two = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        const sunrealtype four = SUN_RCONST(4.0);
+        const sunrealtype six = SUN_RCONST(6.0);
+        const sunrealtype eight = SUN_RCONST(8.0);
+        const sunrealtype sqrt2 = SUNRsqrt(two);
+        C->q = 2;
+        C->p = 1;
+        C->c[1] = two - sqrt2;
+        C->c[2] = two - sqrt2;
+        C->c[3] = one;
+        C->c[4] = one;
+        C->c[5] = one;
+        C->W[0][1][0] = two - sqrt2;
+        C->W[0][3][0] = (three - two * sqrt2)/six - (two - sqrt2);
+        C->W[0][3][2] = (three + two * sqrt2)/six;
+        C->W[0][5][0] = one/(two * sqrt2) - (three - two * sqrt2)/six;
+        C->W[0][5][2] = one/(two * sqrt2) - (three + two * sqrt2)/six;
+        C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
+        C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2)/six;
+        C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2)/six;
+        C->W[0][6][4] = one / (two * sqrt2);
+      }
+      else if (uopts.extsts_method == 2)  // Ralston
+      {
+        C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
+        const sunrealtype one   = SUN_RCONST(1.0);
+        const sunrealtype two   = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        const sunrealtype four  = SUN_RCONST(4.0);
+        C->q                    = 2;
+        C->p                    = 1;
+        C->c[1]                 = two / three;
+        C->c[2]                 = one;
+        C->W[0][1][0]           = two / three;
+        C->W[0][2][0]           = one / four - two / three;
+        C->W[0][2][1]           = three / four;
+        C->W[0][3][0] = SUN_RCONST(5.0) / SUN_RCONST(37.0) - two / three;
+        C->W[0][3][1] = two / three - three / four;
+        C->W[0][3][2] = SUN_RCONST(22.0) / SUN_RCONST(111.0);
+      }
+      else // Heun-Euler
+      {
+        C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
+        const sunrealtype one   = SUN_RCONST(1.0);
+        const sunrealtype two   = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        C->q                    = 2;
+        C->p                    = 1;
+        C->c[1]                 = one;
+        C->c[2]                 = one;
+        C->W[0][1][0]           = one;
+        C->W[0][2][0]           = -one / two;
+        C->W[0][2][1]           = one / two;
+      }
     }
-    else if (uopts.extsts_method == 2)  // Ralston
+    else if (!udata.advection && udata.reaction) // diffusion + reaction
     {
-      C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-      const sunrealtype one   = SUN_RCONST(1.0);
-      const sunrealtype two   = SUN_RCONST(2.0);
-      const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four  = SUN_RCONST(4.0);
-      C->q                    = 2;
-      C->p                    = 1;
-      C->c[1]                 = two / three;
-      C->c[2]                 = one;
-      C->W[0][1][0]           = two / three;
-      C->W[0][2][0]           = one / four - two / three;
-      C->W[0][2][1]           = three / four;
-      C->W[0][3][0] = SUN_RCONST(5.0) / SUN_RCONST(37.0) - two / three;
-      C->W[0][3][1] = two / three - three / four;
-      C->W[0][3][2] = SUN_RCONST(22.0) / SUN_RCONST(111.0);
+      if (uopts.extsts_method == 0)  // ARS(2,2,2)
+      {
+        C = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMPLICIT);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
+        const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
+        const sunrealtype three = SUN_RCONST(3.0);
+        C->q = 2;
+        C->p = 1;
+        C->c[1] = gamma;
+        C->c[2] = gamma;
+        C->c[3] = one;
+        C->c[4] = one;
+        C->G[0][1][0] =  gamma;
+        C->G[0][2][0] = -gamma;
+        C->G[0][2][2] =  gamma;
+        C->G[0][3][2] =  one - gamma;
+        C->G[0][4][2] = -gamma;
+        C->G[0][4][4] =  gamma;
+        C->G[0][5][2] = -SUN_RCONST(0.4);
+        C->G[0][5][4] =  SUN_RCONST(0.4);
+      }
+      else if (uopts.extsts_method == 1)  // Giraldo DIRK2
+      {
+        C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+        const sunrealtype one   = SUN_RCONST(1.0);
+        const sunrealtype two   = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        const sunrealtype four  = SUN_RCONST(4.0);
+        const sunrealtype six   = SUN_RCONST(6.0);
+        const sunrealtype eight = SUN_RCONST(8.0);
+        const sunrealtype sqrt2 = SUNRsqrt(two);
+        C->q                    = 2;
+        C->p                    = 1;
+        C->c[1]                 = two - sqrt2;
+        C->c[2]                 = two - sqrt2;
+        C->c[3]                 = one;
+        C->c[4]                 = one;
+        C->c[5]                 = one;
+        C->G[0][1][0]           = two - sqrt2;
+        C->G[0][2][0]           = one - one / sqrt2 - (two - sqrt2);
+        C->G[0][2][2]           = one - one / sqrt2;
+        C->G[0][3][0]           = one / sqrt2 - one;
+        C->G[0][3][2]           = one / sqrt2;
+        C->G[0][4][0]           = one / (two * sqrt2);
+        C->G[0][4][2]           = one / (two * sqrt2) - one;
+        C->G[0][4][4]           = one - one / sqrt2;
+        C->G[0][6][0]           = (four - sqrt2) / eight - one / (two * sqrt2);
+        C->G[0][6][2]           = (four - sqrt2) / eight - one / (two * sqrt2);
+        C->G[0][6][4]           = one / (two * sqrt2) - (one - one / sqrt2);
+      }
+      else  // SSP SDIRK 2
+      {
+        C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype two = SUN_RCONST(2.0);
+        const sunrealtype five = SUN_RCONST(5.0);
+        const sunrealtype seven = SUN_RCONST(7.0);
+        const sunrealtype twelve = SUN_RCONST(12.0);
+        const sunrealtype gamma = one - one / SUNRsqrt(two);
+        C->q = 2;
+        C->p = 1;
+        C->c[1] = gamma;
+        C->c[2] = gamma;
+        C->c[3] = one - gamma;
+        C->c[4] = one - gamma;
+        C->c[5] = one;
+        C->G[0][1][0] = gamma;
+        C->G[0][2][0] = -gamma;
+        C->G[0][2][2] = gamma;
+        C->G[0][3][2] = one - two * gamma;
+        C->G[0][4][2] = -gamma;
+        C->G[0][4][4] = gamma;
+        C->G[0][5][2] = two * gamma - one / two;
+        C->G[0][5][4] = one / two - gamma;
+        C->G[0][6][2] = two*gamma - seven / twelve;
+        C->G[0][6][4] = seven / twelve - gamma;
+      }
     }
-    else // Heun-Euler
+    else // illegal configuration
     {
-      C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-      const sunrealtype one   = SUN_RCONST(1.0);
-      const sunrealtype two   = SUN_RCONST(2.0);
-      const sunrealtype three = SUN_RCONST(3.0);
-      C->q                    = 2;
-      C->p                    = 1;
-      C->c[1]                 = one;
-      C->c[2]                 = one;
-      C->W[0][1][0]           = one;
-      C->W[0][2][0]           = -one / two;
-      C->W[0][2][1]           = one / two;
+      cerr << "ERROR: Invalid problem configuration" << endl;
+      return -1;
     }
-  }
-  else if (!udata.advection && udata.reaction) // diffusion + reaction
-  {
-    if (uopts.extsts_method == 0)  // ARS(2,2,2)
-    {
-      C = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-      const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
-      const sunrealtype three = SUN_RCONST(3.0);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one;
-      C->c[4] = one;
-      C->G[0][1][0] =  gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] =  gamma;
-      C->G[0][3][2] =  one - gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] =  gamma;
-      C->G[0][5][2] = -SUN_RCONST(0.4);
-      C->G[0][5][4] =  SUN_RCONST(0.4);
-    }
-    else if (uopts.extsts_method == 1)  // Giraldo DIRK2
-    {
-      C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-      const sunrealtype one   = SUN_RCONST(1.0);
-      const sunrealtype two   = SUN_RCONST(2.0);
-      const sunrealtype three = SUN_RCONST(3.0);
-      const sunrealtype four  = SUN_RCONST(4.0);
-      const sunrealtype six   = SUN_RCONST(6.0);
-      const sunrealtype eight = SUN_RCONST(8.0);
-      const sunrealtype sqrt2 = SUNRsqrt(two);
-      C->q                    = 2;
-      C->p                    = 1;
-      C->c[1]                 = two - sqrt2;
-      C->c[2]                 = two - sqrt2;
-      C->c[3]                 = one;
-      C->c[4]                 = one;
-      C->c[5]                 = one;
-      C->G[0][1][0]           = two - sqrt2;
-      C->G[0][2][0]           = one - one / sqrt2 - (two - sqrt2);
-      C->G[0][2][2]           = one - one / sqrt2;
-      C->G[0][3][0]           = one / sqrt2 - one;
-      C->G[0][3][2]           = one / sqrt2;
-      C->G[0][4][0]           = one / (two * sqrt2);
-      C->G[0][4][2]           = one / (two * sqrt2) - one;
-      C->G[0][4][4]           = one - one / sqrt2;
-      C->G[0][6][0]           = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][2]           = (four - sqrt2) / eight - one / (two * sqrt2);
-      C->G[0][6][4]           = one / (two * sqrt2) - (one - one / sqrt2);
-    }
-    else  // SSP SDIRK 2
-    {
-      C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-      const sunrealtype one = SUN_RCONST(1.0);
-      const sunrealtype two = SUN_RCONST(2.0);
-      const sunrealtype five = SUN_RCONST(5.0);
-      const sunrealtype seven = SUN_RCONST(7.0);
-      const sunrealtype twelve = SUN_RCONST(12.0);
-      const sunrealtype gamma = one - one / SUNRsqrt(two);
-      C->q = 2;
-      C->p = 1;
-      C->c[1] = gamma;
-      C->c[2] = gamma;
-      C->c[3] = one - gamma;
-      C->c[4] = one - gamma;
-      C->c[5] = one;
-      C->G[0][1][0] = gamma;
-      C->G[0][2][0] = -gamma;
-      C->G[0][2][2] = gamma;
-      C->G[0][3][2] = one - two * gamma;
-      C->G[0][4][2] = -gamma;
-      C->G[0][4][4] = gamma;
-      C->G[0][5][2] = two * gamma - one / two;
-      C->G[0][5][4] = one / two - gamma;
-      C->G[0][6][2] = two*gamma - seven / twelve;
-      C->G[0][6][4] = seven / twelve - gamma;
-    }
-  }
-  else // illegal configuration
-  {
-    cerr << "ERROR: Invalid problem configuration" << endl;
-    return -1;
   }
   flag = MRIStepSetCoupling(*arkode_mem, C);
   if (check_flag(flag, "MRIStepSetCoupling")) { return 1; }

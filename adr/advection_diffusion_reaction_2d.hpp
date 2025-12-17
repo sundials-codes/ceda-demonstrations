@@ -141,6 +141,7 @@ struct UserOptions
   //         2 = Ralston
   //         3 = Heun-Euler
   //         4 = SSP SDIRK 2
+  //        <0 = use abs(input) to select MRI method table
   int sts_method    = 0;
   int extsts_method = 0;
 
@@ -444,6 +445,7 @@ static void InputHelp()
   cout << "                               2 = Ralston\n";
   cout << "                               3 = Heun-Euler\n";
   cout << "                               4 = SSP SDIRK 2\n";
+  cout << "                              <0 = use MRI method given by abs(input)\n";
   cout << "  --rtol <real>         : relative tolerance\n";
   cout << "  --atol <real>         : absolute tolerance\n";
   cout << "  --error_bias <real>   : temporal error bias\n";
@@ -719,6 +721,10 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
     { cout << "  ExtSTS method    = Heun-Euler" << endl; }
     else if (uopts.extsts_method == 4)
     { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
+    else if (uopts.extsts_method < 0)
+    {
+      cout << "  ExtSTS method    = MRI method " << abs(uopts.extsts_method) << endl;
+    }
     if (uopts.sts_method == 0)
     { cout << "  STS method       = RKC" << endl; }
     else

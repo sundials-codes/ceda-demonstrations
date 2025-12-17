@@ -172,6 +172,10 @@ int main(int argc, char* argv[])
     // Loop over internal time steps
     while (udata.tf - t > std::sqrt(std::numeric_limits<sunrealtype>::epsilon()))
     {
+      // Archive current solution in reference vector
+      t2 = t;
+      N_VScale(1.0, y, yref);
+
       // Call "test" solver in one-step mode
       auto solver_start = chrono::high_resolution_clock::now();
       flag = ARKodeEvolve(arkode_mem, udata.tf, y, &t, ARK_ONE_STEP);
@@ -179,7 +183,9 @@ int main(int argc, char* argv[])
       auto solver_end = chrono::high_resolution_clock::now();
       solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
 
-      // Advance reference solution to identical time and accumulate error
+      // Have the reference solver take an identical step (with same initial condition), and accumulate error
+      flag = ARKodeReset(arkref_mem, t2, yref);
+      if (check_flag(flag, "ARKodeReset")) { return 1; }
       flag = ARKodeSetStopTime(arkref_mem, t);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
       auto reference_start = chrono::high_resolution_clock::now();
@@ -1084,6 +1090,16 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     C->G[0][5][4] = one / two - gamma;
     C->G[0][6][2] = two*gamma - seven / twelve;
     C->G[0][6][4] = seven / twelve - gamma;
+  }
+  else if (uopts.extsts_method < 0)  // use abs(method) to get MRI table
+  {
+    ARKODE_MRITableID mri_table = static_cast<ARKODE_MRITableID>(-uopts.extsts_method);
+    C = MRIStepCoupling_LoadTable(mri_table);
+    if (C == nullptr)
+    {
+      cerr << "ERROR: Unable to load MRI table " << mri_table << endl;
+      return -1;
+    }
   }
   else // illegal configuration
   {
