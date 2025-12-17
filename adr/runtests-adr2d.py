@@ -34,7 +34,7 @@ maxprocs = 60
 def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
     flags = ""
     if (probtype == "RxDiff"):
-        #flags += " --no-advection "
+        flags += " --no-advection "
         flags += " "
     elif (probtype == "AdvDiffRx"):
         flags += " "
@@ -47,7 +47,8 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
         raise(ValueError, msg)
 
     if (implicitrx):
-        flags += " --implicit-reaction --maxnewt 10 --nlscoef 0.01 --error_bias 2.0"
+        #flags += " --implicit-reaction --maxnewt 10 --nlscoef 0.01 --error_bias 2.0"
+        flags += " --implicit-reaction --maxnewt 5"
 
     if (inttype == "ARK"):
         flags += " --integrator 1 --table_id %d" % table_id
@@ -92,10 +93,24 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
             flags += " --extsts_method 3"
         elif (extststype == "SSPSDIRK2"):
             flags += " --extsts_method 4"
+        elif (extststype == "IRK21a"):
+            flags += " --extsts_method -203"
+        elif (extststype == "ESDIRK34a"):
+            flags += " --extsts_method -204"
+        elif (extststype == "ERK22a"):
+            flags += " --extsts_method -211"
+        elif (extststype == "ERK22b"):
+            flags += " --extsts_method -212"
+        elif (extststype == "MERK21"):
+            flags += " --extsts_method -219"
+        elif (extststype == "MERK32"):
+            flags += " --extsts_method -220"
+        elif (extststype == "MRISR21"):
+            flags += " --extsts_method -223"
         else:
             msg = """
             Error: invalid extsts type
-            Valid choices are: ARS, Giraldo, Ralston, Heun-Euler, SSPSDIRK2
+            Valid choices are: ARS, Giraldo, Ralston, Heun-Euler, SSPSDIRK2, IRK21a, ESDIRK34a, ERK22a, ERK22b, MERK21, MERK32, MRISR21
             """
             print(msg + "(" + str(extststype) + " specified)")
             raise(ValueError, msg)
@@ -383,6 +398,10 @@ ShowArgs = True
 # Shared testing parameters: [inttype, ststype, extststype, table_id]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
                     ['ARK', None, None, 2]]
+# ExtSTS solvers:
+#    ImEx: ARS, Giraldo, MRISR21
+#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32
+#    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
 AdvDiffRxSolversExpOnly = [
                            ['ExtSTS', 'RKC', 'ARS', None],
                            ['ExtSTS', 'RKL', 'ARS', None],
@@ -391,7 +410,15 @@ AdvDiffRxSolversExpOnly = [
                            ['ExtSTS', 'RKC', 'Ralston', None],
                            ['ExtSTS', 'RKL', 'Ralston', None],
                            ['ExtSTS', 'RKC', 'Heun-Euler', None],
-                           ['ExtSTS', 'RKL', 'Heun-Euler', None]]
+                           ['ExtSTS', 'RKL', 'Heun-Euler', None],
+                           ['ExtSTS', 'RKC', 'ERK22a', None],
+                           ['ExtSTS', 'RKL', 'ERK22a', None],
+                           ['ExtSTS', 'RKC', 'ERK22b', None],
+                           ['ExtSTS', 'RKL', 'ERK22b', None],
+                           ['ExtSTS', 'RKC', 'MERK21', None],
+                           ['ExtSTS', 'RKL', 'MERK21', None],
+                           ['ExtSTS', 'RKC', 'MERK32', None],
+                           ['ExtSTS', 'RKL', 'MERK32', None]]
 ADRStrangSolvers = [['Strang', 'RKC', None, None],
                     ['Strang', 'RKL', None, None]]
 RxDiffSolvers = [['ARK', None, None, 1],
@@ -401,8 +428,14 @@ RxDiffSolvers = [['ARK', None, None, 1],
                  ['ExtSTS', 'RKL', 'ARS', None],
                  ['ExtSTS', 'RKC', 'Giraldo', None],
                  ['ExtSTS', 'RKL', 'Giraldo', None],
+                 ['ExtSTS', 'RKC', 'MRISR21', None],
+                 ['ExtSTS', 'RKL', 'MRISR21', None],
                  ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
-                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None]]
+                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKC', 'IRK21a', None],
+                 ['ExtSTS', 'RKL', 'IRK21a', None],
+                 ['ExtSTS', 'RKC', 'ESDIRK34a', None],
+                 ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
 RDStrangSolvers = [['Strang', 'RKC', None, None],
                    ['Strang', 'RKL', None, None]]
 

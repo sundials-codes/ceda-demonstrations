@@ -172,10 +172,6 @@ int main(int argc, char* argv[])
     // Loop over internal time steps
     while (udata.tf - t > std::sqrt(std::numeric_limits<sunrealtype>::epsilon()))
     {
-      // Archive current solution in reference vector
-      t2 = t;
-      N_VScale(1.0, y, yref);
-
       // Call "test" solver in one-step mode
       auto solver_start = chrono::high_resolution_clock::now();
       flag = ARKodeEvolve(arkode_mem, udata.tf, y, &t, ARK_ONE_STEP);
@@ -183,9 +179,7 @@ int main(int argc, char* argv[])
       auto solver_end = chrono::high_resolution_clock::now();
       solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
 
-      // Have the reference solver take an identical step (with same initial condition), and accumulate error
-      flag = ARKodeReset(arkref_mem, t2, yref);
-      if (check_flag(flag, "ARKodeReset")) { return 1; }
+      // Have the reference solver evolve to the same time, and accumulate error
       flag = ARKodeSetStopTime(arkref_mem, t);
       if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
       auto reference_start = chrono::high_resolution_clock::now();
