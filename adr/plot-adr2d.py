@@ -22,10 +22,10 @@ plt.rcParams['figure.constrained_layout.use'] = True
 # flags to turn on/off certain plots
 Generate_PDF = True
 Generate_PNG = False
-Plot_ADR = True
-Plot_AD = True
-#Plot_RD = True
-Plot_RD = False
+Plot_ADR = False
+#Plot_ADR = True
+Plot_RD = True
+#Plot_RD = False
 Plot_Fixed = True
 Plot_Adaptive = True
 
@@ -100,6 +100,41 @@ def extsts_line_style(extsts,sts):
             return 'x', 'C9', '-'
         else:
             return '+', 'C9', '-'
+    elif (extsts == 'IRK21a'):
+        if (sts == 'RKL'):
+            return 'o', 'C1', '-'
+        else:
+            return 's', 'C1', '-'
+    elif (extsts == 'ESDIRK34a'):
+        if (sts == 'RKL'):
+            return 'o', 'C2', '-'
+        else:
+            return 's', 'C2', '-'
+    elif (extsts == 'ERK22a'):
+        if (sts == 'RKL'):
+            return 'o', 'C3', '-'
+        else:
+            return 's', 'C3', '-'
+    elif (extsts == 'ERK22b'):
+        if (sts == 'RKL'):
+            return 'o', 'C4', '-'
+        else:
+            return 's', 'C4', '-'
+    elif (extsts == 'MERK21'):
+        if (sts == 'RKL'):
+            return 'o', 'C5', '-'
+        else:
+            return 's', 'C5', '-'
+    elif (extsts == 'MERK32'):
+        if (sts == 'RKL'):
+            return 'o', 'C6', '-'
+        else:
+            return 's', 'C6', '-'
+    elif (extsts == 'MRISR21'):
+        if (sts == 'RKL'):
+            return 'o', 'C7', '-'
+        else:
+            return 's', 'C7', '-'
     else:
         raise ValueError('Unknown extsts type: %d' % extsts)
 
@@ -501,25 +536,31 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 if (Plot_ADR):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx2D-fixed.xlsx')
-        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence',
-                                         integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency',
-                                        integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency',
-                                                integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence',
+        #                                  integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency',
+        #                                 integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency',
+        #                                         integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence')
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency')
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency')
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx2D-adapt.xlsx')
-        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy',
-                                      integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency',
-                                        integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency',
-                                                integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy',
+        #                               integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency',
+        #                                 integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        # make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency',
+        #                                         integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
+        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy')
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency')
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency')
 
 if (Plot_RD):
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff2D-fixed.xlsx')
-        make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd2d_fixed_convergence')
+        #make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd2d_fixed_convergence')
         make_efficiency_comparison_plot(data, 'RxDiff Efficiency (Fixed)', 'rd2d_fixed_efficiency', plot_adv=False)
         make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency (Fixed)', 'rd2d_fixed_runtime_efficiency')
     if (Plot_Adaptive):
