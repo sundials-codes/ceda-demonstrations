@@ -45,10 +45,10 @@ int InitUserData(UserData* udata)
 
   // LSRKStep options
   udata->method          = ARKODE_LSRK_RKL_2; // RKL
-  udata->eigfrequency    = 0;   // 0 refers to constant dominant eigenvalue
+  udata->eigfrequency    = 0;   // 0 refers to constant dominant eigenvalue in default; requires an update for time dependent eigenvalues
   udata->stage_max_limit = 200; // allow up to 200 stages/step
   udata->num_SSP_stages  = 4;   // number of stages in the SSP method
-  udata->eigsafety       = SUN_RCONST(1.01); // 1% safety factor
+  udata->eigsafety       = SUN_RCONST(1.1); // 10% safety factor
 
   // Output variables
   udata->nout = 10; // Number of output times
@@ -56,11 +56,11 @@ int InitUserData(UserData* udata)
   // DEE options
   udata->user_dom_eig = SUNFALSE; // No user-provided dominant eigenvalue function
   udata->dee_id            = 0;   // DEE ID (0 for PI and 1 for Arnoldi)
-  udata->dee_num_init_wups = 100;
+  udata->dee_num_init_wups = 0;
   udata->dee_num_succ_wups = 0;
-  udata->dee_max_iters     = 1000;
+  udata->dee_max_iters     = 100;
   udata->dee_krylov_dim    = 3;
-  udata->dee_reltol        = 0.01;
+  udata->dee_reltol        = 0.1;
 
   // Return success
   return 0;
