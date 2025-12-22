@@ -144,6 +144,7 @@ struct UserOptions
   //         0 = ARS(2,2,2) SDIRK
   //         1 = Giraldo DIRK2
   //         2 = SSP SDIRK 2
+  //   <0 = abs(input) selects MRI method table
   int sts_method    = 0;
   int extsts_method = 0;
 
@@ -445,6 +446,7 @@ static void InputHelp()
   cout << "                                   0 = ARS(2,2,2) SDIRK\n";
   cout << "                                   1 = Giraldo DIRK2\n";
   cout << "                                   2 = SSP SDIRK 2\n";
+  cout << "                               <0 = abs(input) selects MRI method table\n";
   cout << "  --rtol <real>            : relative tolerance\n";
   cout << "  --atol <real>            : absolute tolerance\n";
   cout << "  --fixed_h <real>         : fixed step size\n";
@@ -699,32 +701,39 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   if (uopts.integrator == 2)
   {
     cout << " --------------------------------- " << endl;
-    if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+    if (uopts.extsts_method < 0)
     {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
-      else
-      { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
+      cout << "  ExtSTS method    = MRI method " << abs(uopts.extsts_method) << endl;
     }
-    else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
+    else
     {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2) ERK" << endl; }
-      else if (uopts.extsts_method == 1)
-      { cout << "  ExtSTS method    = Giraldo ERK2" << endl; }
-      else if (uopts.extsts_method == 2)
-      { cout << "  ExtSTS method    = Ralston" << endl; }
-      else
-      { cout << "  ExtSTS method    = Heun-Euler" << endl; }
-    }
-    else if (!udata.advection && udata.reaction)  // diffusion + reaction
-    {
-      if (uopts.extsts_method == 0)
-      { cout << "  ExtSTS method    = ARS(2,2,2) SDIRK" << endl; }
-      else if (uopts.extsts_method == 1)
-      { cout << "  ExtSTS method    = Giraldo DIRK2" << endl; }
-      else
-      { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
+      if (udata.advection && udata.reaction)  // advection + diffusion + reaction
+      {
+        if (uopts.extsts_method == 0)
+        { cout << "  ExtSTS method    = ARS(2,2,2)" << endl; }
+        else
+        { cout << "  ExtSTS method    = Giraldo ARK2" << endl; }
+      }
+      else if (!udata.reaction)  // advection + diffusion -or- just diffusion (both are fully explicit)
+      {
+        if (uopts.extsts_method == 0)
+        { cout << "  ExtSTS method    = ARS(2,2,2) ERK" << endl; }
+        else if (uopts.extsts_method == 1)
+        { cout << "  ExtSTS method    = Giraldo ERK2" << endl; }
+        else if (uopts.extsts_method == 2)
+        { cout << "  ExtSTS method    = Ralston" << endl; }
+        else
+        { cout << "  ExtSTS method    = Heun-Euler" << endl; }
+      }
+      else if (!udata.advection && udata.reaction)  // diffusion + reaction
+      {
+        if (uopts.extsts_method == 0)
+        { cout << "  ExtSTS method    = ARS(2,2,2) SDIRK" << endl; }
+        else if (uopts.extsts_method == 1)
+        { cout << "  ExtSTS method    = Giraldo DIRK2" << endl; }
+        else
+        { cout << "  ExtSTS method    = SSP SDIRK 2" << endl; }
+      }
     }
     if (uopts.sts_method == 0)
     {
