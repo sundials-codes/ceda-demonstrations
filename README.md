@@ -214,7 +214,7 @@ python ./bin/makeplots-diffusion2d.py
 
 *Note: these tests expect that your system can run MPI-parallel simulations using up to 64 CPU cores.  If your system is smaller, then you should edit lines 89-92 in `bin/runtests-diffusion2d.py` to remove inputs with `np` that exceeds your available resources.*
 
-The `runtests` script runs a wide range of tests using different diffusion constants, grids, and time integration methods, storing all results in a Pandas dataframe, and then saving that to the file `X.xlsx`.  The `plot` script reads this file and generates the relevant plots in the above-referenced paper.
+The `runtests` script runs a wide range of tests using different diffusion constants, grids, and time integration methods, storing all results in a Pandas dataframe, and then saving that to the files `results_diffusion_2D.xlsx` and `results_diffusion_2D_fixedstep.xlsx`.  The `plot` script reads this file and generates the relevant plots in the above-referenced paper.
 
 #### `gkeyll_diffusion` tests ####
 
