@@ -72,6 +72,7 @@ To install GkeyllZero and its dependencies (without CUDA), from the top-level fo
 
 ```bash
 cd deps
+git clone --branch gk-g0-app_sundials https://github.com/ammarhakim/gkeyll gkylzero
 export GKYLSOFT=$PWD/gkylsoft
 cd gkylzero/install-deps
 ./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes --build-openblas=yes
