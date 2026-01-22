@@ -32,15 +32,17 @@ To compile the codes in this repository you will need:
 * optionally, the NVIDIA [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) (**if building with GPU support**)
 
 
-The codes in this repository depend on two external libraries:
+The codes in this repository depend on three external libraries:
 
 * [SUNDIALS](https://github.com/LLNL/sundials)
 
-* [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that this is a subset of [Gkeyll](https://github.com/ammarhakim/gkyl)
+* [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that is this is an older version of [Gkeyll](https://github.com/ammarhakim/gkeyll/tree/gk-g0-app_sundials)
 
 * [PostGkeyll](https://github.com/ammarhakim/postgkyl) -- this is only used for postprocessing results from Gkeyll-based runs
 
-If these are not already available on your system, they may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
+* *[hypre](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
+
+If these are not already available on your system, the first three may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
 
 ```bash
   cd ceda-demonstrations/deps
@@ -48,7 +50,7 @@ If these are not already available on your system, they may be cloned from GitHu
   git submodule update
 ```
 
-We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.
+We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.  If *hypre* is desired, then any recent version (e.g., v2.20.0 or higher) should work, but you must install this separately.
 
 
 ### Building the Dependencies
@@ -78,6 +80,13 @@ cd ..
 make -j install
 ```
 
+*Note: the `mkdeps.sh` command may fail with some more recent versions of CMake.  If that occurs, edit line 32 in `deps/gkylzero/install-deps/build-superlu.sh` to:*
+
+```bash
+cmake .. -DCMAKE_C_FLAGS="-g -O3 -fPIC" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -Denable_tests=NO -Denable_internal_blaslib=NO -DXSDK_ENABLE_Fortran=NO -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+```
+
+
 #### PostGkeyll
 
 Assuming that you downloaded all of the relevant submodules above, then we recommend that you set up a Python virtual environment to install PostGkeyll.  Similarly to the [posted installation instructions](https://github.com/ammarhakim/postgkyl), from the top-level folder in this repository:
@@ -87,6 +96,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 cd deps/postgkyl
 pip install -e .[adios,test]
+pip install pandas openpyxl
 ```
 
 After this installation is complete, you can "test" the installation by running
@@ -113,7 +123,7 @@ source .venv/bin/activate
 
 * MPI (**required**) -- note that if building with either CUDA or HIP GPU support then the MPI implementation is assumed to be GPU-aware
 
-* *[HYPRE](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
+* *[hypre](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
 
 * *CUDA Toolkit >=12.0* (**optional**, for building with NVIDIA GPU support)
 
@@ -144,7 +154,7 @@ Instructions for building SUNDIALS with additional options (including *hypre*, C
 
 
 
-### Building the CMake-based tests (`diffusion_2D` and `adr_1D`)
+### Building the CMake-based tests (`diffusion_2D` and `adr`)
 
 The CMake-based test problems follow the standard pattern for CMake-based projects: in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
 
@@ -162,7 +172,7 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc ..
   make -j install
 ```
 
@@ -171,7 +181,7 @@ If SUNDIALS was installed with *hypre* support, then the configuration above sho
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DUSE_HYPRE=ON ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DUSE_HYPRE=ON ..
   make -j install
 ```
 
@@ -187,3 +197,39 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
   export CC=$GKYLSOFT/openmpi/bin/mpicc
   make
 ```
+
+
+### Running the diffusion-only tests ###
+
+This repository contains all testing code for the article Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508).  Those tests are contained in the folders `diffusion_2D` and `gkeyll_diffusion`.
+
+#### `diffusion_2D` tests ####
+
+After building the executables using the above instructions, the full set of finite-difference-based 2D diffusion tests may be run using the commands from the top-level repository directory:
+
+```bash
+python ./bin/runtests-diffusion2d.py
+python ./bin/makeplots-diffusion2d.py
+```
+
+*Note: these tests expect that your system can run MPI-parallel simulations using up to 64 CPU cores.  If your system is smaller, then you should edit lines 89-92 in `bin/runtests-diffusion2d.py` to remove inputs with `np` that exceeds your available resources.*
+
+The `runtests` script runs a wide range of tests using different diffusion constants, grids, and time integration methods, storing all results in a Pandas dataframe, and then saving that to the file `X.xlsx`.  The `plot` script reads this file and generates the relevant plots in the above-referenced paper.
+
+#### `gkeyll_diffusion` tests ####
+
+After building the executables using the above instructions, the full set of discontinuous Galerkin 2D diffusion tests may be run using the commands from the top-level repository directory:
+
+```bash
+cd gkeyll_diffusion
+python ./runtests-gk_diffusion_1x1v_p1.py
+python ./plot-gk_diffusion_1x1v_p1.py
+```
+
+The `runtests` script runs a wide range of tests using different diffusion constants and time integration methods, storing all results in a Pandas dataframe, and then saving that to the files `full_results_gk_diffusion_1x1v_p1_adaptive.xlsx` and `full_results_gk_diffusion_1x1v_p1_fixed.xlsx`.  Due to different mechanisms for processing command-line options between the underlying Gkeyll infrastructure and the `main` routine that runs the tests, this script will output multiple lines of the form
+
+```
+/gk_diffusion_1x1v_p1: illegal option --
+```
+
+Those warning messages can safely be ignored.  The `plot` script reads these `.xlsx` files, and generates the relevant plots in the above-referenced paper.
