@@ -61,5 +61,5 @@ bin/
 *.csv
 *.xlsx
 
-# Local scripts
-local_scripts
+# macOS system files
+.DS_Store

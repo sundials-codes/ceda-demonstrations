@@ -28,20 +28,23 @@ plt.rcParams['xtick.labelsize'] = 24
 plt.rcParams['ytick.labelsize'] = 24
 
 # Load data
-df = pd.read_excel("results_gk_diffusion_1x1v_p1_fixed.xlsx", sheet_name="Sheet1")
+df = pd.read_excel("../full_results_gk_diffusion_1x1v_p1_fixed.xlsx", sheet_name="Sheet1")
 
 # Use Accuracy column as error metric
 error_col = "Accuracy"
 
 # Filter only valid (finite) errors
 df = df[pd.to_numeric(df[error_col], errors='coerce').notnull()]
-df = df[df[error_col] < 1e20]  # remove blow-ups
+df = df[df[error_col] < 1e5]  # remove blow-ups
 
 # Unique methods, k values, normtypes and dom_eig options
 methods = df["method"].unique()
 k_values = df["k"].unique()
 norm_types = df["normtype"].unique()
-user_dom_opts = df["user_dom_eig"].unique()
+user_dom_opts = [False]
+
+# Filter data for eigsafety == 1.1 and SSP methods
+df = df[(df["eigsafety"] == 1.1) | (df["method"].str.startswith("SSP"))]
 
 # Define a set of markers and line styles to avoid overlap confusion
 markers = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "X"]

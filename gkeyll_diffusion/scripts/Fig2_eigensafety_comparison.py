@@ -28,19 +28,19 @@ plt.rcParams['xtick.labelsize'] = 24
 plt.rcParams['ytick.labelsize'] = 24
 
 # Load data
-df = pd.read_excel("full_results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
+df = pd.read_excel("../full_results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
 
 # Use Accuracy column as error metric
 error_col = "rtol"
 
 # Filter only valid (finite) errors
 df = df[pd.to_numeric(df[error_col], errors='coerce').notnull()]
-df = df[df[error_col] < 1e20]  # remove blow-ups
+df = df[df[error_col] < 1e5]  # remove blow-ups
 
 # Remove SSP and normtype != 2 results if present
 df = df[~df["method"].str.contains("SSP", case=False, na=False)]
 df = df[df['normtype'] == 2]
-df = df[~df['user_dom_eig']]
+df = df[~df['user_dom_eig']] # only user_dom_eig == False
 
 # Unique methods, k values, and eigsafety options
 methods = df["method"].unique()
@@ -103,7 +103,7 @@ for user_dom_eig in user_dom_eig_vals:
                    marker='o',
                    linestyle='',
                    markersize=8,
-                   label=f"eigsafety={eigsafety}")
+                   label=f"$q_\\lambda$={eigsafety}")
             for j, eigsafety in enumerate(eigsafety_opts)
         ]
 

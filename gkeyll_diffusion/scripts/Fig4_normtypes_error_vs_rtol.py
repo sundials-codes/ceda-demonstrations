@@ -28,24 +28,25 @@ plt.rcParams['xtick.labelsize'] = 24
 plt.rcParams['ytick.labelsize'] = 24
 
 # Load data
-df = pd.read_excel("results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
+df = pd.read_excel("../full_results_gk_diffusion_1x1v_p1_adaptive.xlsx", sheet_name="Sheet1")
 
 # Use Accuracy column as error metric
 error_col = "Accuracy"
 
 # Filter only valid (finite) errors
 df = df[pd.to_numeric(df[error_col], errors='coerce').notnull()]
-df = df[df[error_col] < 1e20]  # remove blow-ups
+df = df[df[error_col] < 1e5]  # remove blow-ups
 
 # Remove SSP2, SSP3 and RKC results if present
 df = df[~df["method"].str.contains("SSP2", case=False, na=False)]
 df = df[~df["method"].str.contains("SSP3", case=False, na=False)]
 df = df[~df["method"].str.contains("RKC", case=False, na=False)]
+df = df[(df["eigsafety"] == 1.1) | (df["method"].str.startswith("SSP"))]
 
 # Unique methods, k values, and eigsafety options
 methods = df["method"].unique()
 k_values = df["k"].unique()
-user_dom_opts = df["user_dom_eig"].unique()
+user_dom_opts = [False]
 normtype_opts = ["comp_norm", "cell_norm"]
 
 # Define a set of colors, markers and line styles to avoid overlap confusion

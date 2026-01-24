@@ -99,7 +99,7 @@ SSPSolvers = [{'name': 'SSP2', 'stages': 2},
               {'name': 'SSP3', 'stages': 4},
               {'name': 'SSP4', 'stages': 10}]
 eigfreq = 0
-eigsafety = [1.01, 1.05, 1.1, 1.2]
+eigsafety = [1.01, 1.1, 1.15, 1.2]
 user_dom_eig = [False, True]
 dee_id = 0
 dee_init_wups = 0
@@ -121,21 +121,21 @@ if (DoFixedTests):
                 for eigsafety_val in eigsafety:
                     for dee_maxiters in dee_maxiters_val:
                         # automatic eigenvalue computation
-                        stat = runtest(exe, k, 1e-4, atol, h, 1, method,
+                        stat = runtest(exe, k, 1e-4, atol, h, 2, method,
                                     eigfreq, eigsafety_val, False,
                                     dee_id, dee_init_wups, dee_succ_wups,
                                     dee_maxiters, dee_reltol, common)
                         FixedStats.append(stat)
                         # user supplied eigenvalue
-                        stat = runtest(exe, k, 1e-4, atol, h, 1, method,
+                        stat = runtest(exe, k, 1e-4, atol, h, 2, method,
                                     eigfreq, eigsafety_val, True,
                                     dee_id, dee_init_wups, dee_succ_wups,
                                     dee_maxiters, dee_reltol, common)
                         FixedStats.append(stat)
             # SSP methods
             for method in SSPSolvers:
-                stat = runtest(exe, k, 1e-4, atol, h, 1, method,
-                               eigfreq, 1.15, False,
+                stat = runtest(exe, k, 1e-4, atol, h, 2, method,
+                               eigfreq, 1.1, False,
                                dee_id, dee_init_wups, dee_succ_wups,
                                100, dee_reltol, common)
                 FixedStats.append(stat)
@@ -172,7 +172,7 @@ if (DoAdaptiveTests):
                 # SSP methods
                 for method in SSPSolvers:
                     stat = runtest(exe, k, rtol, atol, 0.0, normtype,
-                                   method, eigfreq, 1.15, False,
+                                   method, eigfreq, 1.1, False,
                                    dee_id, dee_init_wups, dee_succ_wups,
                                    100, dee_reltol, common)
                     AdaptiveStats.append(stat)

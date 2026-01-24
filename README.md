@@ -233,3 +233,10 @@ The `runtests` script runs a wide range of tests using different diffusion const
 ```
 
 Those warning messages can safely be ignored.  The `plot` script reads these `.xlsx` files, and generates the relevant plots in the above-referenced paper.
+
+After the complition of the `runtests` run, plots can be obtained by running corresponding scripts in the scripts directory:
+
+```bash
+cd scripts
+python Fig7_DomEig_comparison.py # For the Figure 7
+```
