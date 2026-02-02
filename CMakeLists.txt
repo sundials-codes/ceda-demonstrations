@@ -90,10 +90,14 @@ message(STATUS "Found SUNDIALS: ${SUNDIALS_DIR}")
 # -----
 
 option(USE_HYPRE "Use HYPRE for preconditioning" OFF)
+if(USE_HYPRE)
+  # Forced to OFF for STS tetings, but left the USE_HYPRE option for the source code
+  set(USE_HYPRE OFF CACHE BOOL "Use HYPRE for preconditioning" FORCE)
+  message(STATUS "HYPRE support disabled for STS testing.")
+endif()
 
 # --------------------------------------------------------
 # add subdirectories for specific demonstration test codes
 # --------------------------------------------------------
 
 add_subdirectory(diffusion_2D)
-add_subdirectory(adr)

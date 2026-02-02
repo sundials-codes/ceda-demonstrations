@@ -4,6 +4,3 @@
 [submodule "deps/gkylzero"]
 	path = deps/gkylzero
 	url = git@github.com:ammarhakim/gkylzero.git
-[submodule "deps/postgkyl"]
-	path = deps/postgkyl
-	url = git@github.com:ammarhakim/postgkyl.git

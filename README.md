@@ -38,10 +38,6 @@ The codes in this repository depend on three external libraries:
 
 * [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that is this is an older version of [Gkeyll](https://github.com/ammarhakim/gkeyll/tree/gk-g0-app_sundials)
 
-* [PostGkeyll](https://github.com/ammarhakim/postgkyl) -- this is only used for postprocessing results from Gkeyll-based runs
-
-* *[hypre](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
-
 If these are not already available on your system, the first three may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
 
 ```bash
@@ -50,8 +46,7 @@ If these are not already available on your system, the first three may be cloned
   git submodule update
 ```
 
-We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.  If *hypre* is desired, then any recent version (e.g., v2.20.0 or higher) should work, but you must install this separately.
-
+We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.
 
 ### Building the Dependencies
 
@@ -66,13 +61,12 @@ GkeyllZero uses a Makefile-based build system, that relies on "machine files" fo
 
 The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkylsoft` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
 
-We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.  We also assume that LAPACKE is already installed on the current system.
+We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.  We also assume that LAPACK is already installed on the current system.
 
-To install GkeyllZero and its dependencies (without CUDA), from the top-level folder for this repository,
+To install GkeyllZero and its dependencies, from the top-level folder for this repository,
 
 ```bash
 cd deps
-git clone --branch gk-g0-app_sundials https://github.com/ammarhakim/gkeyll gkylzero
 export GKYLSOFT=$PWD/gkylsoft
 cd gkylzero/install-deps
 ./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes --build-openblas=yes
@@ -87,77 +81,22 @@ make -j install
 cmake .. -DCMAKE_C_FLAGS="-g -O3 -fPIC" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -Denable_tests=NO -Denable_internal_blaslib=NO -DXSDK_ENABLE_Fortran=NO -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 ```
 
-
-#### PostGkeyll
-
-Assuming that you downloaded all of the relevant submodules above, then we recommend that you set up a Python virtual environment to install PostGkeyll.  Similarly to the [posted installation instructions](https://github.com/ammarhakim/postgkyl), from the top-level folder in this repository:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-cd deps/postgkyl
-pip install -e .[adios,test]
-pip install pandas openpyxl
-```
-
-After this installation is complete, you can "test" the installation by running
-
-```bash
-pytest [-v]
-```
-
-You may "deactivate" this Python environment from your current shell with the command
-
-```bash
-deactivate
-```
-
-and in the future you can "reactivate" the python environment in your shell by running from the top-level directory of this repository
-
-```bash
-source .venv/bin/activate
-```
-
 #### SUNDIALS
 
-[The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with:
+[The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with (**required**) MPI.
 
-* MPI (**required**) -- note that if building with either CUDA or HIP GPU support then the MPI implementation is assumed to be GPU-aware
-
-* *[hypre](https://github.com/hypre-space/hypre)* (**optional**, for enabling multigrid preconditioning)
-
-* *CUDA Toolkit >=12.0* (**optional**, for building with NVIDIA GPU support)
-
-* *HIP >=5.0.0* (**optional**, for building with AMD GPU support)
-
-The following steps can be used to build SUNDIALS using a minimal configuration that leverages the dependencies that were already installed by Gkeyll (but without the other optional features above):
+The following steps can be used to build SUNDIALS using a minimal configuration that leverages the dependencies that were already installed by Gkeyll:
 
 ```bash
 mkdir deps/sundials/build
 cd deps/sundials/build
-# To install with LAPACK -- Needs to be fixed
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
-# To install without LAPACK -- deactivate the spack environment for possible conflicts
 ccmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
 make -j install
 ```
 
-Alternately, if CMake is able to find both *hypre* and CUDA automatically (e.g., these were enabled via `module load` or `spack load` on a system where [Linux environment modules](https://modules.readthedocs.io/en/latest/) and/or [Spack](https://spack.readthedocs.io/en/latest/) are available), a build that enables both *hypre* and CUDA may be possible via the steps:
+### Building the CMake-based test (`diffusion_2D`)
 
-```bash
-mkdir deps/sundials/build
-cd deps/sundials/build
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
-make -j install
-```
-
-Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
-
-
-
-### Building the CMake-based tests (`diffusion_2D` and `adr`)
-
-The CMake-based test problems follow the standard pattern for CMake-based projects: in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
+The CMake-based test problem follows the standard pattern for CMake-based projects: in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
 
 ```bash
   mkdir ceda-demonstrations/build
@@ -177,15 +116,6 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
   make -j install
 ```
 
-If SUNDIALS was installed with *hypre* support, then the configuration above should be changed slightly:
-
-```bash
-  mkdir ceda-demonstrations/build
-  cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DUSE_HYPRE=ON ..
-  make -j install
-```
-
 
 ### Building the Makefile-based tests (`gkeyll_diffusion`)
 
@@ -202,7 +132,7 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
 
 ### Running the diffusion-only tests ###
 
-This repository contains all testing code for the article Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508).  Those tests are contained in the folders `diffusion_2D` and `gkeyll_diffusion`.
+This branch contains all testing code for the article Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508).  Those tests are contained in the folders `diffusion_2D` and `gkeyll_diffusion`.
 
 #### `diffusion_2D` tests ####
 
@@ -224,7 +154,6 @@ After building the executables using the above instructions, the full set of dis
 ```bash
 cd gkeyll_diffusion
 python ./runtests-gk_diffusion_1x1v_p1.py
-python ./plot-gk_diffusion_1x1v_p1.py
 ```
 
 The `runtests` script runs a wide range of tests using different diffusion constants and time integration methods, storing all results in a Pandas dataframe, and then saving that to the files `full_results_gk_diffusion_1x1v_p1_adaptive.xlsx` and `full_results_gk_diffusion_1x1v_p1_fixed.xlsx`.  Due to different mechanisms for processing command-line options between the underlying Gkeyll infrastructure and the `main` routine that runs the tests, this script will output multiple lines of the form
@@ -233,9 +162,7 @@ The `runtests` script runs a wide range of tests using different diffusion const
 /gk_diffusion_1x1v_p1: illegal option --
 ```
 
-Those warning messages can safely be ignored.  The `plot` script reads these `.xlsx` files, and generates the relevant plots in the above-referenced paper.
-
-After the complition of the `runtests` run, plots can be obtained by running corresponding scripts in the scripts directory:
+Those warning messages can safely be ignored.  The `plot` script reads these `.xlsx` files, and generates the relevant plots in the above-referenced paper. After the complition of the `runtests` run, plots can be obtained by running corresponding scripts in the scripts directory:
 
 ```bash
 cd scripts

@@ -1,8 +1,0 @@
-&inputs
-   alf = 0.1
-   brussa = 1.3
-   brussb = 2e7
-   atol = 1e-11
-   rtol = 1e-03
-   h = 0.0
-/
