@@ -1,0 +1,17 @@
+&list1
+   alf = 0.1
+   uxadv = 0.01
+   uyadv = 0.0
+   vxadv = 0.01
+   vyadv = 0.0
+   wxadv = 0.01
+   wyadv = 0.0
+   brussa = 0.6
+   brussb = 2.0
+   eps = 0.01
+   atol = 1e-11
+   rtol = 1e-06
+   h = 0.000390625
+   iwork20 = 1
+   iwork21 = 1
+/
