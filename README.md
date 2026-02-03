@@ -41,7 +41,7 @@ The codes in this repository depend on three external libraries:
 
 * [GkeyllZero](https://github.com/ammarhakim/gkylzero) -- note that is this is an older version of [Gkeyll](https://github.com/ammarhakim/gkeyll/tree/gk-g0-app_sundials)
 
-If these are not already available on your system, the first three may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
+If these are not already available on your system, they may be cloned from GitHub as submodules.  After cloning this repository using the command above, you can retrieve these submodules via:
 
 ```bash
   cd ceda-demonstrations/deps
@@ -55,6 +55,7 @@ We note that a particular benefit of retrieving these dependencies using the sub
 
 We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll.
 
+> Note: Deactivate any environments (e.g., Spack or environment modules) that may conflict with the installations below before installing.
 
 #### GkeyllZero
 
