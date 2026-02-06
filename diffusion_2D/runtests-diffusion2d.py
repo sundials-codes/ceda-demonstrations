@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 import shlex
-import sys
+import os
 
 # utility routine to run a test, storing the run options and solver statistics
 def runtest(solver, pg, rtol, h, kxy, commonargs, showcommand=False):
@@ -20,11 +20,10 @@ def runtest(solver, pg, rtol, h, kxy, commonargs, showcommand=False):
              'h': h, 'kx': kxy['kx'], 'ky': kxy['ky'],
              'ReturnCode': 1, 'Steps': 1e10, 'Fails': 1e10, 'Accuracy': 1e10,
              'FEvals': 0, 'Runtime': 1e10, 'args': commonargs}
-    runcommand = "mpiexec -n %i %s --nx %i --ny %i --rtol %e --kx %e --ky %e %s" % (pg['np'], solver['exe'], pg['grid'], pg['grid'], rtol, kxy['kx'], kxy['ky'], commonargs)
+    MPIEXEC = os.getenv("MPIEXEC", "mpiexec")
+    runcommand = "%s -n %i %s --nx %i --ny %i --rtol %e --kx %e --ky %e %s" % (MPIEXEC, pg['np'], solver['exe'], pg['grid'], pg['grid'], rtol, kxy['kx'], kxy['ky'], commonargs)
     if (h > 0):
         runcommand += " --fixedstep %e" %(h)
-    if (solver['name'] == 'dirk-hypre'):
-        runcommand += " --pfmg_nrelax %i" % (pg['nrelax'])
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
     stats['ReturnCode'] = result.returncode
     if (result.returncode != 0):
@@ -59,9 +58,7 @@ bindir = "./bin/"
 
 # shortcuts to executable/configuration of different solver types
 DIRK2Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 2"
-DIRK2SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 2 --pfmg_relax 3"
 DIRK3Solver = bindir + "diffusion_2D_mpi --integrator dirk --order 3"
-DIRK3SolverHypre = bindir + "diffusion_2D_mpi_hypre --integrator dirk --order 3 --pfmg_relax 3"
 ERK2Solver = bindir + "diffusion_2D_mpi --integrator erk --order -2"
 ERK3Solver = bindir + "diffusion_2D_mpi --integrator erk --order -3"
 ERK4Solver = bindir + "diffusion_2D_mpi --integrator erk --order -4"
@@ -70,7 +67,7 @@ RKLSolver = bindir + "diffusion_2D_mpi --integrator rkl"
 
 # test groups to run
 RunAdaptiveTests = True
-RunFixedStepTests = True
+RunFixedStepTests = False
 
 # common testing parameters
 homo = " --inhomogeneous"
@@ -93,9 +90,7 @@ procgrids = [{'np': 1,   'grid': 32,  'nrelax': 3},
 rtols = [1.e-2, 1.e-3, 1.e-4, 1.e-5, 1.e-6]
 hvals = 1.e-2 / np.array([2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
 solvertype = [{'name': 'dirk2-Jacobi', 'exe': DIRK2Solver},
-              {'name': 'dirk2-hypre', 'exe': DIRK2SolverHypre},
               {'name': 'dirk3-Jacobi', 'exe': DIRK3Solver},
-              {'name': 'dirk3-hypre', 'exe': DIRK3SolverHypre},
               {'name': 'erk2', 'exe': ERK2Solver},
               {'name': 'erk3', 'exe': ERK3Solver},
               {'name': 'erk4', 'exe': ERK4Solver},

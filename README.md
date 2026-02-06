@@ -85,6 +85,18 @@ make -j install
 cmake .. -DCMAKE_C_FLAGS="-g -O3 -fPIC" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -Denable_tests=NO -Denable_internal_blaslib=NO -DXSDK_ENABLE_Fortran=NO -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 ```
 
+*Note: we've experienced OpenBLAS build failures on some Linux systems when using the `mkdeps.sh` command above.  If that occurs, you can omit that from the dependency build,
+
+```bash
+./mkdeps.sh CC=gcc CXX=g++ FC=gfortran --prefix=$GKYLSOFT --build-superlu=yes --build-openmpi=yes
+```
+
+you should install OpenBLAS separately on your system (e.g., using `apt-get` or `yum`), and then in the subsequent `configure` line you should manually specify `include` and `library` locations for where the OpenBLAS-installed `lapacke` static library and headers were installed, e.g.
+
+```bash
+./configure CC=gcc --prefix=$GKYLSOFT --use-mpi=yes --lapack-lib=/usr/lib/x86_64-linux-gnu/liblapacke.a --lapack-inc=/usr/include/x86_64-linux-gnu/
+```
+
 #### SUNDIALS
 
 [The SUNDIALS build instructions are linked here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html#building-and-installing-with-cmake).  Note that of the many SUNDIALS build options, this repository requires only a minimal SUNDIALS build with (**required**) MPI.
@@ -138,9 +150,10 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
 
 #### `diffusion_2D` tests ####
 
-After building the executables using the above instructions, the full set of finite-difference-based 2D diffusion tests may be run using the commands from the top-level repository directory:
+After building the executables using the above instructions, the full set of finite-difference-based 2D diffusion tests may be run using the commands from the top-level repository directory.  The MPI-parallel runs should be launched with the `mpiexec` corresponding to the gkylzero and SUNDIALS builds; this can be put in the `MPIEXEC` environment variable, which will be used when running the tests:
 
 ```bash
+export MPIEXEC=$GKYLSOFT/openmpi/bin/mpiexec
 python ./bin/runtests-diffusion2d.py
 python ./bin/makeplots-diffusion2d.py
 ```
@@ -148,6 +161,23 @@ python ./bin/makeplots-diffusion2d.py
 *Note: these tests expect that your system can run MPI-parallel simulations using up to 64 CPU cores.  If your system is smaller, then you should edit lines 89-92 in `bin/runtests-diffusion2d.py` to remove inputs with `np` that exceeds your available resources.*
 
 The `runtests` script runs a wide range of tests using different diffusion constants, grids, and time integration methods, storing all results in a Pandas dataframe, and then saving that to the files `results_diffusion_2D.xlsx` and `results_diffusion_2D_fixedstep.xlsx`.  The `plot` script reads this file and generates the relevant plots in the above-referenced paper.
+
+
+On some Linux systems, CMake may not automatically embed the path to the SUNDIALS libraries into the executable, causing runtime errors of the form
+
+```
+./bin/diffusion_2D_mpi: error while loading shared libraries: libsundials_arkode.so.6: cannot open shared object file: No such file or directory
+```
+
+This may be fixed by adding the SUNDIALS library folder to the `LD_LIBRARY_PATH` environment variable before running the tests, e.g.,
+
+```bash
+export MPIEXEC=$GKYLSOFT/openmpi/bin/mpiexec
+export LD_LIBRARY_PATH=$GKYLSOFT/../sundials-install/lib:$LD_LIBRARY_PATH
+python ./bin/runtests-diffusion2d.py
+python ./bin/makeplots-diffusion2d.py
+```
+
 
 #### `gkeyll_diffusion` tests ####
 
