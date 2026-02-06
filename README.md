@@ -5,6 +5,8 @@ This is a `locked` branch allocated for the publication:
 * [STS_diffusion_with_DG](https://github.com/sundials-codes/ceda-demonstrations/tree/STS_diffusion_with_DG) branch contains all testing code for the article:\
 Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508)
 
+The purpose of this branch is to provide the full set of test codes related to this publication(s).  The following instructions should guide you through the steps required to compile, run, and postprocess those tests.
+
 This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based applications to assess and demonstrate the parallel performance of new super-time-stepping (STS) method capabilities that have been added to SUNDIALS as part of the [CEDA SciDAC project](https://sites.google.com/pppl.gov/ceda-scidac-5?usp=sharing).
 
 
@@ -31,8 +33,6 @@ To compile the codes in this repository you will need:
 * C compiler (C99 standard) and C++ compiler (C++11 standard)
 
 * an MPI library e.g., [OpenMPI](https://www.open-mpi.org/), [MPICH](https://www.mpich.org/), etc.
-
-* optionally, the NVIDIA [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) (**if building with GPU support**)
 
 
 The codes in this repository depend on three external libraries:
@@ -63,9 +63,9 @@ We recommend that users follow the posted instructions for installing both SUNDI
 
 GkeyllZero uses a Makefile-based build system, that relies on "machine files" for configuration.  For systems where existing machine files can be used, we recommend that users follow the "Gkeyll build instructions" linked above.  We recommend that the same MPI library is used when building SUNDIALS, GkeyllZero's dependencies, GkeyllZero, and this repository, so it may be necessary to rebuild SUNDIALS above using the same MPI compiler wrappers as are used in the Gkeyll machine files.
 
-The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarize the minimal steps to install GkeyllZero and its dependencies into the `deps/gkylsoft` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
+The remainder of this section assumes that GkeyllZero has not been built on this machine before, and summarizes the minimal steps to install GkeyllZero and its dependencies into the `deps/gkylsoft` folder.  These closely follow the Gkeyll documentation steps for ["Installing from source manually"](https://gkeyll.readthedocs.io/en/latest/install.html#installing-from-source-manually), and so we omit explanation except where necessary.
 
-We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.  We also assume that LAPACK is already installed on the current system.
+We assume that this repository will be built using the `gcc`, `g++` and `gfortran` compilers, and that these are already in the user's current `$PATH`.
 
 To install GkeyllZero and its dependencies, from the top-level folder for this repository,
 
@@ -94,7 +94,7 @@ The following steps can be used to build SUNDIALS using a minimal configuration 
 ```bash
 mkdir deps/sundials/build
 cd deps/sundials/build
-ccmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
 make -j install
 ```
 
@@ -134,9 +134,7 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
 ```
 
 
-### Running the diffusion-only tests ###
-
-This branch contains all testing code for the article Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508).  Those tests are contained in the folders `diffusion_2D` and `gkeyll_diffusion`.
+### Running the paper tests ###
 
 #### `diffusion_2D` tests ####
 
