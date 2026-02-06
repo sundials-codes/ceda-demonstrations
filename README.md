@@ -148,6 +148,19 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
 
 ### Running the paper tests ###
 
+Computational experiments using the executables built in the preceding steps are run below.  These are run using pairs of Python scripts.  The first script in each folder runs the corresponding code with a wide range of input parameters, and stores the resulting runtime statistics to disk.  These are then followed with plotting scripts, that load the runtime statistics and generate plots.
+
+These Python scripts depend on a small number of widely-used packages: `matplotlib`, `pandas`, and `openpyxl`. If these are not already installed on your system, then we recommend that you create a Python virtual environment, install the packages specified in the top-level `requirements.txt` file,
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r python_requirements.txt
+```
+
+and launch these Python scripts from within that virtual environment.
+
+
 #### `diffusion_2D` tests ####
 
 After building the executables using the above instructions, the full set of finite-difference-based 2D diffusion tests may be run using the commands from the top-level repository directory.  The MPI-parallel runs should be launched with the `mpiexec` corresponding to the gkylzero and SUNDIALS builds; this can be put in the `MPIEXEC` environment variable, which will be used when running the tests:
