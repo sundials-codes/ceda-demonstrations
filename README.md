@@ -7,6 +7,9 @@ A separate `locked` branch is allocated for each publication:
 * [STS_diffusion_with_DG](https://github.com/sundials-codes/ceda-demonstrations/tree/STS_diffusion_with_DG) branch contains all testing code for the article:\
 Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Methods for Diffusion using Discontinuous-Galerkin Spatial Discretizations," 2026, [arXiv:2601.14508](https://arxiv.org/abs/2601.14508)
 
+To run the test codes related to the above publication(s), we recommend that you first checkout the relevant branch, and follow the instructions in the `README.md` therein.
+
+
 This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based applications to assess and demonstrate the parallel performance of new super-time-stepping (STS) method capabilities that have been added to SUNDIALS as part of the [CEDA SciDAC project](https://sites.google.com/pppl.gov/ceda-scidac-5?usp=sharing).
 
 
