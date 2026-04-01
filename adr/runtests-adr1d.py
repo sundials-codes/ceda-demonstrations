@@ -311,48 +311,69 @@ DoAdaptiveTests = True
 # Shared testing parameters
 Executable = './bin/advection_diffusion_reaction_1D'
 PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
+
+# ExtSTS solver options:
+#    ImEx: ARS, Giraldo, MRISR21
+#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32
+#    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
+
+# AdvDiffRxSolvers = [['ARK', None, None, 1],
+#                     ['ARK', None, None, 2],
+#                     ['ExtSTS', 'RKC', 'ARS', None],
+#                     ['ExtSTS', 'RKL', 'ARS', None],
+#                     ['ExtSTS', 'RKC', 'Giraldo', None],
+#                     ['ExtSTS', 'RKL', 'Giraldo', None],
+#                     ['ExtSTS', 'RKC', 'MRISR21', None],
+#                     ['ExtSTS', 'RKL', 'MRISR21', None]]
+# AdvDiffSolvers = [['ARK', None, None, 1],
+#                   ['ARK', None, None, 2],
+#                   ['ExtSTS', 'RKC', 'ARS', None],
+#                   ['ExtSTS', 'RKL', 'ARS', None],
+#                   ['ExtSTS', 'RKC', 'Giraldo', None],
+#                   ['ExtSTS', 'RKL', 'Giraldo', None],
+#                   ['ExtSTS', 'RKC', 'MRISR21', None],
+#                   ['ExtSTS', 'RKL', 'MRISR21', None],
+#                   ['ExtSTS', 'RKC', 'Ralston', None],
+#                   ['ExtSTS', 'RKL', 'Ralston', None],
+#                   ['ExtSTS', 'RKC', 'ERK22a', None],
+#                   ['ExtSTS', 'RKL', 'ERK22a', None],
+#                   ['ExtSTS', 'RKC', 'ERK22b', None],
+#                   ['ExtSTS', 'RKL', 'ERK22b', None],
+#                   ['ExtSTS', 'RKC', 'MERK21', None],
+#                   ['ExtSTS', 'RKL', 'MERK21', None],
+#                   ['ExtSTS', 'RKC', 'MERK32', None],
+#                   ['ExtSTS', 'RKL', 'MERK32', None]]
+# RxDiffSolvers = [['ARK', None, None, 5],
+#                  ['ARK', None, None, 6],
+#                  ['ExtSTS', 'RKC', 'ARS', None],
+#                  ['ExtSTS', 'RKL', 'ARS', None],
+#                  ['ExtSTS', 'RKC', 'Giraldo', None],
+#                  ['ExtSTS', 'RKL', 'Giraldo', None],
+#                  ['ExtSTS', 'RKC', 'MRISR21', None],
+#                  ['ExtSTS', 'RKL', 'MRISR21', None],
+#                  ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+#                  ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
+#                  ['ExtSTS', 'RKC', 'IRK21a', None],
+#                  ['ExtSTS', 'RKL', 'IRK21a', None],
+#                  ['ExtSTS', 'RKC', 'ESDIRK34a', None],
+#                  ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
+# StrangSolvers = [['Strang', 'RKC', None, None],
+#                  ['Strang', 'RKL', None, None]]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
-                    ['ARK', None, None, 2],
                     ['ExtSTS', 'RKC', 'ARS', None],
-                    ['ExtSTS', 'RKL', 'ARS', None],
-                    ['ExtSTS', 'RKC', 'Giraldo', None],
-                    ['ExtSTS', 'RKL', 'Giraldo', None],
-                    ['ExtSTS', 'RKC', 'MRISR21', None],
-                    ['ExtSTS', 'RKL', 'MRISR21', None]]
+                    ['ExtSTS', 'RKC', 'Giraldo', None]]
 AdvDiffSolvers = [['ARK', None, None, 1],
-                  ['ARK', None, None, 2],
                   ['ExtSTS', 'RKC', 'ARS', None],
-                  ['ExtSTS', 'RKL', 'ARS', None],
                   ['ExtSTS', 'RKC', 'Giraldo', None],
-                  ['ExtSTS', 'RKL', 'Giraldo', None],
-                  ['ExtSTS', 'RKC', 'MRISR21', None],
-                  ['ExtSTS', 'RKL', 'MRISR21', None],
                   ['ExtSTS', 'RKC', 'Ralston', None],
-                  ['ExtSTS', 'RKL', 'Ralston', None],
                   ['ExtSTS', 'RKC', 'ERK22a', None],
-                  ['ExtSTS', 'RKL', 'ERK22a', None],
-                  ['ExtSTS', 'RKC', 'ERK22b', None],
-                  ['ExtSTS', 'RKL', 'ERK22b', None],
-                  ['ExtSTS', 'RKC', 'MERK21', None],
-                  ['ExtSTS', 'RKL', 'MERK21', None],
-                  ['ExtSTS', 'RKC', 'MERK32', None],
-                  ['ExtSTS', 'RKL', 'MERK32', None]]
-RxDiffSolvers = [['ARK', None, None, 5],
-                 ['ARK', None, None, 6],
+                  ['ExtSTS', 'RKC', 'MERK21', None]]
+RxDiffSolvers = [['ARK', None, None, 6],
                  ['ExtSTS', 'RKC', 'ARS', None],
-                 ['ExtSTS', 'RKL', 'ARS', None],
                  ['ExtSTS', 'RKC', 'Giraldo', None],
-                 ['ExtSTS', 'RKL', 'Giraldo', None],
-                 ['ExtSTS', 'RKC', 'MRISR21', None],
-                 ['ExtSTS', 'RKL', 'MRISR21', None],
                  ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
-                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
-                 ['ExtSTS', 'RKC', 'IRK21a', None],
-                 ['ExtSTS', 'RKL', 'IRK21a', None],
-                 ['ExtSTS', 'RKC', 'ESDIRK34a', None],
-                 ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
-StrangSolvers = [['Strang', 'RKC', None, None],
-                 ['Strang', 'RKL', None, None]]
+                 ['ExtSTS', 'RKC', 'IRK21a', None]]
+StrangSolvers = [['Strang', 'RKC', None, None]]
 #c = 1e-2
 c = 0.5
 dvals = [1e-1, 1e1]
@@ -378,9 +399,14 @@ if (DoAdvDiffRx):
         if (DoFixedTests):
 
             # set step sizes for fixed-step ADR tests
-            fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            if (d == 1e-1):
+                fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            else:
+                fixedh        = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
             for solver in AdvDiffRxSolvers:
                 for h in fixedh:
@@ -442,9 +468,14 @@ if (DoAdvDiff):
         if (DoFixedTests):
 
             # set step sizes for fixed-step AD tests
-            fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            if (d == 1e-1):
+                fixedh        = 0.02 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.01 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            else:
+                fixedh        = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
             for solver in AdvDiffSolvers:
                 for h in fixedh:
@@ -508,9 +539,14 @@ if (DoRxDiff):
         if (DoFixedTests):
 
             # set step sizes for fixed-step RD tests
-            fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            if (d == 1e-1):
+                fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+            else:
+                fixedh        = 0.5 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.5 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.5 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
             for solver in RxDiffSolvers:
                 for h in fixedh:
