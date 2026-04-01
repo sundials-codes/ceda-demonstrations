@@ -22,10 +22,8 @@ plt.rcParams['figure.constrained_layout.use'] = True
 # flags to turn on/off certain plots
 Generate_PDF = True
 Generate_PNG = False
-Plot_ADR = False
-#Plot_ADR = True
+Plot_ADR = True
 Plot_RD = True
-#Plot_RD = False
 Plot_Fixed = True
 Plot_Adaptive = True
 
@@ -33,15 +31,17 @@ Plot_Adaptive = True
 def ark_table_name(table_id):
     """Return the name of the ARK table with the given ID."""
     if (table_id == 1):
-        return 'ARS'
+        return 'ARS-ARK21'
     elif (table_id == 2):
-        return 'Giraldo'
+        return 'Giraldo-ARK21'
     elif (table_id == 3):
-        return 'Ralston'
+        return 'Ralston-ERK21'
     elif (table_id == 4):
-        return 'Heun-Euler'
+        return 'Heun-Euler-ERK21'
     elif (table_id == 5):
         return 'SSP-SDIRK21'
+    elif (table_id == 6):
+        return 'Giraldo-DIRK21'
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
@@ -60,7 +60,9 @@ def rk_line_style(table_id,implicitrx):
     elif (table_id == 4):
         return '+', 'C3', ls
     elif (table_id == 5):
-        return 'x', 'C4', ls
+        return 'x', 'C7', ls
+    elif (table_id == 6):
+        return '+', 'C8'
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
@@ -68,73 +70,73 @@ def strang_line_style(sts):
     """Return the marker, color, and line style for plotting the Strang + STS
        method."""
     if (sts == 'RKL'):
-        return 'x', 'C8', '-'
+        return 'x', 'C6', '-'
     else:
-        return '+', 'C8', '-'
+        return '+', 'C6', '-'
 
 def extsts_line_style(extsts,sts):
     """Return the marker, color, and line style for plotting the extended STS method type and
        STS method with the given IDs."""
     if (extsts == 'ARS'):
         if (sts == 'RKL'):
+            return 'x', 'C2', '-'
+        else:
+            return '+', 'C2', '-'
+    elif (extsts == 'Giraldo'):
+        if (sts == 'RKL'):
+            return 'x', 'C3', '-'
+        else:
+            return '+', 'C3', '-'
+    elif (extsts == 'Ralston'):
+        if (sts == 'RKL'):
+            return 'x', 'C4', '-'
+        else:
+            return '+', 'C4', '-'
+    elif (extsts == 'SSPSDIRK2'):
+        if (sts == 'RKL'):
             return 'x', 'C5', '-'
         else:
             return '+', 'C5', '-'
-    elif (extsts == 'Giraldo'):
-        if (sts == 'RKL'):
-            return 'x', 'C6', '-'
-        else:
-            return '+', 'C6', '-'
-    elif (extsts == 'Ralston'):
-        if (sts == 'RKL'):
-            return 'x', 'C7', '-'
-        else:
-            return '+', 'C7', '-'
-    elif (extsts == 'Heun-Euler'):
-        if (sts == 'RKL'):
-            return 'x', 'C8', '-'
-        else:
-            return '+', 'C8', '-'
-    elif (extsts == 'SSPSDIRK2'):
-        if (sts == 'RKL'):
-            return 'x', 'C9', '-'
-        else:
-            return '+', 'C9', '-'
     elif (extsts == 'IRK21a'):
-        if (sts == 'RKL'):
-            return 'o', 'C1', '-'
-        else:
-            return 's', 'C1', '-'
-    elif (extsts == 'ESDIRK34a'):
-        if (sts == 'RKL'):
-            return 'o', 'C2', '-'
-        else:
-            return 's', 'C2', '-'
-    elif (extsts == 'ERK22a'):
-        if (sts == 'RKL'):
-            return 'o', 'C3', '-'
-        else:
-            return 's', 'C3', '-'
-    elif (extsts == 'ERK22b'):
-        if (sts == 'RKL'):
-            return 'o', 'C4', '-'
-        else:
-            return 's', 'C4', '-'
-    elif (extsts == 'MERK21'):
-        if (sts == 'RKL'):
-            return 'o', 'C5', '-'
-        else:
-            return 's', 'C5', '-'
-    elif (extsts == 'MERK32'):
         if (sts == 'RKL'):
             return 'o', 'C6', '-'
         else:
             return 's', 'C6', '-'
-    elif (extsts == 'MRISR21'):
+    elif (extsts == 'ESDIRK34a'):
         if (sts == 'RKL'):
             return 'o', 'C7', '-'
         else:
             return 's', 'C7', '-'
+    elif (extsts == 'ERK22a'):
+        if (sts == 'RKL'):
+            return 'o', 'C8', '-'
+        else:
+            return 's', 'C8', '-'
+    elif (extsts == 'ERK22b'):
+        if (sts == 'RKL'):
+            return 'o', 'C9', '-'
+        else:
+            return 's', 'C9', '-'
+    elif (extsts == 'MERK21'):
+        if (sts == 'RKL'):
+            return 'o', 'C10', '-'
+        else:
+            return 's', 'C10', '-'
+    elif (extsts == 'MERK32'):
+        if (sts == 'RKL'):
+            return 'o', 'C11', '-'
+        else:
+            return 's', 'C11', '-'
+    elif (extsts == 'MRISR21'):
+        if (sts == 'RKL'):
+            return 'o', 'C12', '-'
+        else:
+            return 's', 'C12', '-'
+    elif (extsts == 'Heun-Euler'):
+        if (sts == 'RKL'):
+            return 'x', 'C4', '-'
+        else:
+            return '+', 'C4', '-'
     else:
         raise ValueError('Unknown extsts type: %d' % extsts)
 
@@ -208,10 +210,13 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     accuracy = tabledata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
-                    if (rxtype):
-                        rxtxt = 'impl-R'
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = 'impl-R'
+                        else:
+                            rxtxt = 'expl-R'
                     else:
-                        rxtxt = 'expl-R'
+                        rxtxt = ''
                     ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
                     rate = ' (rate = %.2f)' % (medrate)
                     m,c,l = rk_line_style(table_id,rxtype)
@@ -332,10 +337,13 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         advevals = tabledata['AdvEvals'].to_numpy()
                     if (plot_rx):
                         rxevals = tabledata['RxEvals'].to_numpy()
-                    if (rxtype):
-                        rxtxt = 'impl-R'
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = 'impl-R'
+                        else:
+                            rxtxt = 'expl-R'
                     else:
-                        rxtxt = 'expl-R'
+                        rxtxt = ''
                     ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
@@ -424,10 +432,13 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
                     accuracy = tabledata['Accuracy'].to_numpy()
                     runtime = tabledata['RunTime'].to_numpy()
-                    if (rxtype):
-                        rxtxt = 'impl-R'
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = 'impl-R'
+                        else:
+                            rxtxt = 'expl-R'
                     else:
-                        rxtxt = 'expl-R'
+                        rxtxt = ''
                     ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
@@ -505,10 +516,13 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
                     rtol = tabledata['rtol'].to_numpy()
                     accuracy = tabledata['Accuracy'].to_numpy()
-                    if (rxtype):
-                        rxtxt = 'impl-R'
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = 'impl-R'
+                        else:
+                            rxtxt = 'expl-R'
                     else:
-                        rxtxt = 'expl-R'
+                        rxtxt = ''
                     ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True

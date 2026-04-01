@@ -52,6 +52,10 @@ def rk_line_style(table_id):
         return 'x', 'C0'
     elif (table_id == 2):
         return '+', 'C1'
+    elif (table_id == 3):
+        return '+', 'C2', ls
+    elif (table_id == 4):
+        return '+', 'C3', ls
     elif (table_id == 5):
         return 'x', 'C7'
     elif (table_id == 6):
