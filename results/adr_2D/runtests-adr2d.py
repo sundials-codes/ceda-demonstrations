@@ -1,0 +1,1 @@
+../../adr/runtests-adr2d.py

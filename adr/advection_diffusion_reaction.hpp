@@ -244,7 +244,7 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
              SUNLinearSolver* LS, void** arkode_mem);
 
 int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-                SUNMatrix* A, SUNLinearSolver* LS, MRIStepInnerStepper* sts_mem,
+                SUNMatrix* A, SUNLinearSolver* LS, void** lsrkstep_mem,
                 void** arkode_mem);
 
 int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
@@ -359,7 +359,7 @@ static int OutputStatsARK(void* arkode_mem, UserData& udata)
 }
 
 // Print ExtSTS integrator statistics
-static int OutputStatsExtSTS(void* arkode_mem, MRIStepInnerStepper sts_mem,
+static int OutputStatsExtSTS(void* arkode_mem, void *lsrkstep_mem,
                              UserData& udata)
 {
   int flag;
@@ -372,14 +372,9 @@ static int OutputStatsExtSTS(void* arkode_mem, MRIStepInnerStepper sts_mem,
   cout << endl;
 
   // Print inner sts integrator stats
-  void* inner_content = nullptr;
-  MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
-  STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
-
-  // Get STS integrator and solver stats
   cout << fixed << setprecision(6);
   cout << endl << "Inner STS Method:" << endl;
-  flag = ARKodePrintAllStats(content->sts_arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+  flag = ARKodePrintAllStats(lsrkstep_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
   if (check_flag(flag, "ARKodePrintAllStats")) { return -1; }
 
   return 0;

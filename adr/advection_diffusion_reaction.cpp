@@ -120,12 +120,11 @@ int main(int argc, char* argv[])
   SUNMatrix Aref        = nullptr;
   SUNLinearSolver LSref = nullptr;
 
-  // STS integrator for ExtSTS method
-  MRIStepInnerStepper sts_mem = nullptr;
-
-  // LSRKStep and ARKStep integrators for Strang splitting method
-  SUNStepper steppers[2];
+  // LSRKStep integrator for ExtSTS and Strang splitting methods
   void* lsrkstep_mem = nullptr;
+
+  // ARKStep integrator for Strang splitting method
+  SUNStepper steppers[2];
   void* arkstep_mem = nullptr;
 
   // Create integrator
@@ -133,13 +132,9 @@ int main(int argc, char* argv[])
   {
   case (0): flag = SetupERK(ctx, udata, uopts, y, &arkode_mem); break;
   case (1): flag = SetupARK(ctx, udata, uopts, y, &LS, &arkode_mem); break;
-  case (2):
-    flag = SetupExtSTS(ctx, udata, uopts, y, &A, &LS, &sts_mem, &arkode_mem);
-    break;
-  case (3):
-    flag = SetupStrang(ctx, udata, uopts, y, &A, &LS, steppers, &lsrkstep_mem,
-                       &arkstep_mem, &arkode_mem);
-    break;
+  case (2): flag = SetupExtSTS(ctx, udata, uopts, y, &A, &LS, &lsrkstep_mem, &arkode_mem); break;
+  case (3): flag = SetupStrang(ctx, udata, uopts, y, &A, &LS, steppers, &lsrkstep_mem,
+                               &arkstep_mem, &arkode_mem); break;
   default: flag = -1;
   }
   if (check_flag(flag, "Integrator setup")) { return 1; }
@@ -236,7 +231,7 @@ int main(int argc, char* argv[])
     {
     case (0): flag = OutputStatsERK(arkode_mem, udata); break;
     case (1): flag = OutputStatsARK(arkode_mem, udata); break;
-    case (2): flag = OutputStatsExtSTS(arkode_mem, sts_mem, udata); break;
+    case (2): flag = OutputStatsExtSTS(arkode_mem, lsrkstep_mem, udata); break;
     case (3): flag = OutputStatsStrang(arkode_mem, arkstep_mem, lsrkstep_mem, udata); break;
     default: flag = -1;
     }
@@ -251,17 +246,7 @@ int main(int argc, char* argv[])
   {
   case (0): ARKodeFree(&arkode_mem); break;
   case (1): ARKodeFree(&arkode_mem); break;
-  case (2):
-  {
-    void* inner_content = nullptr;
-    MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
-    STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
-    ARKodeFree(&(content->sts_arkode_mem));
-    free(content);
-    MRIStepInnerStepper_Free(&sts_mem);
-    ARKodeFree(&arkode_mem);
-    break;
-  }
+  case (2): ARKodeFree(&arkode_mem); break;
   case (3):
   {
     ARKodeFree(&lsrkstep_mem);
@@ -718,8 +703,7 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts,
 }
 
 int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
-                SUNMatrix* A, SUNLinearSolver* LS, MRIStepInnerStepper* sts_mem,
-                void** arkode_mem)
+                SUNMatrix* A, SUNLinearSolver* LS, void** lsrkstep_mem, void** arkode_mem)
 {
   // Problem configuration
   ARKRhsFn fe_RHS;   // explicit RHS function
@@ -730,71 +714,31 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   fi_RHS = (udata.reaction) ? f_reaction : nullptr;
   Ji_RHS = (udata.reaction) ? J_reaction : nullptr;
 
-  // -------------------------------
-  // Setup the custom STS integrator
-  // -------------------------------
+  // Create MRIStep EstSTS solver memory
+  *arkode_mem = MRIStepCreateExtSTS(f_diffusion, fe_RHS, fi_RHS, ZERO, y, ctx);
+  if (check_ptr(*arkode_mem, "MRIStepCreateExtSTS")) { return 1; }
 
-  // Create LSRKStep memory
-  void* sts_arkode_mem = LSRKStepCreateSTS(f_diffusion_forcing, ZERO, y, ctx);
-  if (check_ptr(arkode_mem, "LSRKStepCreateSTS")) { return 1; }
+  // Access inner LSRKStep solver
+  *lsrkstep_mem = MRIStepGetSTSStepper(*arkode_mem);
+  if (check_ptr(*lsrkstep_mem, "MRIStepGetSTSStepper")) { return 1; }
 
-  // Attach user data
-  int flag = ARKodeSetUserData(sts_arkode_mem, &udata);
+  // Attach user data (this attaches to both MRIStep and LSRKStep)
+  int flag = ARKodeSetUserData(*arkode_mem, &udata);
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
   // Select STS method
   ARKODE_LSRKMethodType ststype = (uopts.sts_method == 0) ? ARKODE_LSRK_RKC_2
                                                           : ARKODE_LSRK_RKL_2;
-  flag                          = LSRKStepSetSTSMethod(sts_arkode_mem, ststype);
+  flag                          = LSRKStepSetSTSMethod(*lsrkstep_mem, ststype);
   if (check_flag(flag, "LSRKStepSetSTSMethod")) { return 1; }
 
   // Set dominant eigenvalue function and frequency
-  flag = LSRKStepSetDomEigFn(sts_arkode_mem, diffusion_domeig);
-  if (check_flag(flag, "LSRKStepSetDomEigFn")) { return 1; }
-  flag = LSRKStepSetDomEigFrequency(sts_arkode_mem, uopts.ls_setup_freq);
+  flag = MRIStepExtSTSSetDomEigFn(*arkode_mem, diffusion_domeig);
+  if (check_flag(flag, "MRIStepExtSTSSetDomEigFn")) { return 1; }
+  flag = LSRKStepSetDomEigFrequency(*lsrkstep_mem, uopts.ls_setup_freq);
   if (check_flag(flag, "LSRKStepSetDomEigFrequency")) { return 1; }
 
-  // Increase the maximum number of internal STS stages allowed
-  flag = LSRKStepSetMaxNumStages(sts_arkode_mem, 10000);
-  if (check_flag(flag, "LSRKStepSetMaxNumStages")) { return 1; }
-
-  // Disable temporal interpolation for inner STS method
-  flag = ARKodeSetInterpolantType(sts_arkode_mem, ARK_INTERP_NONE);
-  if (check_flag(flag, "ARKodeSetInterpolantType")) { return 1; }
-
-  // Create the inner stepper wrapper
-  flag = MRIStepInnerStepper_Create(ctx, sts_mem);
-  if (check_flag(flag, "MRIStepInnerStepper_Create")) { return 1; }
-
-  // Attach memory and operations
-  STSInnerStepperContent* inner_content = new STSInnerStepperContent;
-  inner_content->sts_arkode_mem         = sts_arkode_mem;
-  inner_content->user_data              = &udata;
-
-  flag = MRIStepInnerStepper_SetContent(*sts_mem, inner_content);
-  if (check_flag(flag, "MRIStepInnerStepper_SetContent")) { return 1; }
-
-  flag = MRIStepInnerStepper_SetEvolveFn(*sts_mem, STSInnerStepper_Evolve);
-  if (check_flag(flag, "MRIStepInnerStepper_SetEvolveFn")) { return 1; }
-
-  flag = MRIStepInnerStepper_SetFullRhsFn(*sts_mem, STSInnerStepper_FullRhs);
-  if (check_flag(flag, "MRIStepInnerStepper_SetFullRhsFn")) { return 1; }
-
-  flag = MRIStepInnerStepper_SetResetFn(*sts_mem, STSInnerStepper_Reset);
-  if (check_flag(flag, "MRIStepInnerStepper_SetResetFn")) { return 1; }
-
-  // Attach inner stepper memory to user data
-  udata.sts_mem = *sts_mem;
-
-  // -------------------------
-  // Setup the MRI integrator
-  // -------------------------
-
-  // Create slow integrator for diffusion and attach fast integrator
-  *arkode_mem = MRIStepCreate(fe_RHS, fi_RHS, ZERO, y, *sts_mem, ctx);
-  if (check_ptr(*arkode_mem, "MRIStepCreate")) { return 1; }
-
-  // Set fixed step size
+  // Set fixed step size (if requested)
   if (uopts.fixed_h > ZERO)
   {
     flag = ARKodeSetFixedStep(*arkode_mem, uopts.fixed_h);
@@ -848,249 +792,81 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
 
   // Select ExtSTS method via MRIStepCoupling structure
-  MRIStepCoupling C;
+  MRIStepCoupling C = nullptr;
   if (uopts.extsts_method < 0)  // use abs(method) to get MRI table
   {
     ARKODE_MRITableID mri_table = static_cast<ARKODE_MRITableID>(-uopts.extsts_method);
     C = MRIStepCoupling_LoadTable(mri_table);
-    if (C == nullptr)
-    {
-      cerr << "ERROR: Unable to load MRI table " << mri_table << endl;
-      return -1;
-    }
   }
   else  // custom ExtSTS coupling
   {
     if (udata.advection && udata.reaction) // advection + diffusion + reaction
     {
       if (uopts.extsts_method == 0) // ARS(2,2,2)
-      {
-        C                       = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMEX);
-        const sunrealtype one   = SUN_RCONST(1.0);
-        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-        const sunrealtype delta = one - one / (SUN_RCONST(2.0) * gamma);
-        const sunrealtype three = SUN_RCONST(3.0);
-        C->q = 2;
-        C->p = 1;
-        C->c[1] = gamma;
-        C->c[2] = gamma;
-        C->c[3] = one;
-        C->c[4] = one;
-        C->W[0][1][0] = gamma;
-        C->W[0][3][0] = delta - gamma;
-        C->W[0][3][2] = one - delta;
-        C->W[0][5][0] = -delta;
-        C->W[0][5][2] = delta - SUN_RCONST(0.4);
-        C->W[0][5][4] = SUN_RCONST(0.4);
-        C->G[0][1][0] =  gamma;
-        C->G[0][2][0] = -gamma;
-        C->G[0][2][2] =  gamma;
-        C->G[0][3][2] =  one - gamma;
-        C->G[0][4][2] = -gamma;
-        C->G[0][4][4] =  gamma;
-        C->G[0][5][2] = -SUN_RCONST(0.4);
-        C->G[0][5][4] =  SUN_RCONST(0.4);
-      }
+      { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
       else // Giraldo ARK2
-      {
-        C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMEX);
-        const sunrealtype one   = SUN_RCONST(1.0);
-        const sunrealtype two   = SUN_RCONST(2.0);
-        const sunrealtype three = SUN_RCONST(3.0);
-        const sunrealtype four  = SUN_RCONST(4.0);
-        const sunrealtype six   = SUN_RCONST(6.0);
-        const sunrealtype eight = SUN_RCONST(8.0);
-        const sunrealtype sqrt2 = SUNRsqrt(two);
-        C->q                    = 2;
-        C->p                    = 1;
-        C->c[1]                 = two - sqrt2;
-        C->c[2]                 = two - sqrt2;
-        C->c[3]                 = one;
-        C->c[4]                 = one;
-        C->c[5]                 = one;
-        C->W[0][1][0]           = two - sqrt2;
-        C->W[0][3][0]           = (three - two * sqrt2) / six - (two - sqrt2);
-        C->W[0][3][2]           = (three + two * sqrt2) / six;
-        C->W[0][5][0] = one / (two * sqrt2) - (three - two * sqrt2) / six;
-        C->W[0][5][2] = one / (two * sqrt2) - (three + two * sqrt2) / six;
-        C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
-        C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2) / six;
-        C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2) / six;
-        C->W[0][6][4] = one / (two * sqrt2);
-        C->G[0][1][0] = two - sqrt2;
-        C->G[0][2][0] = one - one / sqrt2 - (two - sqrt2);
-        C->G[0][2][2] = one - one / sqrt2;
-        C->G[0][3][0] = one / sqrt2 - one;
-        C->G[0][3][2] = one / sqrt2;
-        C->G[0][4][0] = one / (two * sqrt2);
-        C->G[0][4][2] = one / (two * sqrt2) - one;
-        C->G[0][4][4] = one - one / sqrt2;
-        C->G[0][6][0] = (four - sqrt2) / eight - one / (two * sqrt2);
-        C->G[0][6][2] = (four - sqrt2) / eight - one / (two * sqrt2);
-        C->G[0][6][4] = one / (two * sqrt2) - (one - one / sqrt2);
-      }
+      { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
     }
     else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
     {
       if (uopts.extsts_method == 0)  // ARS(2,2,2) ERK
       {
-        C = MRIStepCoupling_Alloc(1, 5, MRISTEP_EXPLICIT);
-        const sunrealtype one = SUN_RCONST(1.0);
-        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-        const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
-        const sunrealtype three = SUN_RCONST(3.0);
-        C->q = 2;
-        C->p = 1;
-        C->c[1] = gamma;
-        C->c[2] = gamma;
-        C->c[3] = one;
-        C->c[4] = one;
-        C->W[0][1][0] = gamma;
-        C->W[0][3][0] = delta - gamma;
-        C->W[0][3][2] = one - delta;
-        C->W[0][5][0] = -delta;
-        C->W[0][5][2] = delta - SUN_RCONST(0.4);
-        C->W[0][5][4] = SUN_RCONST(0.4);
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ARS222_ERK_3_1_2);
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
       }
       else if (uopts.extsts_method == 1)  // Giraldo ERK2
       {
-        C = MRIStepCoupling_Alloc(1, 6, MRISTEP_EXPLICIT);
-        const sunrealtype one = SUN_RCONST(1.0);
-        const sunrealtype two = SUN_RCONST(2.0);
-        const sunrealtype three = SUN_RCONST(3.0);
-        const sunrealtype four = SUN_RCONST(4.0);
-        const sunrealtype six = SUN_RCONST(6.0);
-        const sunrealtype eight = SUN_RCONST(8.0);
-        const sunrealtype sqrt2 = SUNRsqrt(two);
-        C->q = 2;
-        C->p = 1;
-        C->c[1] = two - sqrt2;
-        C->c[2] = two - sqrt2;
-        C->c[3] = one;
-        C->c[4] = one;
-        C->c[5] = one;
-        C->W[0][1][0] = two - sqrt2;
-        C->W[0][3][0] = (three - two * sqrt2)/six - (two - sqrt2);
-        C->W[0][3][2] = (three + two * sqrt2)/six;
-        C->W[0][5][0] = one/(two * sqrt2) - (three - two * sqrt2)/six;
-        C->W[0][5][2] = one/(two * sqrt2) - (three + two * sqrt2)/six;
-        C->W[0][5][4] = one - one / SUNRsqrt(SUN_RCONST(2.0));
-        C->W[0][6][0] = (four - sqrt2) / eight - (three - two * sqrt2)/six;
-        C->W[0][6][2] = (four - sqrt2) / eight - (three + two * sqrt2)/six;
-        C->W[0][6][4] = one / (two * sqrt2);
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ARK2_ERK_3_1_2);
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
       }
       else if (uopts.extsts_method == 2)  // Ralston
       {
-        C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-        const sunrealtype one   = SUN_RCONST(1.0);
-        const sunrealtype two   = SUN_RCONST(2.0);
-        const sunrealtype three = SUN_RCONST(3.0);
-        const sunrealtype four  = SUN_RCONST(4.0);
-        C->q                    = 2;
-        C->p                    = 1;
-        C->c[1]                 = two / three;
-        C->c[2]                 = one;
-        C->W[0][1][0]           = two / three;
-        C->W[0][2][0]           = one / four - two / three;
-        C->W[0][2][1]           = three / four;
-        C->W[0][3][0] = SUN_RCONST(5.0) / SUN_RCONST(37.0) - two / three;
-        C->W[0][3][1] = two / three - three / four;
-        C->W[0][3][2] = SUN_RCONST(22.0) / SUN_RCONST(111.0);
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_RALSTON_3_1_2);
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
       }
       else // Heun-Euler
       {
-        C                       = MRIStepCoupling_Alloc(1, 3, MRISTEP_EXPLICIT);
-        const sunrealtype one   = SUN_RCONST(1.0);
-        const sunrealtype two   = SUN_RCONST(2.0);
-        const sunrealtype three = SUN_RCONST(3.0);
-        C->q                    = 2;
-        C->p                    = 1;
-        C->c[1]                 = one;
-        C->c[2]                 = one;
-        C->W[0][1][0]           = one;
-        C->W[0][2][0]           = -one / two;
-        C->W[0][2][1]           = one / two;
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_HEUN_EULER_2_1_2);
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
       }
     }
     else if (!udata.advection && udata.reaction) // diffusion + reaction
     {
       if (uopts.extsts_method == 0)  // ARS(2,2,2)
-      {
-        C = MRIStepCoupling_Alloc(1, 5, MRISTEP_IMPLICIT);
-        const sunrealtype one = SUN_RCONST(1.0);
-        const sunrealtype gamma = one - one / SUNRsqrt(SUN_RCONST(2.0));
-        const sunrealtype delta = one - one / (SUN_RCONST(2.0)*gamma);
-        const sunrealtype three = SUN_RCONST(3.0);
-        C->q = 2;
-        C->p = 1;
-        C->c[1] = gamma;
-        C->c[2] = gamma;
-        C->c[3] = one;
-        C->c[4] = one;
-        C->G[0][1][0] =  gamma;
-        C->G[0][2][0] = -gamma;
-        C->G[0][2][2] =  gamma;
-        C->G[0][3][2] =  one - gamma;
-        C->G[0][4][2] = -gamma;
-        C->G[0][4][4] =  gamma;
-        C->G[0][5][2] = -SUN_RCONST(0.4);
-        C->G[0][5][4] =  SUN_RCONST(0.4);
-      }
+      { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
       else if (uopts.extsts_method == 1)  // Giraldo DIRK2
-      {
-        C                       = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
-        const sunrealtype one   = SUN_RCONST(1.0);
-        const sunrealtype two   = SUN_RCONST(2.0);
-        const sunrealtype three = SUN_RCONST(3.0);
-        const sunrealtype four  = SUN_RCONST(4.0);
-        const sunrealtype six   = SUN_RCONST(6.0);
-        const sunrealtype eight = SUN_RCONST(8.0);
-        const sunrealtype sqrt2 = SUNRsqrt(two);
-        C->q                    = 2;
-        C->p                    = 1;
-        C->c[1]                 = two - sqrt2;
-        C->c[2]                 = two - sqrt2;
-        C->c[3]                 = one;
-        C->c[4]                 = one;
-        C->c[5]                 = one;
-        C->G[0][1][0]           = two - sqrt2;
-        C->G[0][2][0]           = one - one / sqrt2 - (two - sqrt2);
-        C->G[0][2][2]           = one - one / sqrt2;
-        C->G[0][3][0]           = one / sqrt2 - one;
-        C->G[0][3][2]           = one / sqrt2;
-        C->G[0][4][0]           = one / (two * sqrt2);
-        C->G[0][4][2]           = one / (two * sqrt2) - one;
-        C->G[0][4][4]           = one - one / sqrt2;
-        C->G[0][6][0]           = (four - sqrt2) / eight - one / (two * sqrt2);
-        C->G[0][6][2]           = (four - sqrt2) / eight - one / (two * sqrt2);
-        C->G[0][6][4]           = one / (two * sqrt2) - (one - one / sqrt2);
-      }
+      { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
       else  // SSP SDIRK 2
       {
-        C = MRIStepCoupling_Alloc(1, 6, MRISTEP_IMPLICIT);
+        ARKodeButcherTable B = ARKodeButcherTable_Alloc(5, SUNTRUE);
         const sunrealtype one = SUN_RCONST(1.0);
         const sunrealtype two = SUN_RCONST(2.0);
         const sunrealtype five = SUN_RCONST(5.0);
         const sunrealtype seven = SUN_RCONST(7.0);
         const sunrealtype twelve = SUN_RCONST(12.0);
         const sunrealtype gamma = one - one / SUNRsqrt(two);
-        C->q = 2;
-        C->p = 1;
-        C->c[1] = gamma;
-        C->c[2] = gamma;
-        C->c[3] = one - gamma;
-        C->c[4] = one - gamma;
-        C->c[5] = one;
-        C->G[0][1][0] = gamma;
-        C->G[0][2][0] = -gamma;
-        C->G[0][2][2] = gamma;
-        C->G[0][3][2] = one - two * gamma;
-        C->G[0][4][2] = -gamma;
-        C->G[0][4][4] = gamma;
-        C->G[0][5][2] = two * gamma - one / two;
-        C->G[0][5][4] = one / two - gamma;
-        C->G[0][6][2] = two*gamma - seven / twelve;
-        C->G[0][6][4] = seven / twelve - gamma;
+        B->q = 2;
+        B->p = 1;
+        B->c[1] = gamma;
+        B->c[2] = gamma;
+        B->c[3] = one - gamma;
+        B->c[4] = one - gamma;
+        B->c[5] = one;
+        B->A[1][0] = gamma;
+        B->A[2][2] = gamma;
+        B->A[3][2] = one - gamma;
+        B->A[4][2] = one - two * gamma;
+        B->A[4][4] = gamma;
+        B->b[2] = one / two;
+        B->b[4] = one / two;
+        B->d[2] = five / twelve;
+        B->d[4] = seven / twelve;
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
       }
     }
     else // illegal configuration
@@ -1098,6 +874,11 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       cerr << "ERROR: Invalid problem configuration" << endl;
       return -1;
     }
+  }
+  if (C == nullptr)
+  {
+    cerr << "ERROR: Unable to load/create MRI table " << uopts.extsts_method << endl;
+    return -1;
   }
   flag = MRIStepSetCoupling(*arkode_mem, C);
   if (check_flag(flag, "MRIStepSetCoupling")) { return 1; }
@@ -1320,72 +1101,6 @@ int SetupStrang(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   // Set stopping time
   flag = ARKodeSetStopTime(*arkode_mem, udata.tf);
   if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
-
-  return 0;
-}
-
-// -----------------------------------------------------------------------------
-// Custom inner stepper functions
-// -----------------------------------------------------------------------------
-
-// Advance one step of the STS IVP
-int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
-                           sunrealtype tout, N_Vector y)
-{
-  void* inner_content = nullptr;
-  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
-  if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
-
-  STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
-
-  // Reset STS integrator to current state
-  flag = ARKodeReset(content->sts_arkode_mem, t0, y);
-  if (check_flag(flag, "ARKodeReset")) { return 1; }
-
-  // Set step size to get to tout in a single step
-  flag = ARKodeSetFixedStep(content->sts_arkode_mem, tout - t0);
-  if (check_flag(flag, "ARKodeSetFixedStep")) { return 1; }
-
-  // Set stop time
-  flag = ARKodeSetStopTime(content->sts_arkode_mem, tout);
-  if (check_flag(flag, "ARKodeSetStopTime")) { return 1; }
-
-  // Evolve a single time step
-  sunrealtype tret;
-  flag = ARKodeEvolve(content->sts_arkode_mem, tout, y, &tret, ARK_ONE_STEP);
-  if (check_flag(flag, "ARKodeEvolve")) { return flag; }
-
-  return 0;
-}
-
-// Compute the RHS of the diffusion IVP
-int STSInnerStepper_FullRhs(MRIStepInnerStepper sts_mem, sunrealtype t,
-                            N_Vector y, N_Vector f, int mode)
-{
-  void* inner_content = nullptr;
-  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
-  if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
-
-  STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
-
-  flag = f_diffusion(t, y, f, content->user_data);
-  if (flag) { return -1; }
-
-  return 0;
-}
-
-// Reset the fast integrator to the given time and state
-int STSInnerStepper_Reset(MRIStepInnerStepper sts_mem, sunrealtype tR, N_Vector yR)
-{
-  void* inner_content = nullptr;
-  int flag            = MRIStepInnerStepper_GetContent(sts_mem, &inner_content);
-  if (check_flag(flag, "MRIStepInnerStepper_GetContent")) { return -1; }
-
-  STSInnerStepperContent* content = (STSInnerStepperContent*)inner_content;
-
-  // Reset STS integrator to current state
-  flag = ARKodeReset(content->sts_arkode_mem, tR, yR);
-  if (check_flag(flag, "ARKodeReset")) { return 1; }
 
   return 0;
 }
