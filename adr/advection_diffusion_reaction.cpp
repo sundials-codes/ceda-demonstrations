@@ -840,7 +840,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
       else if (uopts.extsts_method == 1)  // Giraldo DIRK2
       { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
-      else  // SSP SDIRK 2
+      else  // SSP SDIRK 2 -- THIS NEEDS TO BE FIXED, AS IT GIVES DIFFERENT RESULTS THAN PREVIOUSLY
       {
         ARKodeButcherTable B = ARKodeButcherTable_Alloc(5, SUNTRUE);
         const sunrealtype one = SUN_RCONST(1.0);
@@ -855,7 +855,6 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
         B->c[2] = gamma;
         B->c[3] = one - gamma;
         B->c[4] = one - gamma;
-        B->c[5] = one;
         B->A[1][0] = gamma;
         B->A[2][2] = gamma;
         B->A[3][2] = one - gamma;

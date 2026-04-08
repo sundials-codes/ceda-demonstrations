@@ -387,10 +387,8 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 # Flags to enable/disable categories of tests
 DoImplicitRx = False
 DoExplicitRx = True
-#DoADRFixedTests = True
-#DoADRAdaptiveTests = True
-DoADRFixedTests = False
-DoADRAdaptiveTests = False
+DoADRFixedTests = True
+DoADRAdaptiveTests = True
 DoRDFixedTests = True
 DoRDAdaptiveTests = True
 ShowCommand = True
