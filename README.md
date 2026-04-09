@@ -9,14 +9,11 @@ Aggul, M., Francisquez, M., Reynolds, D.R., Amihere, S., "Super Time Stepping Me
 
 To run the test codes related to the above publication(s), we recommend that you first checkout the relevant branch, and follow the instructions in the `README.md` therein.
 
-
 This is a repository of [SUNDIALS](https://github.com/LLNL/sundials)-based applications to assess and demonstrate the parallel performance of new super-time-stepping (STS) method capabilities that have been added to SUNDIALS as part of the [CEDA SciDAC project](https://sites.google.com/pppl.gov/ceda-scidac-5?usp=sharing).
-
 
 ## Installation
 
 The following steps describe how to build the demonstration code in a Linux or OS X environment.
-
 
 ### Gettting the Code
 
@@ -25,7 +22,6 @@ To obtain the code, clone this repository with Git:
 ```bash
   git clone https://github.com/sundials-codes/ceda-demonstrations.git
 ```
-
 
 ### Requirements
 
@@ -60,11 +56,9 @@ If these are not already available on your system, the first three may be cloned
 
 We note that a particular benefit of retrieving these dependencies using the submodules is that these point to specific revisions of both libraries that are known to work correctly with the codes in this repository.  If *hypre* is desired, then any recent version (e.g., v2.20.0 or higher) should work, but you must install this separately.
 
-
 ### Building the Dependencies
 
 We recommend that users follow the posted instructions for installing both SUNDIALS and Gkeyll.
-
 
 #### GkeyllZero
 
@@ -94,7 +88,6 @@ make -j install
 ```bash
 cmake .. -DCMAKE_C_FLAGS="-g -O3 -fPIC" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -Denable_tests=NO -Denable_internal_blaslib=NO -DXSDK_ENABLE_Fortran=NO -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 ```
-
 
 #### PostGkeyll
 
@@ -144,9 +137,9 @@ The following steps can be used to build SUNDIALS using a minimal configuration 
 mkdir deps/sundials/build
 cd deps/sundials/build
 # To install with LAPACK -- Needs to be fixed
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DCMAKE_BUILD_TYPE=Release -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> ..
 # To install without LAPACK -- deactivate the spack environment for possible conflicts
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DCMAKE_BUILD_TYPE=Release -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi-4.1.6/bin/mpicc -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi-4.1.6/bin/mpiexec ..
 make -j install
 ```
 
@@ -155,13 +148,11 @@ Alternately, if CMake is able to find both *hypre* and CUDA automatically (e.g.,
 ```bash
 mkdir deps/sundials/build
 cd deps/sundials/build
-cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
+cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DCMAKE_BUILD_TYPE=Release -DENABLE_MPI=ON -DSUNDIALS_INDEX_SIZE=32 -DMPI_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DMPI_Fortran_COMPILER=$GKYLSOFT/openmpi/bin/mpifort -DMPI_Fortran_WORKS=ON -DMPIEXEC_EXECUTABLE=$GKYLSOFT/openmpi/bin/mpiexec -DENABLE_LAPACK=ON -DLAPACK_LIBRARIES=<full-path-to-liblapacke.a> -DENABLE_CUDA=ON -DENABLE_HYPRE=ON ..
 make -j install
 ```
 
 Instructions for building SUNDIALS with additional options (including *hypre*, CUDA and HIP) [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
-
-
 
 ### Building the CMake-based tests (`diffusion_2D` and `adr`)
 
@@ -170,7 +161,7 @@ The CMake-based test problems follow the standard pattern for CMake-based projec
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT="[sundials-path]" ..
+  cmake -DSUNDIALS_ROOT="[sundials-path]" -DCMAKE_BUILD_TYPE=Release ..
   make -j install
 ```
 
@@ -181,7 +172,7 @@ If both SUNDIALS and Gkeyll were installed using the submodule-based instruction
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc ..
   make -j install
 ```
 
@@ -190,10 +181,9 @@ If SUNDIALS was installed with *hypre* support, then the configuration above sho
 ```bash
   mkdir ceda-demonstrations/build
   cd ceda-demonstrations/build
-  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DUSE_HYPRE=ON ..
+  cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$GKYLSOFT/openmpi/bin/mpicxx -DCMAKE_C_COMPILER=$GKYLSOFT/openmpi/bin/mpicc -DUSE_HYPRE=ON ..
   make -j install
 ```
-
 
 ### Building the Makefile-based tests (`gkeyll_diffusion`)
 
@@ -206,7 +196,6 @@ Assuming that both SUNDIALS and GkylZero were installed following the above inst
   export CC=$GKYLSOFT/openmpi/bin/mpicc
   make
 ```
-
 
 ### Running the diffusion-only tests ###
 
@@ -237,7 +226,7 @@ python ./plot-gk_diffusion_1x1v_p1.py
 
 The `runtests` script runs a wide range of tests using different diffusion constants and time integration methods, storing all results in a Pandas dataframe, and then saving that to the files `full_results_gk_diffusion_1x1v_p1_adaptive.xlsx` and `full_results_gk_diffusion_1x1v_p1_fixed.xlsx`.  Due to different mechanisms for processing command-line options between the underlying Gkeyll infrastructure and the `main` routine that runs the tests, this script will output multiple lines of the form
 
-```
+```bash
 /gk_diffusion_1x1v_p1: illegal option --
 ```
 
