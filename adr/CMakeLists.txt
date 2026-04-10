@@ -12,7 +12,7 @@ add_executable(${target} ${sources})
 target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 target_link_libraries(${target} PRIVATE
-  SUNDIALS::arkode SUNDIALS::nvecserial)
+  SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
 
 #   request installation of the target into the overall "bin" folder
 install(TARGETS ${target} DESTINATION ${demonstration_bin})
@@ -32,7 +32,7 @@ add_executable(${target_2d} ${sources_2d})
 target_include_directories(${target_2d} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 target_link_libraries(${target_2d} PRIVATE
-  SUNDIALS::arkode SUNDIALS::nvecserial)
+  SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
 
 #   request installation of the target into the overall "bin" folder
 install(TARGETS ${target_2d} DESTINATION ${demonstration_bin})
@@ -68,6 +68,8 @@ install(TARGETS ${target_pirock_adr1D} ${target_pirock_bruss2dadv} ${target_piro
 
 
 ### install testing scripts and input file ###
-install(FILES runtests-adr1d.py plot-adr1d.py adr_1D_pirock_params.txt
-        runtests-adr2d.py plot-adr2d.py adr_2D_pirock_params.txt rd_2D_pirock_params.txt
+install(FILES runtests-adr1d.py runtests-adr2d.py
+        plot-adr1d.py plot-adr2d.py
+        plotspectrum-adr1d.py plotspectrum-adr2d.py
+        adr_1D_pirock_params.txt adr_2D_pirock_params.txt rd_2D_pirock_params.txt
         DESTINATION ${demonstration_bin})

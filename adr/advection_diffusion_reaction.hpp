@@ -16,6 +16,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <random>
 
 // Include desired integrators, vectors, linear solvers, and nonlinear solvers
 #include "arkode/arkode_erkstep.h"
@@ -28,6 +29,7 @@
 #include "sunlinsol/sunlinsol_spgmr.h"
 #include "sunlinsol/sunlinsol_band.h"
 #include "sunmatrix/sunmatrix_band.h"
+#include "sundomeigest/sundomeigest_power.h"
 
 // Macros for problem constants
 #define ZERO SUN_RCONST(0.0)
@@ -86,8 +88,13 @@ struct UserData
   N_Vector temp_v  = nullptr;
   SUNMatrix temp_J = nullptr;
 
-  // Inner stepper memory
-  MRIStepInnerStepper sts_mem = nullptr;
+  // Utility modules for dominant eigenvalue estimation
+  SUNDomEigEstimator DEE_adv = nullptr;
+  SUNDomEigEstimator DEE_diff = nullptr;
+  SUNDomEigEstimator DEE_react = nullptr;
+  ofstream adv_eig_out;
+  ofstream diff_eig_out;
+  ofstream react_eig_out;
 
   ~UserData();
 };
@@ -155,6 +162,9 @@ struct UserOptions
   // Step size selection (ZERO = adaptive steps)
   sunrealtype fixed_h = ZERO;
 
+  // Estimate and output dominant eigenvalues for each RHS function
+  bool output_domeig = false;
+
   int maxsteps      = 10000; // max steps between outputs
   int predictor     = 0;     // predictor for nonlinear systems
   int ls_setup_freq = 0;     // linear solver setup frequency
@@ -171,29 +181,6 @@ struct UserOptions
 };
 
 // -----------------------------------------------------------------------------
-// Custom inner stepper content and functions
-// -----------------------------------------------------------------------------
-
-struct STSInnerStepperContent
-{
-  void* sts_arkode_mem = nullptr; // LSRKStep memory structure
-  void* user_data = nullptr; // user data pointer
-
-  // saved integrator stats
-  long int nst = 0; // time steps
-  long int nfe = 0; // rhs evals
-};
-
-int STSInnerStepper_Evolve(MRIStepInnerStepper sts_mem, sunrealtype t0,
-                           sunrealtype tout, N_Vector y);
-
-int STSInnerStepper_FullRhs(MRIStepInnerStepper sts_mem, sunrealtype t,
-                            N_Vector y, N_Vector f, int mode);
-
-int STSInnerStepper_Reset(MRIStepInnerStepper sts_mem, sunrealtype tR,
-                          N_Vector yR);
-
-// -----------------------------------------------------------------------------
 // Functions provided to the SUNDIALS integrators
 // -----------------------------------------------------------------------------
 
@@ -206,8 +193,6 @@ int f_adv_diff(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_adv_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 int f_adv_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
-
-int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data);
 
 // Jacobian of RHS functions
 int J_advection(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
@@ -256,6 +241,10 @@ int SetupReference(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector
 
 // Compute the initial condition
 int SetIC(N_Vector y, UserData& udata);
+
+// Estimate and output the dominant eigenvalues of each RHS function
+int InitializeDomeig(sunrealtype t, N_Vector y, UserData& udata, SUNContext ctx);
+int OutputDomeig(sunrealtype t, N_Vector y, UserData& udata);
 
 // -----------------------------------------------------------------------------
 // Output and utility functions
@@ -453,6 +442,7 @@ static void InputHelp()
   cout << "  --calc_error             : use reference solution to compute solution error\n";
   cout << "  --write_solution         : write the reference solution to disk\n";
   cout << "  --output <int>           : output level\n";
+  cout << "  --output_domeig          : output dominant eigenvalues\n";
   cout << "  --nout <int>             : number of outputs\n";
   cout << "  --help                   : print options and exit\n";
 }
@@ -546,13 +536,14 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--write_solution", uopts.write_solution);
   find_arg(args, "--output", uopts.output);
   find_arg(args, "--nout", uopts.nout);
+  find_arg(args, "--output_domeig", uopts.output_domeig);
 
   // Recompute mesh spacing and total number of nodes
   udata.dx  = (udata.xu - udata.xl) / (udata.nx - 1);
   udata.neq = NSPECIES * udata.nx;
 
   // Create workspace
-  if ((uopts.integrator < 2) || uopts.calc_error)
+  if ((uopts.integrator < 2) || uopts.calc_error || uopts.output_domeig)
   {
     udata.temp_v = N_VNew_Serial(udata.neq, ctx);
     if (check_ptr(udata.temp_v, "N_VNew_Serial")) { return -1; }
@@ -762,7 +753,8 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   {
     cout << "  reference solver = ARK" << endl;
   }
-  cout << "  output           = " << uopts.output << endl;
+  cout << "  output            = " << uopts.output << endl;
+  cout << "  eigenvalue output = " << uopts.output_domeig << endl;
   cout << " --------------------------------- " << endl;
   cout << endl;
 

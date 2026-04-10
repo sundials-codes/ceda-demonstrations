@@ -142,6 +142,13 @@ int main(int argc, char* argv[])
     if (check_flag(flag, "ARKodeSetOrder")) { return 1; }
   }
 
+  // Create and initialize dominant eigenvalue estimators if requested
+  if (uopts.output_domeig)
+  {
+    flag = InitializeDomeig(ZERO, y, udata, ctx);
+    if (check_flag(flag, "InitializeDomeig")) { return 1; }
+  }
+
   // ----------------------
   // Evolve problem in time
   // ----------------------
@@ -196,6 +203,11 @@ int main(int argc, char* argv[])
       std::cout << " t = " << t << ", ||err_curr|| = " << std::sqrt(curr_error / udata.nx / 3)
                 << ", ||err_tot|| = " << std::sqrt(total_error / uopts.nout / udata.nx / 3)
                 << ", reference steps = " << nst_ref << std::endl;
+      if (uopts.output_domeig)
+      {
+        flag = OutputDomeig(t, y, udata);
+        if (check_flag(flag, "OutputDomeig")) { return 1; }
+      }
     }
   }
   else                       // normal mode
@@ -217,6 +229,13 @@ int main(int argc, char* argv[])
       if (check_flag(flag, "ARKodeEvolve")) { return 1; }
       auto solver_end = chrono::high_resolution_clock::now();
       solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+
+      // Output dominant eigenvalue estimates
+      if (uopts.output_domeig)
+      {
+        flag = OutputDomeig(t, y, udata);
+        if (check_flag(flag, "OutputDomeig")) { return 1; }
+      }
 
       // Update output time
       tout += dTout;
@@ -283,6 +302,15 @@ int main(int argc, char* argv[])
     SUNLinSolFree(LSref);
   }
 
+  if (udata.DEE_adv) { SUNDomEigEstimator_Destroy(&udata.DEE_adv); }
+  if (udata.DEE_diff) { SUNDomEigEstimator_Destroy(&udata.DEE_diff); }
+  if (udata.DEE_react) { SUNDomEigEstimator_Destroy(&udata.DEE_react); }
+  if (uopts.output_domeig)
+  {
+    if (udata.advection) { udata.adv_eig_out.close(); }
+    udata.diff_eig_out.close();
+    udata.react_eig_out.close();
+  }
   N_VDestroy(y);
   SUNMatDestroy(A);
   SUNLinSolFree(LS);
@@ -1364,23 +1392,6 @@ int f_adv_diff_react(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   return 0;
 }
 
-// Diffusion RHS function with MRI forcing
-int f_diffusion_forcing(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
-{
-  // Access problem data
-  UserData* udata = (UserData*)user_data;
-
-  // Compute diffusion RHS
-  int flag = f_diffusion(t, y, f, user_data);
-  if (flag) { return flag; }
-
-  // Apply inner forcing for MRI + LSRKStep
-  flag = MRIStepInnerStepper_AddForcing(udata->sts_mem, t, f);
-  if (check_flag(flag, "MRIStepInnerStepper_AddForcing")) { return -1; }
-
-  return 0;
-}
-
 // Dominant eigenvalue function (for diffusion operator in LSRKStep)
 int diffusion_domeig(sunrealtype t, N_Vector y, N_Vector fn,
                      sunrealtype* lambdaR, sunrealtype* lambdaI, void* user_data,
@@ -1414,6 +1425,124 @@ int SetIC(N_Vector y, UserData& udata)
     }
   }
 
+  return 0;
+}
+
+
+// Estimate and output the dominant eigenvalues of each RHS function
+//    This routine created and initializes a DEE for each RHS
+//    The next routine uses this and outputs results to the requested streams
+int InitializeDomeig(sunrealtype t, N_Vector y, UserData& udata, SUNContext ctx)
+{
+  // Fill workspace vector with random data for initial DEE guesses
+  sunrealtype* temp_data = N_VGetArrayPointer(udata.temp_v);
+  std::mt19937 gen(42);
+  std::uniform_real_distribution<sunrealtype> dist(0.0, 1.0);
+  for (int i=0; i<N_VGetLength(udata.temp_v); i++)
+  { temp_data[i] = dist(gen); }
+
+  // Create DEE objects for each RHS function
+  if (udata.advection)
+  {
+    udata.DEE_adv = SUNDomEigEstimator_Power(udata.temp_v, 1000, 1e-2, ctx);
+    if (check_ptr(udata.DEE_adv, "SUNDomEigEstimator_Power")) { return -1; }
+  }
+  udata.DEE_diff = SUNDomEigEstimator_Power(udata.temp_v, 1000, 1e-2, ctx);
+  if (check_ptr(udata.DEE_diff, "SUNDomEigEstimator_Power")) { return -1; }
+  udata.DEE_react = SUNDomEigEstimator_Power(udata.temp_v, 1000, 1e-2, ctx);
+  if (check_ptr(udata.DEE_react, "SUNDomEigEstimator_Power")) { return -1; }
+
+  // Configure the DEE objects
+  int flag;
+  if (udata.advection)
+  {
+    flag = SUNDomEigEstimator_SetRhs(udata.DEE_adv, &udata, f_advection);
+    if (check_flag(flag, "SUNDomEigEstimator_SetRHS (adv)")) { return -1; }
+  }
+  flag = SUNDomEigEstimator_SetRhs(udata.DEE_diff, &udata, f_diffusion);
+  if (check_flag(flag, "SUNDomEigEstimator_SetRHS (diff)")) { return -1; }
+  flag = SUNDomEigEstimator_SetRhs(udata.DEE_react, &udata, f_reaction);
+  if (check_flag(flag, "SUNDomEigEstimator_SetRHS (react)")) { return -1; }
+
+  // Initialize the DEE objects
+  if (udata.advection)
+  {
+    flag = SUNDomEigEstimator_Initialize(udata.DEE_adv);
+    if (check_flag(flag, "SUNDomEigEstimator_Initialize (adv)")) { return -1; }
+  }
+  flag = SUNDomEigEstimator_Initialize(udata.DEE_diff);
+  if (check_flag(flag, "SUNDomEigEstimator_Initialize (diff)")) { return -1; }
+  flag = SUNDomEigEstimator_Initialize(udata.DEE_react);
+  if (check_flag(flag, "SUNDomEigEstimator_Initialize (react)")) { return -1; }
+
+  // Open output file streams and write headers
+  if (udata.advection)
+  {
+    udata.adv_eig_out.open("advection_domeig.txt");
+    if (!udata.adv_eig_out.is_open())
+    {
+      cerr << "ERROR: Unable to open advection eigenvalue output file" << endl;
+      return -1;
+    }
+    udata.adv_eig_out << "# Time LambdaR LambdaI NumIters" << endl;
+  }
+  udata.diff_eig_out.open("diffusion_domeig.txt");
+  if (!udata.diff_eig_out.is_open())
+  {
+    cerr << "ERROR: Unable to open diffusion eigenvalue output file" << endl;
+    return -1;
+  }
+  udata.diff_eig_out << "# Time LambdaR LambdaI NumIters" << endl;
+
+  udata.react_eig_out.open("reaction_domeig.txt");
+  if (!udata.react_eig_out.is_open())
+  {
+    cerr << "ERROR: Unable to open reaction eigenvalue output file" << endl;
+    return -1;
+  }
+  udata.react_eig_out << "# Time LambdaR LambdaI NumIters" << endl;
+
+  // Output initial eigenvalue estimates
+  flag = OutputDomeig(t, y, udata);
+  if (check_flag(flag, "OutputDomeig")) { return -1; }
+  return 0;
+}
+int OutputDomeig(sunrealtype t, N_Vector y, UserData& udata)
+{
+  // update the DEE linearization points to the current solution
+  int flag;
+  if (udata.advection)
+  {
+    flag = SUNDomEigEstimator_SetRhsLinearizationPoint(udata.DEE_adv, t, y);
+    if (check_flag(flag, "SUNDomEigEstimator_SetRhsLinearizationPoint (adv)")) { return -1; }
+  }
+  flag = SUNDomEigEstimator_SetRhsLinearizationPoint(udata.DEE_diff, t, y);
+  if (check_flag(flag, "SUNDomEigEstimator_SetRhsLinearizationPoint (diff)")) { return -1; }
+  flag = SUNDomEigEstimator_SetRhsLinearizationPoint(udata.DEE_react, t, y);
+  if (check_flag(flag, "SUNDomEigEstimator_SetRhsLinearizationPoint (react)")) { return -1; }
+
+  sunrealtype lambdaR, lambdaI;
+  long int niters;
+  if (udata.advection)
+  {
+    flag = SUNDomEigEstimator_Estimate(udata.DEE_adv, &lambdaR, &lambdaI);
+    if (check_flag(flag, "SUNDomEigEstimator_Estimate (adv)")) { return -1; }
+    flag = SUNDomEigEstimator_GetNumIters(udata.DEE_adv, &niters);
+    if (check_flag(flag, "SUNDomEigEstimator_GetNumIters (adv)")) { return -1; }
+    udata.adv_eig_out << t << " " << lambdaR << " " << lambdaI << " " << niters << endl;
+  }
+
+  flag = SUNDomEigEstimator_Estimate(udata.DEE_diff, &lambdaR, &lambdaI);
+  if (check_flag(flag, "SUNDomEigEstimator_Estimate (diff)")) { return -1; }
+  flag = SUNDomEigEstimator_GetNumIters(udata.DEE_diff, &niters);
+  if (check_flag(flag, "SUNDomEigEstimator_GetNumIters (diff)")) { return -1; }
+  udata.diff_eig_out << t << " " << lambdaR << " " << lambdaI << " " << niters << endl;
+
+  flag = SUNDomEigEstimator_Estimate(udata.DEE_react, &lambdaR, &lambdaI);
+  if (check_flag(flag, "SUNDomEigEstimator_Estimate (react)")) { return -1; }
+  flag = SUNDomEigEstimator_GetNumIters(udata.DEE_react, &niters);
+  if (check_flag(flag, "SUNDomEigEstimator_GetNumIters (react)")) { return -1; }
+  udata.react_eig_out << t << " " << lambdaR << " " << lambdaI << " " << niters << endl;
   return 0;
 }
 
