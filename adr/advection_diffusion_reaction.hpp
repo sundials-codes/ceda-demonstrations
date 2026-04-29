@@ -16,6 +16,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <chrono>
 #include <random>
 
 // Include desired integrators, vectors, linear solvers, and nonlinear solvers
@@ -95,6 +96,13 @@ struct UserData
   ofstream adv_eig_out;
   ofstream diff_eig_out;
   ofstream react_eig_out;
+
+  // Profiling timers
+  bool profiling = true;
+  sunrealtype fDtime = ZERO;
+  sunrealtype fAtime = ZERO;
+  sunrealtype fRtime = ZERO;
+  sunrealtype JRtime = ZERO;
 
   ~UserData();
 };
@@ -397,6 +405,21 @@ static int OutputStatsStrang(void* arkode_mem, void* arkstep_mem, void* lsrkstep
   return 0;
 }
 
+// Print profiling information
+static int OutputProfiling(UserData& udata)
+{
+  if (udata.profiling)
+  {
+    cout << fixed << setprecision(6);
+    cout << endl;
+    cout << "fDtime = " << udata.fDtime << endl;
+    cout << "fAtime = " << udata.fAtime << endl;
+    cout << "fRtime = " << udata.fRtime << endl;
+    cout << "JRtime = " << udata.JRtime << endl;
+  }
+  return 0;
+}
+
 // Print command line options
 static void InputHelp()
 {
@@ -444,6 +467,7 @@ static void InputHelp()
   cout << "  --output <int>           : output level\n";
   cout << "  --output_domeig          : output dominant eigenvalues\n";
   cout << "  --nout <int>             : number of outputs\n";
+  cout << "  --no_profiling           : disable RHS runtime profiling\n";
   cout << "  --help                   : print options and exit\n";
 }
 
@@ -537,6 +561,10 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   find_arg(args, "--output", uopts.output);
   find_arg(args, "--nout", uopts.nout);
   find_arg(args, "--output_domeig", uopts.output_domeig);
+
+  bool noprofiling = false;
+  find_arg(args, "--no_profiling", noprofiling);
+  udata.profiling = !noprofiling;
 
   // Recompute mesh spacing and total number of nodes
   udata.dx  = (udata.xu - udata.xl) / (udata.nx - 1);

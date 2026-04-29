@@ -155,7 +155,7 @@ def generate_RD_reference(exe='./bin/advection_diffusion_reaction_2D', d=0.1, A=
 def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 400):
         raise(ValueError, "To run without 400 spatial nodes, need to edit/recompile pb_bruss2dadv.f (and this error check)")
-    stats = {'probtype': 'AdvDiffRx', 'implicitrx': False, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': 'AdvDiffRx', 'implicitrx': False, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
 
     # create a temporary directory to run the test
     with tempfile.TemporaryDirectory() as tempdir:
@@ -206,13 +206,13 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
             for line in lines:
                 if 'Number of f evaluations' in line:
                     txt = line.split()
-                    stats['DiffEvals'] = int(txt[4])
-                    stats['AdvEvals'] = int(txt[7])
-                    stats['Steps'] = int(txt[9])
-                    stats['Fails'] = int(txt[13])
+                    stats['DiffEvals'] = abs(int(txt[4]))
+                    stats['AdvEvals'] = abs(int(txt[7]))
+                    stats['Steps'] = abs(int(txt[9]))
+                    stats['Fails'] = abs(int(txt[13]))
                 elif 'Number of reaction VF' in line:
                     txt = line.split()
-                    stats['RxEvals'] = int(txt[5])
+                    stats['RxEvals'] = abs(int(txt[5]))
         os.chdir(pwd)
     return stats
 
@@ -221,7 +221,7 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
 def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B=2.e7, nx=200, ny=200, tf=2.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 200):
         raise(ValueError, "To run without 200 spatial nodes, need to edit/recompile pb_bruss2dreac.f (and this error check)")
-    stats = {'probtype': 'RxDiff', 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': 0.0, 'cuy': 0.0, 'cvx': 0.0, 'cvy': 0.0, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': 'RxDiff', 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': 0.0, 'cuy': 0.0, 'cvx': 0.0, 'cvy': 0.0, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
 
     # create a temporary directory to run the test
     with tempfile.TemporaryDirectory() as tempdir:
@@ -269,10 +269,10 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
                 if 'Number of f evaluations' in line:
                     try:
                         txt = line.split()
-                        stats['DiffEvals'] = int(txt[4])
-                        stats['AdvEvals'] = int(txt[7])
-                        stats['Steps'] = int(txt[9])
-                        stats['Fails'] = int(txt[13])
+                        stats['DiffEvals'] = abs(int(txt[4]))
+                        stats['AdvEvals'] = abs(int(txt[7]))
+                        stats['Steps'] = abs(int(txt[9]))
+                        stats['Fails'] = abs(int(txt[13]))
                     except (IndexError, ValueError):
                         print("Error parsing f evaluations line: " + line)
                         print("current namelist file:")
@@ -281,14 +281,14 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
                         raise(ValueError,"Aborting due to parse error")
                 elif 'Number of reaction VF' in line:
                     txt = line.split()
-                    stats['RxEvals'] = int(txt[5])
+                    stats['RxEvals'] = abs(int(txt[5]))
         os.chdir(pwd)
     return stats
 
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
 def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
-    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
     runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
 
     # create a temporary directory to run the test
@@ -341,6 +341,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
                             stats['DiffEvals'] = int(txt[4])
                             if (implicitrx == True):
                                 stats['RxEvals'] = int(txt[4])
+                    if ("fDtime" in txt):
+                        stats['DiffTime'] = float(txt[2])
+                    if ("fAtime" in txt):
+                        stats['AdvTime'] = float(txt[2])
+                    if ("fRtime" in txt):
+                        stats['RxTime'] = float(txt[2])
+                    if ("JRtime" in txt):
+                        stats['RxJacTime'] = float(txt[2])
             elif (inttype == "Strang"):
                 for line in lines:
                     txt = line.split()
@@ -362,6 +370,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
                             stats['RxEvals'] = 0
                     elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                         stats['DiffEvals'] = int(txt[4])
+                    if ("fDtime" in txt):
+                        stats['DiffTime'] = float(txt[2])
+                    if ("fAtime" in txt):
+                        stats['AdvTime'] = float(txt[2])
+                    if ("fRtime" in txt):
+                        stats['RxTime'] = float(txt[2])
+                    if ("JRtime" in txt):
+                        stats['RxJacTime'] = float(txt[2])
             else:
                 for line in lines:
                     txt = line.split()
@@ -377,6 +393,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
                         stats['RxEvals'] = int(txt[6])
                     elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                         stats['DiffEvals'] = int(txt[4])
+                    if ("fDtime" in txt):
+                        stats['DiffTime'] = float(txt[2])
+                    if ("fAtime" in txt):
+                        stats['AdvTime'] = float(txt[2])
+                    if ("fRtime" in txt):
+                        stats['RxTime'] = float(txt[2])
+                    if ("JRtime" in txt):
+                        stats['RxJacTime'] = float(txt[2])
         os.chdir(pwd)
     return stats
 

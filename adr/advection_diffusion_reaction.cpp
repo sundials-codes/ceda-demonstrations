@@ -241,6 +241,7 @@ int main(int argc, char* argv[])
       cout << "  Solution error     = " << setprecision(2)
            << sqrt(total_error / uopts.nout / udata.nx / 3) << endl;
     }
+    flag = OutputProfiling(udata);
     switch (uopts.integrator)
     {
     case (0): flag = OutputStatsERK(arkode_mem, udata); break;
@@ -1136,6 +1137,8 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;
+  chrono::high_resolution_clock::time_point solver_start;
+  if (udata->profiling) solver_start = chrono::high_resolution_clock::now();
 
   // Access data arrays
   sunrealtype* ydata = N_VGetArrayPointer(y);
@@ -1168,6 +1171,11 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[WIDX(i)] = c * (wr - wl);
   }
 
+  if (udata->profiling)
+  {
+    chrono::high_resolution_clock::time_point solver_end = chrono::high_resolution_clock::now();
+    udata->fAtime += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+  }
   return 0;
 }
 
@@ -1176,6 +1184,8 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;
+  chrono::high_resolution_clock::time_point solver_start;
+  if (udata->profiling) solver_start = chrono::high_resolution_clock::now();
 
   // Access data arrays
   sunrealtype* ydata = N_VGetArrayPointer(y);
@@ -1211,6 +1221,11 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[WIDX(i)] = d * (wl - TWO * wc + wr);
   }
 
+  if (udata->profiling)
+  {
+    chrono::high_resolution_clock::time_point solver_end = chrono::high_resolution_clock::now();
+    udata->fDtime += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+  }
   return 0;
 }
 
@@ -1247,6 +1262,8 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;
+  chrono::high_resolution_clock::time_point solver_start;
+  if (udata->profiling) solver_start = chrono::high_resolution_clock::now();
 
   // Access data arrays
   sunrealtype* ydata = N_VGetArrayPointer(y);
@@ -1270,6 +1287,11 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
     fdata[WIDX(i)] = ((udata->B - w) / udata->eps) - w * u;
   }
 
+  if (udata->profiling)
+  {
+    chrono::high_resolution_clock::time_point solver_end = chrono::high_resolution_clock::now();
+    udata->fRtime += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+  }
   return 0;
 }
 
@@ -1279,6 +1301,8 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
 {
   // Access problem data
   UserData* udata = (UserData*)user_data;
+  chrono::high_resolution_clock::time_point solver_start;
+  if (udata->profiling) solver_start = chrono::high_resolution_clock::now();
 
   // Access data array
   sunrealtype* ydata = N_VGetArrayPointer(y);
@@ -1308,6 +1332,11 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
     SM_ELEMENT_B(J, WIDX(i), WIDX(i)) = (-ONE / udata->eps) - u;
   }
 
+  if (udata->profiling)
+  {
+    chrono::high_resolution_clock::time_point solver_end = chrono::high_resolution_clock::now();
+    udata->JRtime += chrono::duration<sunrealtype>(solver_end - solver_start).count();
+  }
   return 0;
 }
 

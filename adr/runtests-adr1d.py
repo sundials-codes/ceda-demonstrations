@@ -131,7 +131,7 @@ def generate_reference(exe='./bin/advection_diffusion_reaction_1D', probtype='Ad
 def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
     if (nx != 512):
         raise(ValueError, "To run without 512 spatial nodes, need to edit/recompile pb_adr_1D.f (and this error check)")
-    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
 
     advec_iwork20 = 1  # True
     reac_iwork21 = 1   # True
@@ -184,13 +184,13 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
             for line in lines:
                 if 'Number of f evaluations' in line:
                     txt = line.split()
-                    stats['DiffEvals'] = int(txt[4])
-                    stats['AdvEvals'] = int(txt[7])
-                    stats['Steps'] = int(txt[9])
-                    stats['Fails'] = int(txt[13])
+                    stats['DiffEvals'] = abs(int(txt[4]))
+                    stats['AdvEvals'] = abs(int(txt[7]))
+                    stats['Steps'] = abs(int(txt[9]))
+                    stats['Fails'] = abs(int(txt[13]))
                 elif 'Number of reaction VF' in line:
                     txt = line.split()
-                    stats['RxEvals'] = int(txt[5])
+                    stats['RxEvals'] = abs(int(txt[5]))
         except:
             print("Error processing PIROCK output:")
             print(lines)
@@ -199,7 +199,7 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
 def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
-    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan}
+    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
     runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
 
     # run the test (and determine runtime)
@@ -237,6 +237,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     if (probtype == "AdvDiff"):
                         stats['DiffEvals'] = int(txt[4])
                         stats['RxEvals'] = 0
+                if ("fDtime" in txt):
+                    stats['DiffTime'] = float(txt[2])
+                if ("fAtime" in txt):
+                    stats['AdvTime'] = float(txt[2])
+                if ("fRtime" in txt):
+                    stats['RxTime'] = float(txt[2])
+                if ("JRtime" in txt):
+                    stats['RxJacTime'] = float(txt[2])
         elif (inttype == "ERK"):
             for line in lines:
                 txt = line.split()
@@ -259,6 +267,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                         stats['AdvEvals'] = 0
                         stats['DiffEvals'] = int(txt[3])
                         stats['RxEvals'] = int(txt[3])
+                if ("fDtime" in txt):
+                    stats['DiffTime'] = float(txt[2])
+                if ("fAtime" in txt):
+                    stats['AdvTime'] = float(txt[2])
+                if ("fRtime" in txt):
+                    stats['RxTime'] = float(txt[2])
+                if ("JRtime" in txt):
+                    stats['RxJacTime'] = float(txt[2])
         elif (inttype == "Strang"):
             for line in lines:
                 txt = line.split()
@@ -280,6 +296,14 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                         stats['RxEvals'] = 0
                 elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                     stats['DiffEvals'] = int(txt[4])
+                if ("fDtime" in txt):
+                    stats['DiffTime'] = float(txt[2])
+                if ("fAtime" in txt):
+                    stats['AdvTime'] = float(txt[2])
+                if ("fRtime" in txt):
+                    stats['RxTime'] = float(txt[2])
+                if ("JRtime" in txt):
+                    stats['RxJacTime'] = float(txt[2])
         else:
             for line in lines:
                 txt = line.split()
@@ -295,6 +319,16 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['RxEvals'] = int(txt[6])
                 elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
                     stats['DiffEvals'] = int(txt[4])
+                if ("fDtime" in txt):
+                    stats['DiffTime'] = float(txt[2])
+                if ("fAtime" in txt):
+                    stats['AdvTime'] = float(txt[2])
+                if ("fRtime" in txt):
+                    stats['RxTime'] = float(txt[2])
+                if ("JRtime" in txt):
+                    stats['RxJacTime'] = float(txt[2])
+
+
     return stats
 
 

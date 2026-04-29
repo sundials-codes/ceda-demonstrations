@@ -353,6 +353,28 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, dcoeff, int
     gs = GridSpec(1, 2, figure=fig)
     ax1 = fig.add_subplot(gs[0,0])
     data = data.groupby(['d',]).get_group((dcoeff,))
+
+    # determine average runtime per RHS call over full set of non-PIROCK experiments
+    AdvRhsTime = 0.0
+    DiffRhsTime = 0
+    RxRhsTime = 0.0
+    AdvRhsNum = 0
+    DiffRhsNum = 0.0
+    RxRhsNum = 0
+    for integrator in data['inttype'].unique():
+        intdata = data.groupby(['inttype',]).get_group((integrator,))
+        if (integrator != 'PIROCK'):
+            AdvRhsTime += np.sum(intdata['AdvTime'].to_numpy())
+            DiffRhsTime += np.sum(intdata['DiffTime'].to_numpy())
+            RxRhsTime += np.sum(intdata['RxTime'].to_numpy())
+            AdvRhsNum += np.sum(intdata['AdvEvals'].to_numpy())
+            DiffRhsNum += np.sum(intdata['DiffEvals'].to_numpy())
+            RxRhsNum += np.sum(intdata['RxEvals'].to_numpy())
+    AdvRhsMean = (AdvRhsTime/AdvRhsNum) if (AdvRhsNum > 0) else 0
+    DiffRhsMean = (DiffRhsTime/DiffRhsNum) if (DiffRhsNum > 0) else 0
+    RxRhsMean = (RxRhsTime/RxRhsNum) if (RxRhsNum > 0) else 0
+
+    # generate plots
     for integrator in data['inttype'].unique():
         intdata = data.groupby(['inttype',]).get_group((integrator,))
 
@@ -362,7 +384,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, dcoeff, int
                 for sts in extstsdata['ststype'].unique():
                     stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
                     accuracy = stsdata['Accuracy'].to_numpy()
-                    runtime = stsdata['RunTime'].to_numpy()
+                    runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
@@ -374,7 +396,9 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, dcoeff, int
 
         elif (integrator == 'PIROCK'):
             accuracy = intdata['Accuracy'].to_numpy()
-            runtime = intdata['RunTime'].to_numpy()
+            runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
+                       DiffRhsMean * intdata['DiffEvals'].to_numpy() +
+                       RxRhsMean * intdata['RxEvals'].to_numpy())
             ltext = '%s' % (integrator)
             DoPlot = True
             if (integrators is not None):
@@ -387,7 +411,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, dcoeff, int
             for sts in intdata['ststype'].unique():
                 stsdata = intdata.groupby(['ststype',]).get_group((sts,))
                 accuracy = stsdata['Accuracy'].to_numpy()
-                runtime = stsdata['RunTime'].to_numpy()
+                runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
                 ltext = '%s+%s' % (integrator,sts)
                 m,c = strang_line_style(sts)
                 DoPlot = True
@@ -401,7 +425,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, dcoeff, int
             for table_id in intdata['table_id'].unique():
                 tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
                 accuracy = tabledata['Accuracy'].to_numpy()
-                runtime = tabledata['RunTime'].to_numpy()
+                runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
                 ltext = ark_table_name(table_id)
                 m,c = rk_line_style(table_id)
                 DoPlot = True
