@@ -181,6 +181,7 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
             namefile.write("   atol = " + str(atol) + "\n")
             namefile.write("   rtol = " + str(rtol) + "\n")
             namefile.write("   h = " + str(fixedh) + "\n")
+            namefile.write("   tend = " + str(tf) + "\n")
             namefile.write("/\n")
 
         # run the test (and determine runtime)
@@ -243,6 +244,7 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
             namefile.write("   atol = " + str(atol) + "\n")
             namefile.write("   rtol = " + str(rtol) + "\n")
             namefile.write("   h = " + str(fixedh) + "\n")
+            namefile.write("   tend = " + str(tf) + "\n")
             namefile.write("/\n")
 
         # run the test (and determine runtime)
