@@ -393,12 +393,15 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
     for integrator in data['inttype'].unique():
         intdata = data.groupby(['inttype',]).get_group((integrator,))
         if (integrator != 'PIROCK'):
-            AdvRhsTime += np.sum(intdata['AdvTime'].to_numpy())
-            DiffRhsTime += np.sum(intdata['DiffTime'].to_numpy())
-            RxRhsTime += np.sum(intdata['RxTime'].to_numpy())
-            AdvRhsNum += np.sum(intdata['AdvEvals'].to_numpy())
-            DiffRhsNum += np.sum(intdata['DiffEvals'].to_numpy())
-            RxRhsNum += np.sum(intdata['RxEvals'].to_numpy())
+            AdvRhsTime += np.nansum(intdata['AdvTime'].to_numpy())
+            DiffRhsTime += np.nansum(intdata['DiffTime'].to_numpy())
+            RxRhsTime += np.nansum(intdata['RxTime'].to_numpy())
+            AdvRhsNum += np.nansum(intdata['AdvEvals'].to_numpy())
+            DiffRhsNum += np.nansum(intdata['DiffEvals'].to_numpy())
+            numRx = np.nansum(intdata['RxEvals'].to_numpy())
+            if (numRx == 0):
+                numRx = np.nansum(intdata['AdvEvals'].to_numpy())
+            RxRhsNum += numRx
     AdvRhsMean = (AdvRhsTime/AdvRhsNum) if (AdvRhsNum > 0) else 0
     DiffRhsMean = (DiffRhsTime/DiffRhsNum) if (DiffRhsNum > 0) else 0
     RxRhsMean = (RxRhsTime/RxRhsNum) if (RxRhsNum > 0) else 0
@@ -413,7 +416,16 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                 for sts in extstsdata['ststype'].unique():
                     stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
                     accuracy = stsdata['Accuracy'].to_numpy()
-                    runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
+                    numRx = np.sum(stsdata['RxEvals'].to_numpy())
+                    if (numRx == 0):
+                        runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                    else:
+                        runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * stsdata['RxEvals'].to_numpy())
+                    #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
                     ltext = '%s+%s+%s' % (integrator,extsts,sts)
                     m,c,l = extsts_line_style(extsts,sts)
                     DoPlot = True
@@ -425,9 +437,15 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
 
         elif (integrator == 'PIROCK'):
             accuracy = intdata['Accuracy'].to_numpy()
-            runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
-                       DiffRhsMean * intdata['DiffEvals'].to_numpy() +
-                       RxRhsMean * intdata['RxEvals'].to_numpy())
+            numRx = np.sum(intdata['RxEvals'].to_numpy())
+            if (numRx == 0):
+                runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
+                           DiffRhsMean * intdata['DiffEvals'].to_numpy() +
+                           RxRhsMean * intdata['AdvEvals'].to_numpy())
+            else:
+                runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
+                           DiffRhsMean * intdata['DiffEvals'].to_numpy() +
+                           RxRhsMean * intdata['RxEvals'].to_numpy())
             ltext = '%s' % (integrator)
             DoPlot = True
             if (integrators is not None):
@@ -440,7 +458,16 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
             for sts in intdata['ststype'].unique():
                 stsdata = intdata.groupby(['ststype',]).get_group((sts,))
                 accuracy = stsdata['Accuracy'].to_numpy()
-                runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
+                numRx = np.sum(stsdata['RxEvals'].to_numpy())
+                if (numRx == 0):
+                    runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                               DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                               RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                else:
+                    runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                               DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                               RxRhsMean * stsdata['RxEvals'].to_numpy())
+                #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
                 ltext = '%s+%s' % (integrator,sts)
                 m,c,l = strang_line_style(sts)
                 DoPlot = True
@@ -455,7 +482,16 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                 for rxtype in intdata['implicitrx'].unique():
                     tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
                     accuracy = tabledata['Accuracy'].to_numpy()
-                    runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
+                    numRx = np.sum(tabledata['RxEvals'].to_numpy())
+                    if (numRx == 0):
+                        runtime = (AdvRhsMean * tabledata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * tabledata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * tabledata['AdvEvals'].to_numpy())
+                    else:
+                        runtime = (AdvRhsMean * tabledata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * tabledata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * tabledata['RxEvals'].to_numpy())
+                    #runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = 'impl-R'
