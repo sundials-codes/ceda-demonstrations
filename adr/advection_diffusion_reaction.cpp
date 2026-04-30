@@ -851,9 +851,79 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
         C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
         ARKodeButcherTable_Free(B);
       }
-      else // Heun-Euler
+      else if (uopts.extsts_method == 3) // Heun-Euler
       {
         ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_HEUN_EULER_2_1_2);
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
+      }
+      else if (uopts.extsts_method == 4) // SSP(2,2)
+      {
+        ARKodeButcherTable B = ARKodeButcherTable_Alloc(2, SUNTRUE);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype half = SUN_RCONST(0.5);
+        B->q = 2;
+        B->p = 1;
+        B->c[1] = one;
+        B->A[1][0] = one;
+        B->b[0] = half;
+        B->b[1] = half;
+        B->d[0] = SUN_RCONST(0.694021459207626);
+        B->d[1] = one - B->d[0];
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
+      }
+      else if (uopts.extsts_method == 5) // SSP(3,2)
+      {
+        ARKodeButcherTable B = ARKodeButcherTable_Alloc(3, SUNTRUE);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype nine = SUN_RCONST(9.0);
+        const sunrealtype half = SUN_RCONST(0.5);
+        const sunrealtype third = one/SUN_RCONST(3.0);
+        B->q = 2;
+        B->p = 1;
+        B->c[1] = half;
+        B->c[2] = one;
+        B->A[1][0] = half;
+        B->A[2][0] = half;
+        B->A[2][1] = half;
+        B->b[0] = third;
+        B->b[1] = third;
+        B->b[2] = third;
+        B->d[0] = SUN_RCONST(4.0)/nine;
+        B->d[1] = third;
+        B->d[2] = SUN_RCONST(2.0)/nine;
+        C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
+        ARKodeButcherTable_Free(B);
+      }
+      else if (uopts.extsts_method == 6) // SSP(4,2)
+      {
+        ARKodeButcherTable B = ARKodeButcherTable_Alloc(4, SUNTRUE);
+        const sunrealtype one = SUN_RCONST(1.0);
+        const sunrealtype two = SUN_RCONST(2.0);
+        const sunrealtype three = SUN_RCONST(3.0);
+        const sunrealtype four = SUN_RCONST(4.0);
+        const sunrealtype nine = SUN_RCONST(9.0);
+        const sunrealtype half = SUN_RCONST(0.5);
+        B->q = 2;
+        B->p = 1;
+        B->c[1] = one/three;
+        B->c[2] = two/three;
+        B->c[3] = one;
+        B->A[1][0] = one/three;
+        B->A[2][0] = one/three;
+        B->A[2][1] = one/three;
+        B->A[3][0] = one/three;
+        B->A[3][1] = one/three;
+        B->A[3][2] = one/three;
+        B->b[0] = one/four;
+        B->b[1] = one/four;
+        B->b[2] = one/four;
+        B->b[3] = one/four;
+        B->d[0] = SUN_RCONST(5.0)/SUN_RCONST(16.0);
+        B->d[1] = one/four;
+        B->d[2] = one/four;
+        B->d[3] = three/SUN_RCONST(16.0);
         C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
         ARKodeButcherTable_Free(B);
       }

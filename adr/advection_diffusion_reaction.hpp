@@ -155,6 +155,9 @@ struct UserOptions
   //         1 = Giraldo ERK2
   //         2 = Ralston
   //         3 = Heun-Euler
+  //         4 = SSP(2,2)
+  //         5 = SSP(3,2)
+  //         6 = SSP(4,2)
   //   * diffusion+reaction
   //         0 = ARS(2,2,2) SDIRK
   //         1 = Giraldo DIRK2
@@ -449,6 +452,9 @@ static void InputHelp()
   cout << "                                   1 = Giraldo ERK2\n";
   cout << "                                   2 = Ralston\n";
   cout << "                                   3 = Heun-Euler\n";
+  cout << "                                   4 = SSP(2,2)\n";
+  cout << "                                   5 = SSP(3,2)\n";
+  cout << "                                   6 = SSP(4,2)\n";
   cout << "                               diffusion+reaction\n";
   cout << "                                   0 = ARS(2,2,2) SDIRK\n";
   cout << "                                   1 = Giraldo DIRK2\n";
@@ -736,8 +742,19 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
         { cout << "  ExtSTS method    = Giraldo ERK2" << endl; }
         else if (uopts.extsts_method == 2)
         { cout << "  ExtSTS method    = Ralston" << endl; }
-        else
+        else if (uopts.extsts_method == 3)
         { cout << "  ExtSTS method    = Heun-Euler" << endl; }
+        else if (uopts.extsts_method == 3)
+        { cout << "  ExtSTS method    = SSP(2,2)" << endl; }
+        else if (uopts.extsts_method == 4)
+        { cout << "  ExtSTS method    = SSP(3,2)" << endl; }
+        else if (uopts.extsts_method == 6)
+        { cout << "  ExtSTS method    = SSP(4,2)" << endl; }
+        else
+        {
+          cout << "  ExtSTS method unknown (error)" << endl;
+          return 1;
+        }
       }
       else if (!udata.advection && udata.reaction)  // diffusion + reaction
       {
