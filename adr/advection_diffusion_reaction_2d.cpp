@@ -200,8 +200,8 @@ int main(int argc, char* argv[])
       long int nst_ref;
       flag = ARKodeGetNumSteps(arkref_mem, &nst_ref);
       if (check_flag(flag, "ARKodeGetNumSteps")) { return -1; }
-      std::cout << " t = " << t << ", ||err_curr|| = " << std::sqrt(curr_error / udata.nx / 3)
-                << ", ||err_tot|| = " << std::sqrt(total_error / uopts.nout / udata.nx / 3)
+      std::cout << " t = " << t << ", ||err_curr|| = " << std::sqrt(curr_error / udata.nx / udata.ny / 2)
+                << ", ||err_tot|| = " << std::sqrt(total_error / uopts.nout / udata.nx / udata.ny / 2)
                 << ", reference steps = " << nst_ref << std::endl;
       if (uopts.output_domeig)
       {
@@ -479,7 +479,7 @@ int SetupARK(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
                                 SUN_RCONST(1.0) / (SUN_RCONST(2.0) * gamma);
       if (fe_RHS != nullptr)
       {
-        Be                      = ARKodeButcherTable_Alloc(3, SUNTRUE);
+        Be = ARKodeButcherTable_Alloc(3, SUNTRUE);
         Be->c[1] = gamma;
         Be->c[2] = SUN_RCONST(1.0);
         Be->A[1][0] = gamma;
