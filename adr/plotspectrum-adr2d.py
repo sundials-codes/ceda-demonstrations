@@ -222,7 +222,6 @@ def plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt, picname):
 
 # Shared testing parameters
 adrexe='./bin/advection_diffusion_reaction_2D'
-A=1.3
 rtol = 1e-5
 atol = 1e-11
 
@@ -234,10 +233,11 @@ if (DoAdvDiffRx):
     cvx=0.4
     cvy=0.7
     d=1e-2
-    B=1.0
+    A=1.0
+    B=3.0
     nx=400
     ny=400
-    tf=1.0
+    tf=10.0
     diff_eigs, adv_eigs, react_eigs= runtest(exe=adrexe, probtype='AdvDiffRx', implicitrx=True,
                                              inttype='ARK', ststype=None, extststype=None, table_id=1,
                                              cux=cux, cuy=cuy, cvx=cvx, cvy=cvy, d=d, A=A, B=B, nx=nx,
@@ -254,7 +254,8 @@ if (DoRxDiff):
     cvx=0.0
     cvy=0.0
     d=0.1
-    B=2.e7
+    A=1.3
+    B=2.e4
     nx=200
     ny=200
     tf=2.0

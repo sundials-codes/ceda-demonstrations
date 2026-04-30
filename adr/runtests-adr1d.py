@@ -97,10 +97,22 @@ def int_method(probtype, inttype, ststype, extststype, table_id):
             flags += " --extsts_method -220"
         elif (extststype == "MRISR21"):
             flags += " --extsts_method -223"
+        elif (extststype == "SSP22"):
+            if (probtype != "AdvDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 4"
+        elif (extststype == "SSP32"):
+            if (probtype != "AdvDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 5"
+        elif (extststype == "SSP42"):
+            if (probtype != "AdvDiff"):
+                raise(ValueError, "invalid problem + extsts type combination")
+            flags += " --extsts_method 6"
         else:
             msg = """
             Error: invalid extsts type
-            Valid choices are: ARS, Giraldo, Ralston, HeunEuler, SSPSDIRK2, IRK21a, ESDIRK34a, ERK22a, ERK22b, MERK21, MERK32, MRISR21
+            Valid choices are: ARS, Giraldo, Ralston, HeunEuler, SSPSDIRK2, IRK21a, ESDIRK34a, ERK22a, ERK22b, MERK21, MERK32, MRISR21, SSP22, SSP32, SSP42
             """
             raise(ValueError, msg)
 
@@ -348,7 +360,7 @@ PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21
-#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32
+#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32, SSP22, SSP32, SSP42
 #    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
 
 # AdvDiffRxSolvers = [['ARK', None, None, 1],
@@ -376,7 +388,13 @@ PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 #                   ['ExtSTS', 'RKC', 'MERK21', None],
 #                   ['ExtSTS', 'RKL', 'MERK21', None],
 #                   ['ExtSTS', 'RKC', 'MERK32', None],
-#                   ['ExtSTS', 'RKL', 'MERK32', None]]
+#                   ['ExtSTS', 'RKL', 'MERK32', None],
+#                   ['ExtSTS', 'RKC', 'SSP22', None],
+#                   ['ExtSTS', 'RKL', 'SSP22', None],
+#                   ['ExtSTS', 'RKC', 'SSP32', None],
+#                   ['ExtSTS', 'RKL', 'SSP32', None],
+#                   ['ExtSTS', 'RKC', 'SSP42', None],
+#                   ['ExtSTS', 'RKL', 'SSP42', None]]
 # RxDiffSolvers = [['ARK', None, None, 5],
 #                  ['ARK', None, None, 6],
 #                  ['ExtSTS', 'RKC', 'ARS', None],
@@ -401,7 +419,10 @@ AdvDiffSolvers = [['ARK', None, None, 1],
                   ['ExtSTS', 'RKC', 'Giraldo', None],
                   ['ExtSTS', 'RKC', 'Ralston', None],
                   ['ExtSTS', 'RKC', 'ERK22a', None],
-                  ['ExtSTS', 'RKC', 'MERK21', None]]
+                  ['ExtSTS', 'RKC', 'MERK21', None],
+                  ['ExtSTS', 'RKC', 'SSP22', None],
+                  ['ExtSTS', 'RKC', 'SSP32', None],
+                  ['ExtSTS', 'RKC', 'SSP42', None]]
 RxDiffSolvers = [['ARK', None, None, 6],
                  ['ExtSTS', 'RKC', 'ARS', None],
                  ['ExtSTS', 'RKC', 'Giraldo', None],

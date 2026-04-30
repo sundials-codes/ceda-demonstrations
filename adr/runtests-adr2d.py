@@ -93,6 +93,12 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
             flags += " --extsts_method 3"
         elif (extststype == "SSPSDIRK2"):
             flags += " --extsts_method 4"
+        elif (extststype == "SSP22"):
+            flags += " --extsts_method 5"
+        elif (extststype == "SSP32"):
+            flags += " --extsts_method 6"
+        elif (extststype == "SSP42"):
+            flags += " --extsts_method 7"
         elif (extststype == "IRK21a"):
             flags += " --extsts_method -203"
         elif (extststype == "ESDIRK34a"):
@@ -110,7 +116,7 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
         else:
             msg = """
             Error: invalid extsts type
-            Valid choices are: ARS, Giraldo, Ralston, Heun-Euler, SSPSDIRK2, IRK21a, ESDIRK34a, ERK22a, ERK22b, MERK21, MERK32, MRISR21
+            Valid choices are: ARS, Giraldo, Ralston, Heun-Euler, SSPSDIRK2, IRK21a, ESDIRK34a, ERK22a, ERK22b, MERK21, MERK32, MRISR21, SSP22, SSP32, SSP42
             """
             print(msg + "(" + str(extststype) + " specified)")
             raise(ValueError, msg)
@@ -423,7 +429,7 @@ ShowArgs = True
 
 # ExtSTS solvers:
 #    ImEx: ARS, Giraldo, MRISR21
-#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32
+#    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32, SSP22, SSP32, SSP42
 #    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
 
 # AdvDiffRxSolvers = [['ARK', None, None, 1],
@@ -444,7 +450,13 @@ ShowArgs = True
 #                            ['ExtSTS', 'RKC', 'MERK21', None],
 #                            ['ExtSTS', 'RKL', 'MERK21', None],
 #                            ['ExtSTS', 'RKC', 'MERK32', None],
-#                            ['ExtSTS', 'RKL', 'MERK32', None]]
+#                            ['ExtSTS', 'RKL', 'MERK32', None],
+#                            ['ExtSTS', 'RKC', 'SSP22', None],
+#                            ['ExtSTS', 'RKL', 'SSP22', None],
+#                            ['ExtSTS', 'RKC', 'SSP32', None],
+#                            ['ExtSTS', 'RKL', 'SSP32', None],
+#                            ['ExtSTS', 'RKC', 'SSP42', None],
+#                            ['ExtSTS', 'RKL', 'SSP42', None]]
 # ADRStrangSolvers = [['Strang', 'RKC', None, None],
 #                     ['Strang', 'RKL', None, None]]
 # RxDiffSolvers = [['ARK', None, None, 1],
@@ -471,7 +483,10 @@ AdvDiffRxSolversExpOnly = [['ExtSTS', 'RKC', 'ARS', None],
                            ['ExtSTS', 'RKC', 'Heun-Euler', None],
                            ['ExtSTS', 'RKC', 'ERK22a', None],
                            ['ExtSTS', 'RKC', 'MERK21', None],
-                           ['ExtSTS', 'RKC', 'MERK32', None]]
+                           ['ExtSTS', 'RKC', 'MERK32', None],
+                           ['ExtSTS', 'RKC', 'SSP22', None],
+                           ['ExtSTS', 'RKC', 'SSP32', None],
+                           ['ExtSTS', 'RKC', 'SSP42', None]]
 ADRStrangSolvers = [['Strang', 'RKC', None, None]]
 RxDiffSolvers = [['ARK', None, None, 1],
                  ['ARK', None, None, 2],
@@ -494,15 +509,15 @@ if (DoADRFixedTests or DoADRAdaptiveTests):
     cvx=0.4
     cvy=0.7
     d=1e-2
-    A=1.3
-    B=1.0
+    A=1.0
+    B=3.0
     nx=400
     ny=400
-    tf=1.0
+    tf=10.0
     atol=1e-9
 
     # generate reference solution
-    generate_ADR_reference()
+    generate_ADR_reference(adrexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf)
 
     if (DoADRFixedTests):
         Stats = []
@@ -652,14 +667,15 @@ if (DoRDFixedTests or DoRDAdaptiveTests):
     cvy=0.0
     d=0.1
     A=1.3
-    B=2.e7
+    #B=2.e7
+    B=2.e4
     nx=200
     ny=200
     tf=2.0
     atol=1e-9
 
     # generate reference solution
-    generate_RD_reference(d=d, A=A, B=B)
+    generate_RD_reference(adrexe, d, A, B, nx, ny, tf)
 
     if (DoRDFixedTests):
         Stats = []
