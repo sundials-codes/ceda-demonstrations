@@ -18,7 +18,7 @@ c ----- to integrate with pirock.f
       integer iwork(25),idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
-      namelist /inputs/ alf,brussa,brussb,atol,rtol,h
+      namelist /inputs/ alf,brussa,brussb,atol,rtol,h,tend
 c --- read input from namelist file (if it exists) ---
       open(10, file='rd_2D_pirock_params.txt', status='old', err=100)
       read(10, nml=inputs)
@@ -36,9 +36,10 @@ c ----- initial step size -----
           fixedstep=.true.
           write(6,*) 'Fixed step size h=',h
       end if
-c --------------- multiplying by input tolerances by 1.d0 since Python doesn't write values with '.d'
+c note that we multiply by input tolerances and final time by 1.d0 since Python doesn't write values with '.d'
       atol=atol*1.d0
       rtol=rtol*1.d0
+      tend=tend*1.d0
 
 c--------------------------------------------------------
 c     Initialize iwork:
@@ -77,7 +78,8 @@ c iwork for stats
 	    iwork(i)=0
 	end do
 
-      call init(nsd,t,tend,y)
+c note that we define the final time from the namelist input file, and not the hard-coded value in init()
+      call init(nsd,t,tend2,y)
 
 c ----- integration -----
 	write (6,*) 'rtol',rtol
