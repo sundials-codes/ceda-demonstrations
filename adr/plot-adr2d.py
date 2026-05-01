@@ -139,19 +139,19 @@ def extsts_line_style(extsts,sts):
             return '+', 'C4', '-'
     elif (extsts == 'SSP22'):
         if (sts == 'RKL'):
-            return 'o', 'C13'
+            return 'o', 'C13', '-'
         else:
-            return 's', 'C13'
+            return 's', 'C13', '-'
     elif (extsts == 'SSP32'):
         if (sts == 'RKL'):
-            return 'o', 'C14'
+            return 'o', 'C14', '-'
         else:
-            return 's', 'C14'
+            return 's', 'C14', '-'
     elif (extsts == 'SSP42'):
         if (sts == 'RKL'):
-            return 'o', 'C15'
+            return 'o', 'C15', '-'
         else:
-            return 's', 'C15'
+            return 's', 'C15', '-'
     else:
         raise ValueError('Unknown extsts type: %d' % extsts)
 
