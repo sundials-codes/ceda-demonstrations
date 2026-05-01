@@ -36,15 +36,15 @@ c ----- dimensions -----
 		  ns=nsd
       nssq=ns*ns
       nsnsm1=ns*(ns-1)
-      alf=1.d-1
+c      alf=1.d-1
 			amult=0.d0
 			uxadv=-.5d-1  *amult
 			uyadv=0.5d-1  *amult
 			vxadv=.4d-1   *amult
 			vyadv=.3d-1   *amult
       alph=alf
-			brussa=1.3d0
-			brussb=2.0d7
+c			brussa=1.3d0
+c			brussb=2.0d7
 
       write(6,*) 'Integration of the '
      &   ,'2-dim Brusselator reaction-diffusion problem'
