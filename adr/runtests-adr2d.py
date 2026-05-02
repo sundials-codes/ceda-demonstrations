@@ -417,7 +417,7 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 # testing setup
 
 # Flags to enable/disable categories of tests
-DoImplicitRx = False
+DoImplicitRx = True
 DoExplicitRx = True
 DoADRFixedTests = True
 DoADRAdaptiveTests = True
@@ -435,7 +435,13 @@ ShowArgs = True
 #    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
 
 # AdvDiffRxSolvers = [['ARK', None, None, 1],
-#                     ['ARK', None, None, 2]]
+#                     ['ARK', None, None, 2],
+#                     ['ExtSTS', 'RKC', 'ARS', None],
+#                     ['ExtSTS', 'RKL', 'ARS', None],
+#                     ['ExtSTS', 'RKC', 'Giraldo', None],
+#                     ['ExtSTS', 'RKL', 'Giraldo', None],
+#                     ['ExtSTS', 'RKC', 'MRISR21', None],
+#                     ['ExtSTS', 'RKL', 'MRISR21', None]]
 # AdvDiffRxSolversExpOnly = [
 #                            ['ExtSTS', 'RKC', 'ARS', None],
 #                            ['ExtSTS', 'RKL', 'ARS', None],
@@ -479,7 +485,11 @@ ShowArgs = True
 # RDStrangSolvers = [['Strang', 'RKC', None, None],
 #                    ['Strang', 'RKL', None, None]]
 
-AdvDiffRxSolvers = [['ARK', None, None, 1]]
+AdvDiffRxSolvers = [['ARK', None, None, 1],
+                    ['ARK', None, None, 2],
+                    ['ExtSTS', 'RKC', 'ARS', None],
+                    ['ExtSTS', 'RKC', 'Giraldo', None],
+                    ['ExtSTS', 'RKC', 'MRISR21', None]]
 AdvDiffRxSolversExpOnly = [['ExtSTS', 'RKC', 'ARS', None],
                            ['ExtSTS', 'RKC', 'Giraldo', None],
                            ['ExtSTS', 'RKC', 'Heun-Euler', None],
