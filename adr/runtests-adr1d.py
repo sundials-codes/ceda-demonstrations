@@ -18,7 +18,7 @@ import time
 # utility routines
 
 # utility routine to set C++ executable inputs for running a specific integration type
-def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
+def int_method(probtype, inttype, ststype, extststype, table_id):
     flags = ""
     if (probtype == "AdvDiff"):
         flags += " --no-reaction"
@@ -32,10 +32,6 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
         Valid problem types are: AdvDiff, RxDiff, AdvDiffRx
         """
         raise(ValueError, msg)
-
-    if (implicitrx):
-        #flags += " --implicit-reaction --maxnewt 10 --nlscoef 0.01 --error_bias 2.0"
-        flags += " --implicit-reaction --maxnewt 5"
 
     if (inttype == "ARK"):
         flags += " --integrator 1 --table_id %d" % table_id
@@ -143,75 +139,11 @@ def generate_reference(exe='./bin/advection_diffusion_reaction_1D', probtype='Ad
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE)
 
 
-# utility routine to run the PIROCK AD executable
-def runtest_AD_pirock(exe='./bin/advection_diffusion_1D_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
-    if (nx != 512):
-        raise(ValueError, "To run without 512 spatial nodes, need to edit/recompile pb_adr_1D.f (and this error check)")
-    stats = {'probtype': probtype, 'implicitrx': False, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-
-    advec_iwork20 = 1  # True
-    reac_iwork21 = 0   # False
-
-    # modify parameters in namelist file and turn on/off advection/reaction
-    with open("adr_1D_pirock_params.txt",'w') as namefile:
-        namefile.write("&list1\n")
-        namefile.write("   alf = " + str(d) + "\n")
-        namefile.write("   uxadv = " + str(c) + "\n")
-        namefile.write("   uyadv = 0.0\n")
-        namefile.write("   vxadv = " + str(c) + "\n")
-        namefile.write("   vyadv = 0.0\n")
-        namefile.write("   wxadv = " + str(c) + "\n")
-        namefile.write("   wyadv = 0.0\n")
-        namefile.write("   brussa = " + str(A) + "\n")
-        namefile.write("   brussb = " + str(B) + "\n")
-        namefile.write("   eps = " + str(eps) + "\n")
-        namefile.write("   atol = " + str(atol) + "\n")
-        namefile.write("   rtol = " + str(rtol) + "\n")
-        namefile.write("   h = " + str(fixedh) + "\n")
-        namefile.write("   iwork20 = " + str(advec_iwork20) + "\n")
-        namefile.write("   iwork21 = " + str(reac_iwork21) + "\n")
-        namefile.write("/\n")
-
-    # run the test (and determine runtime)
-    tstart = time.perf_counter()
-    result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    runtime = time.perf_counter() - tstart
-
-    # process the run results
-    stats['ReturnCode'] = result.returncode
-    stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + exe + " FAILURE: " + str(result.returncode))
-        print(result.stderr)
-    else:
-        if(showcommand):
-            print("Run command: " + exe + " SUCCESS\n")
-
-        # compute solution error and store this in the stats
-        stats['Accuracy'] = calc_error(nx, "sol.dat", "reference.dat")
-
-        # get remaining stats from stdout
-        try:
-            lines = str(result.stdout).split('\\n')
-            for line in lines:
-                if 'Number of f evaluations' in line:
-                    txt = line.split()
-                    stats['DiffEvals'] = abs(int(txt[4]))
-                    stats['AdvEvals'] = abs(int(txt[7]))
-                    stats['RxEvals'] = abs(int(txt[7]))
-                    stats['Steps'] = abs(int(txt[9]))
-                    stats['Fails'] = abs(int(txt[13]))
-        except:
-            print("Error processing PIROCK output:")
-            print(lines)
-    return stats
-
-
-# utility routine to run the PIROCK ADR executable
+# utility routine to run the PIROCK executable
 def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
     if (nx != 512):
         raise(ValueError, "To run without 512 spatial nodes, need to edit/recompile pb_adr_1D.f (and this error check)")
-    stats = {'probtype': probtype, 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
+    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
 
     advec_iwork20 = 1  # True
     reac_iwork21 = 1   # True
@@ -308,15 +240,12 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
                         stats['AdvEvals'] = int(txt[4])
-                        if (implicitrx == False):
-                            stats['RxEvals'] = int(txt[4])
                     if (probtype == "AdvDiff"):
                         stats['AdvEvals'] = int(txt[4])
                 elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
                         stats['DiffEvals'] = int(txt[4])
-                        if (implicitrx == True):
-                            stats['RxEvals'] = int(txt[4])
+                        stats['RxEvals'] = int(txt[4])
                     if (probtype == "AdvDiff"):
                         stats['DiffEvals'] = int(txt[4])
                         stats['RxEvals'] = 0
@@ -370,8 +299,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx" or probtype == "AdvDiff"):
                         stats['AdvEvals'] = int(txt[5])
-                        if (probtype == "AdvDiffRx" and implicitrx == False):
-                            stats['RxEvals'] = int(txt[5])
                     else:
                         stats['AdvEvals'] = 0
                 elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
@@ -400,8 +327,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['Accuracy'] = float(txt[3])
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     stats['AdvEvals'] = int(txt[6])
-                    if (implicitrx == False):
-                        stats['RxEvals'] = int(txt[6])
                 elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     stats['RxEvals'] = int(txt[6])
                 elif (("RHS" in txt) and ("fn" in txt) and ("evals" in txt) and ("LS" not in txt)):
@@ -423,8 +348,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
 # testing setup
 
 # Flags to enable/disable categories of tests
-DoImplicitRx = True
-DoExplicitRx = True
 DoAdvDiffRx = True
 DoAdvDiff = True
 DoRxDiff = True
@@ -434,7 +357,6 @@ DoAdaptiveTests = True
 # Shared testing parameters
 Executable = './bin/advection_diffusion_reaction_1D'
 PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
-PIROCKADExecutable = './bin/advection_diffusion_1D_pirock'
 
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21
@@ -449,30 +371,6 @@ PIROCKADExecutable = './bin/advection_diffusion_1D_pirock'
 #                     ['ExtSTS', 'RKL', 'Giraldo', None],
 #                     ['ExtSTS', 'RKC', 'MRISR21', None],
 #                     ['ExtSTS', 'RKL', 'MRISR21', None]]
-# AdvDiffRxSolversExpOnly = [['ARK', None, None, 1],
-#                            ['ARK', None, None, 2],
-#                            ['ExtSTS', 'RKC', 'ARS', None],
-#                            ['ExtSTS', 'RKL', 'ARS', None],
-#                            ['ExtSTS', 'RKC', 'Giraldo', None],
-#                            ['ExtSTS', 'RKL', 'Giraldo', None],
-#                            ['ExtSTS', 'RKC', 'MRISR21', None],
-#                            ['ExtSTS', 'RKL', 'MRISR21', None],
-#                            ['ExtSTS', 'RKC', 'Ralston', None],
-#                            ['ExtSTS', 'RKL', 'Ralston', None],
-#                            ['ExtSTS', 'RKC', 'ERK22a', None],
-#                            ['ExtSTS', 'RKL', 'ERK22a', None],
-#                            ['ExtSTS', 'RKC', 'ERK22b', None],
-#                            ['ExtSTS', 'RKL', 'ERK22b', None],
-#                            ['ExtSTS', 'RKC', 'MERK21', None],
-#                            ['ExtSTS', 'RKL', 'MERK21', None],
-#                            ['ExtSTS', 'RKC', 'MERK32', None],
-#                            ['ExtSTS', 'RKL', 'MERK32', None],
-#                            ['ExtSTS', 'RKC', 'SSP22', None],
-#                            ['ExtSTS', 'RKL', 'SSP22', None],
-#                            ['ExtSTS', 'RKC', 'SSP32', None],
-#                            ['ExtSTS', 'RKL', 'SSP32', None],
-#                            ['ExtSTS', 'RKC', 'SSP42', None],
-#                            ['ExtSTS', 'RKL', 'SSP42', None]]
 # AdvDiffSolvers = [['ARK', None, None, 1],
 #                   ['ARK', None, None, 2],
 #                   ['ExtSTS', 'RKC', 'ARS', None],
@@ -516,19 +414,6 @@ PIROCKADExecutable = './bin/advection_diffusion_1D_pirock'
 AdvDiffRxSolvers = [['ARK', None, None, 1],
                     ['ExtSTS', 'RKC', 'ARS', None],
                     ['ExtSTS', 'RKC', 'Giraldo', None]]
-AdvDiffRxSolversExpOnly = [['ARK', None, None, 1],
-                           ['ARK', None, None, 2],
-                           ['ExtSTS', 'RKC', 'ARS', None],
-                           ['ExtSTS', 'RKC', 'Giraldo', None],
-                           ['ExtSTS', 'RKC', 'MRISR21', None],
-                           ['ExtSTS', 'RKC', 'Ralston', None],
-                           ['ExtSTS', 'RKC', 'ERK22a', None],
-                           ['ExtSTS', 'RKC', 'ERK22b', None],
-                           ['ExtSTS', 'RKC', 'MERK21', None],
-                           ['ExtSTS', 'RKC', 'MERK32', None],
-                           ['ExtSTS', 'RKC', 'SSP22', None],
-                           ['ExtSTS', 'RKC', 'SSP32', None],
-                           ['ExtSTS', 'RKC', 'SSP42', None]]
 AdvDiffSolvers = [['ARK', None, None, 1],
                   ['ExtSTS', 'RKC', 'ARS', None],
                   ['ExtSTS', 'RKC', 'Giraldo', None],
@@ -546,10 +431,10 @@ RxDiffSolvers = [['ARK', None, None, 6],
 StrangSolvers = [['Strang', 'RKC', None, None]]
 #c = 1e-2
 c = 0.5
-dvals = [1e-1, 1e1]
-A = 0.6
-B = 2.0
-eps = 1e-2
+dvals = [1e-1, 1e0]
+A = 1.0
+B = 3.0
+eps = 1e-4
 nx = 512
 fixed_maxl = 500
 nout = 1
@@ -584,12 +469,7 @@ if (DoAdvDiffRx):
                                         ststype=solver[1], extststype=solver[2],
                                         table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
                                         nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-            for solver in AdvDiffRxSolversExpOnly:
-                for h in fixedh:
-                    FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                        ststype=solver[1], extststype=solver[2],
-                                        table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
-                                        nx=nx, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))            for solver in StrangSolvers:
+            for solver in StrangSolvers:
                 for h in fixedh_strang:
                     FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
                                         ststype=solver[1], extststype=solver[2],

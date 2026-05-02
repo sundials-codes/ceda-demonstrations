@@ -224,10 +224,10 @@ def plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt, picname):
 # Shared testing parameters
 Executable = './bin/advection_diffusion_reaction_1D'
 c = 0.5
-dvals = [1e-1, 1e1]
-A = 0.6
-B = 2.0
-eps = 1e-2
+dvals = [1e-1, 1e0]
+A = 1.0
+B = 3.0
+eps = 1e-4
 nx = 512
 rtol = 1e-5
 atol = 1e-11

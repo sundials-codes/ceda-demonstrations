@@ -88,8 +88,9 @@ c ----- initial and end point of integration -----
         tend = 3.d0
 
 c ----- initial values -----
+        dx = 1.d0/(ns-1)
         do i=1,ns
-            xx       = ((i-1.d0)/(ns-1.d0))
+            xx           = (i-1) * dx
             y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
             y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
             y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
@@ -164,6 +165,8 @@ c ----- zero boundary conditions -----
       f(3*ns-2) = 0.d0
       f(3*ns-1) = 0.d0
       f(3*ns)   = 0.d0
+      dx = 1.d0 / (ns-1)
+      d = alf / dx / dx
 c ----- big loop -----
       do i=2,ns-1
 c ----- left neighbour -----
@@ -178,9 +181,9 @@ c ----- the derivative -----
           uij=y(i*3-2)
           vij=y(i*3-1)
           wij=y(i*3)
-          f(i*3-2) = alf * nssq * (uleft + uright - 2.d0*uij)
-          f(i*3-1) = alf * nssq * (vleft + vright - 2.d0*vij)
-          f(i*3)   = alf * nssq * (wleft + wright - 2.d0*wij)
+          f(i*3-2) = d * (uleft + uright - 2.d0*uij)
+          f(i*3-1) = d * (vleft + vright - 2.d0*vij)
+          f(i*3)   = d * (wleft + wright - 2.d0*wij)
       end do
       return
       end
@@ -203,6 +206,8 @@ c ----- zero boundary conditions -----
       f(3*ns-1) = 0.d0
       f(3*ns)   = 0.d0
 c ----- big loop -----
+      dx = 1.d0 / (ns-1)
+      c = -1.d0 * uxadv / (2.d0 * dx)
       do i=2,ns-1
 c ----- left neighbour -----
           uleft=y((i-1)*3-2)
@@ -216,9 +221,9 @@ c ----- the derivative -----
           uij=y(i*3-2)
           vij=y(i*3-1)
           wij=y(i*3)
-	    f(i*3-2)=0.5d0*(ns-1)*(-uxadv*(uright-uleft))
-          f(i*3-1)=0.5d0*(ns-1)*(-vxadv*(vright-vleft))
-          f(i*3)  =0.5d0*(ns-1)*(-wxadv*(wright-wleft))
+	    f(i*3-2) = c * (uright - uleft)
+          f(i*3-1) = c * (vright - vleft)
+          f(i*3)   = c * (wright - wleft)
 	end do
       return
       end

@@ -46,10 +46,6 @@ set(sources_pirock_adr1D dr_adr_1D.f)
 set(target_pirock_adr1D advection_diffusion_reaction_1D_pirock)
 add_executable(${target_pirock_adr1D} ${sources_pirock_adr1D})
 
-set(sources_pirock_ad1D dr_ad_1D.f)
-set(target_pirock_ad1D advection_diffusion_1D_pirock)
-add_executable(${target_pirock_ad1D} ${sources_pirock_ad1D})
-
 set(sources_pirock_bruss2dadv dr_bruss2dadv.f)
 set(target_pirock_bruss2dadv advection_diffusion_reaction_2D_pirock)
 add_executable(${target_pirock_bruss2dadv} ${sources_pirock_bruss2dadv})
@@ -72,7 +68,6 @@ endif()
 
 #   request installation of the targets into the overall "bin" folder
 install(TARGETS ${target_pirock_adr1D}
-                ${target_pirock_ad1D}
                 ${target_pirock_bruss2dadv}
                 ${target_pirock_bruss2dadvreac}
                 ${target_pirock_bruss2dreac}
