@@ -31,6 +31,13 @@ c--------------------------------------------------------
 c --- common parameters for the problem -----
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+c --- namelist definition
+      namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
+     &    atol,rtol,h,tend
+c --- read input from namelist file (if it exists) ---
+      open(10, file='adr_2D_pirock_params.txt', status='old')
+      read(10, nml=inputs)
+      close(10)
 
 c ----- dimensions -----
 		  neqn   = nsd*nsd*2

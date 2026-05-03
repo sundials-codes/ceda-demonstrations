@@ -45,6 +45,14 @@ c-------------------------------------------------------------------------------
 c --- common parameters for the problem -----
       common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+c --- namelist definition
+      namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
+     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
+
+c --- read input from namelist file (if it exists) ---
+        open(10, file='adr_1D_pirock_params.txt', status='old')
+        read(10, nml=list1)
+        close(10)
 
 c ----- dimensions -----
         neqn   = nsd*npdes

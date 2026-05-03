@@ -30,6 +30,12 @@ c--------------------------------------------------------
 c --- common parameters for the problem -----
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+c --- namelist definition
+      namelist /inputs/ alf,brussa,brussb,atol,rtol,h,tend
+c --- read input from namelist file (if it exists) ---
+      open(10, file='rd_2D_pirock_params.txt', status='old')
+      read(10, nml=inputs)
+      close(10)
 
 c ----- dimensions -----
 			neqn=nsd*nsd*npdes
@@ -67,7 +73,7 @@ c --------------- multiply by 1.d0 since Python doesn't write values with '.d'
 
 c ----- initial and end point of integration -----
       t=0.0d0
-      tend=2.d0
+c      tend=2.d0
 
 c ----- initial values -----
       ans=ns

@@ -5,7 +5,7 @@ c ----- to integrate with pirock.f -----
       include 'pirock.f'
       include 'decsol.f'
 c --- Problem driver and dimension parameters
-	include 'pb_bruss2dadv.f'
+	include 'pb_bruss2dadvreac.f'
       program main
       parameter (nsd=400,npdes=0,neqn=nsd*nsd*2)
 c ----------------------------------------------------
@@ -102,10 +102,9 @@ c ----- print statistics -----
       write(6,*) 'Max number of stages used=',iwork(10)
       write(6,*) 'Number of f eval. for the spectr. radius=',iwork(9)
 	write(6,*) 'Max number of iterations used=',iwork(13)
-      write(6,91) iwork(5),iwork(16),iwork(6),
-     &   iwork(7),iwork(8),iwork(13)
- 91   format(' Number of f evaluations=',i7,' fA evaluations=',i7,
-     &   ' steps=',i7,' accpt=',i7,' rejct=',i7,' max iter',i4)
+      write(6,*) 'Number of f evaluations=',iwork(5),' fA evaluations=',
+     &   iwork(16),' steps=',iwork(6),' accpt=',iwork(7),' rejct=',
+     &   iwork(8),' max iter',iwork(13)
 
 	write (6,*) 'Number of reaction VF',
      &   iwork(17),(iwork(17)*npdes)/neqn

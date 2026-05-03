@@ -4,9 +4,10 @@
    uyadv = 1.0
    vxadv = 0.4
    vyadv = 0.7
-   brussa = 1.3
-   brussb = 1.0
+   brussa = 1.0
+   brussb = 3.0
    atol = 1e-11
    rtol = 1e-03
    h = 0.0
+   tend = 10.0
 /

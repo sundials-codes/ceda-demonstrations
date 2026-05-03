@@ -116,10 +116,6 @@ c ----- print statistics -----
       write(6,*) 'Number of f evaluations=',iwork(5),' fA evaluations=',
      &   iwork(16),' steps=',iwork(6),' accpt=',iwork(7),' rejct=',
      &   iwork(8),' max iter',iwork(13)
-c      write (6,91) iwork(5),iwork(16),iwork(6),
-c     &   iwork(7),iwork(8),iwork(13)
-c 91   format(' Number of f evaluations=',i7,' fA evaluations=',i7,
-c     &   ' steps=',i7,' accpt=',i7,' rejct=',i7,' max iter',i7)
 
 	write (6,*) 'Number of reaction VF',
      &   iwork(17),(iwork(17)*npdes)/neqn

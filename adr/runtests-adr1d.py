@@ -210,9 +210,9 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
 
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
-def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', implicitrx=True, inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
-    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
+def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
+    stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
+    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
