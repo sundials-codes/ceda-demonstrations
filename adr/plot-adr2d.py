@@ -66,92 +66,100 @@ def rk_line_style(table_id,implicitrx):
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
-def strang_line_style(sts):
+def strang_line_style(sts,implicitrx):
     """Return the marker, color, and line style for plotting the Strang + STS
        method."""
-    if (sts == 'RKL'):
-        return 'x', 'C6', '-'
+    if (implicitrx):
+        ls = '--'
     else:
-        return '+', 'C6', '-'
+        ls = '-'
+    if (sts == 'RKL'):
+        return 'x', 'C6', ls
+    else:
+        return '+', 'C6', ls
 
-def extsts_line_style(extsts,sts):
+def extsts_line_style(extsts,sts,implicitrx):
     """Return the marker, color, and line style for plotting the extended STS method type and
        STS method with the given IDs."""
+    if (implicitrx):
+        ls = '--'
+    else:
+        ls = '-'
     if (extsts == 'ARS'):
         if (sts == 'RKL'):
-            return 'x', 'C2', '-'
+            return 'x', 'C2', ls
         else:
-            return '+', 'C2', '-'
+            return '+', 'C2', ls
     elif (extsts == 'Giraldo'):
         if (sts == 'RKL'):
-            return 'x', 'C3', '-'
+            return 'x', 'C3', ls
         else:
-            return '+', 'C3', '-'
+            return '+', 'C3', ls
     elif (extsts == 'Ralston'):
         if (sts == 'RKL'):
-            return 'x', 'C4', '-'
+            return 'x', 'C4', ls
         else:
-            return '+', 'C4', '-'
+            return '+', 'C4', ls
     elif (extsts == 'SSPSDIRK2'):
         if (sts == 'RKL'):
-            return 'x', 'C5', '-'
+            return 'x', 'C5', ls
         else:
-            return '+', 'C5', '-'
+            return '+', 'C5', ls
     elif (extsts == 'IRK21a'):
         if (sts == 'RKL'):
-            return 'o', 'C6', '-'
+            return 'o', 'C6', ls
         else:
-            return 's', 'C6', '-'
+            return 's', 'C6', ls
     elif (extsts == 'ESDIRK34a'):
         if (sts == 'RKL'):
-            return 'o', 'C7', '-'
+            return 'o', 'C7', ls
         else:
-            return 's', 'C7', '-'
+            return 's', 'C7', ls
     elif (extsts == 'ERK22a'):
         if (sts == 'RKL'):
-            return 'o', 'C8', '-'
+            return 'o', 'C8', ls
         else:
-            return 's', 'C8', '-'
+            return 's', 'C8', ls
     elif (extsts == 'ERK22b'):
         if (sts == 'RKL'):
-            return 'o', 'C9', '-'
+            return 'o', 'C9', ls
         else:
-            return 's', 'C9', '-'
+            return 's', 'C9', ls
     elif (extsts == 'MERK21'):
         if (sts == 'RKL'):
-            return 'o', 'C10', '-'
+            return 'o', 'C10', ls
         else:
-            return 's', 'C10', '-'
+            return 's', 'C10', ls
     elif (extsts == 'MERK32'):
         if (sts == 'RKL'):
-            return 'o', 'C11', '-'
+            return 'o', 'C11', ls
         else:
-            return 's', 'C11', '-'
+            return 's', 'C11', ls
     elif (extsts == 'MRISR21'):
         if (sts == 'RKL'):
-            return 'o', 'C12', '-'
+            return 'o', 'C12', ls
         else:
-            return 's', 'C12', '-'
+            return 's', 'C12', ls
     elif (extsts == 'Heun-Euler'):
         if (sts == 'RKL'):
-            return 'x', 'C4', '-'
+            return 'x', 'C4', ls
         else:
-            return '+', 'C4', '-'
+            return '+', 'C4', ls
     elif (extsts == 'SSP22'):
         if (sts == 'RKL'):
-            return 'o', 'C13', '-'
+            return 'o', 'C13', ls
         else:
-            return 's', 'C13', '-'
+            return 's', 'C13', ls
     elif (extsts == 'SSP32'):
         if (sts == 'RKL'):
-            return 'o', 'C14', '-'
+            return 'o', 'C14', ls
         else:
-            return 's', 'C14', '-'
+            return 's', 'C14', ls'
     elif (extsts == 'SSP42'):
         if (sts == 'RKL'):
-            return 'o', 'C15', '-'
+            return 'o', 'C15', ls
         else:
-            return 's', 'C15', '-'
+            return 's', 'C15', ls
     else:
         raise ValueError('Unknown extsts type: %d' % extsts)
 
@@ -171,51 +179,78 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in intdata['implicitrx'].unique():
+                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
+                        stepsize = stsdata['fixedh'].to_numpy()
+                        accuracy = stsdata['Accuracy'].to_numpy()
+                        rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
+                        medrate = np.nanmedian(rates)
+                        if (len(intdata['implicitrx'].unique()) > 1):
+                            if (rxtype):
+                                rxtxt = ', impl-R'
+                            else:
+                                rxtxt = ', expl-R'
+                        else:
+                            rxtxt = ''
+                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        rate = ' (rate = %.2f)' % (medrate)
+                        m,c,l = extsts_line_style(extsts,sts,rxtype)
+                        DoPlot = True
+                        if (integrators is not None):
+                            if ltext not in integrators:
+                                DoPlot = False
+                        if DoPlot:
+                            ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
+
+        elif (integrator == 'PIROCK'):
+            for rxtype in intdata['implicitrx'].unique():
+                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                stepsize = pdata['fixedh'].to_numpy()
+                accuracy = pdata['Accuracy'].to_numpy()
+                rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
+                medrate = np.nanmedian(rates)
+                if (len(intdata['implicitrx'].unique()) > 1):
+                    if (rxtype):
+                        rxtxt = ', impl-R'
+                        ls = '--'
+                    else:
+                        rxtxt = ', expl-R'
+                        ls = '-'
+                else:
+                    rxtxt = ''
+                ltext = '%s%s' % (integrator,rxtxt)
+                rate = ' (rate = %.2f)' % (medrate)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(stepsize, accuracy, marker='.', color='k', linestyle=ls, label=ltext+rate)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                for rxtype in intdata['implicitrx'].unique():
+                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
                     stepsize = stsdata['fixedh'].to_numpy()
                     accuracy = stsdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = ', impl-R'
+                        else:
+                            rxtxt = ', expl-R'
+                    else:
+                        rxtxt = ''
+                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
                     rate = ' (rate = %.2f)' % (medrate)
-                    m,c,l = extsts_line_style(extsts,sts)
+                    m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
                         ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
-
-        elif (integrator == 'PIROCK'):
-            stepsize = intdata['fixedh'].to_numpy()
-            accuracy = intdata['Accuracy'].to_numpy()
-            rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-            medrate = np.nanmedian(rates)
-            ltext = integrator
-            rate = ' (rate = %.2f)' % (medrate)
-            DoPlot = True
-            if (integrators is not None):
-                if ltext not in integrators:
-                    DoPlot = False
-            if DoPlot:
-                ax1.loglog(stepsize, accuracy, marker='.', color='k', linestyle='-', label=ltext+rate)
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
-                stepsize = stsdata['fixedh'].to_numpy()
-                accuracy = stsdata['Accuracy'].to_numpy()
-                rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
-                medrate = np.nanmedian(rates)
-                ltext = '%s+%s' % (integrator,sts)
-                rate = ' (rate = %.2f)' % (medrate)
-                m,c,l = strang_line_style(sts)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -227,12 +262,12 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     medrate = np.nanmedian(rates)
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
-                            rxtxt = 'impl-R'
+                            rxtxt = ', impl-R'
                         else:
-                            rxtxt = 'expl-R'
+                            rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
+                    ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
                     rate = ' (rate = %.2f)' % (medrate)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
@@ -277,17 +312,87 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in intdata['implicitrx'].unique():
+                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
+                        accuracy = stsdata['Accuracy'].to_numpy()
+                        diffevals = stsdata['DiffEvals'].to_numpy()
+                        if (plot_adv):
+                            advevals = stsdata['AdvEvals'].to_numpy()
+                        if (plot_rx):
+                            rxevals = stsdata['RxEvals'].to_numpy()
+                            if (np.sum(rxevals) == 0):
+                                rxevals = stsdata['AdvEvals'].to_numpy()
+                        if (len(intdata['implicitrx'].unique()) > 1):
+                            if (rxtype):
+                                rxtxt = ', impl-R'
+                            else:
+                                rxtxt = ', expl-R'
+                        else:
+                            rxtxt = ''
+                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        m,c,l = extsts_line_style(extsts,sts,rxtype)
+                        DoPlot = True
+                        if (integrators is not None):
+                            if ltext not in integrators:
+                                DoPlot = False
+                        if DoPlot:
+                            ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            if (plot_adv):
+                                ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            if (plot_rx):
+                                ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+
+        elif (integrator == 'PIROCK'):
+            for rxtype in intdata['implicitrx'].unique():
+                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                accuracy = pdata['Accuracy'].to_numpy()
+                diffevals = pdata['DiffEvals'].to_numpy()
+                if (plot_adv):
+                    advevals = pdata['AdvEvals'].to_numpy()
+                if (plot_rx):
+                    rxevals = pdata['RxEvals'].to_numpy()
+                    if (np.sum(rxevals) == 0):
+                        rxevals = pdata['AdvEvals'].to_numpy()
+                if (len(intdata['implicitrx'].unique()) > 1):
+                    if (rxtype):
+                        rxtxt = ', impl-R'
+                        ls = '--'
+                    else:
+                        rxtxt = ', expl-R'
+                        ls = '-'
+                else:
+                    rxtxt = ''
+                ltext = '%s%s' % (integrator,rxtxt)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax_diff.loglog(diffevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                    if (plot_adv):
+                        ax_adv.loglog(advevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                    if (plot_rx):
+                        ax_rx.loglog(rxevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                for rxtype in intdata['implicitrx'].unique():
+                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
                     accuracy = stsdata['Accuracy'].to_numpy()
                     diffevals = stsdata['DiffEvals'].to_numpy()
                     if (plot_adv):
                         advevals = stsdata['AdvEvals'].to_numpy()
                     if (plot_rx):
                         rxevals = stsdata['RxEvals'].to_numpy()
-                        if (np.sum(rxevals) == 0):
-                            rxevals = stsdata['AdvEvals'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
-                    m,c,l = extsts_line_style(extsts,sts)
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = ', impl-R'
+                        else:
+                            rxtxt = ', expl-R'
+                    else:
+                        rxtxt = ''
+                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
@@ -298,49 +403,6 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                             ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
                         if (plot_rx):
                             ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
-
-        elif (integrator == 'PIROCK'):
-            accuracy = intdata['Accuracy'].to_numpy()
-            diffevals = intdata['DiffEvals'].to_numpy()
-            if (plot_adv):
-                advevals = intdata['AdvEvals'].to_numpy()
-            if (plot_rx):
-                rxevals = intdata['RxEvals'].to_numpy()
-                if (np.sum(rxevals) == 0):
-                    rxevals = intdata['AdvEvals'].to_numpy()
-            ltext = '%s' % (integrator)
-            DoPlot = True
-            if (integrators is not None):
-                if ltext not in integrators:
-                    DoPlot = False
-            if DoPlot:
-                ax_diff.loglog(diffevals, accuracy, marker='.', color='k', linestyle='-', label=ltext)
-                if (plot_adv):
-                    ax_adv.loglog(advevals, accuracy, marker='.', color='k', linestyle='-', label=ltext)
-                if (plot_rx):
-                    ax_rx.loglog(rxevals, accuracy, marker='.', color='k', linestyle='-', label=ltext)
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
-                accuracy = stsdata['Accuracy'].to_numpy()
-                diffevals = stsdata['DiffEvals'].to_numpy()
-                if (plot_adv):
-                    advevals = stsdata['AdvEvals'].to_numpy()
-                if (plot_rx):
-                    rxevals = stsdata['RxEvals'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
-                m,c,l = strang_line_style(sts)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
-                    if (plot_adv):
-                        ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
-                    if (plot_rx):
-                        ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -354,12 +416,12 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         rxevals = tabledata['RxEvals'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
-                            rxtxt = 'impl-R'
+                            rxtxt = ', impl-R'
                         else:
-                            rxtxt = 'expl-R'
+                            rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
+                    ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
@@ -429,68 +491,93 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in intdata['implicitrx'].unique():
+                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
+                        accuracy = stsdata['Accuracy'].to_numpy()
+                        numRx = np.sum(stsdata['RxEvals'].to_numpy())
+                        if (numRx == 0):
+                            runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                                    DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                    RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                        else:
+                            runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
+                                    DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                    RxRhsMean * stsdata['RxEvals'].to_numpy())
+                        if (len(intdata['implicitrx'].unique()) > 1):
+                            if (rxtype):
+                                rxtxt = ', impl-R'
+                            else:
+                                rxtxt = ', expl-R'
+                        else:
+                            rxtxt = ''
+                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        m,c,l = extsts_line_style(extsts,sts,rxtype)
+                        DoPlot = True
+                        if (integrators is not None):
+                            if ltext not in integrators:
+                                DoPlot = False
+                        if DoPlot:
+                            ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+
+        elif (integrator == 'PIROCK'):
+            for rxtype in intdata['implicitrx'].unique():
+                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                accuracy = pdata['Accuracy'].to_numpy()
+                numRx = np.sum(pdata['RxEvals'].to_numpy())
+                if (numRx == 0):
+                    runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                            DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                            RxRhsMean * pdata['AdvEvals'].to_numpy())
+                else:
+                    runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                            DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                            RxRhsMean * pdata['RxEvals'].to_numpy())
+                if (len(intdata['implicitrx'].unique()) > 1):
+                    if (rxtype):
+                        rxtxt = ', impl-R'
+                        ls = '--'
+                    else:
+                        rxtxt = ', expl-R'
+                        ls = '-'
+                else:
+                    rxtxt = ''
+                ltext = '%s%s' % (integrator,rxtxt)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(runtime, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                for rxtype in intdata['implicitrx'].unique():
+                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
                     accuracy = stsdata['Accuracy'].to_numpy()
                     numRx = np.sum(stsdata['RxEvals'].to_numpy())
                     if (numRx == 0):
                         runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                   DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                   RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                RxRhsMean * stsdata['AdvEvals'].to_numpy())
                     else:
                         runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                   DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                   RxRhsMean * stsdata['RxEvals'].to_numpy())
-                    #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
-                    m,c,l = extsts_line_style(extsts,sts)
+                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
+                                RxRhsMean * stsdata['RxEvals'].to_numpy())
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = ', impl-R'
+                        else:
+                            rxtxt = ', expl-R'
+                    else:
+                        rxtxt = ''
+                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
                         ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
-
-        elif (integrator == 'PIROCK'):
-            accuracy = intdata['Accuracy'].to_numpy()
-            numRx = np.sum(intdata['RxEvals'].to_numpy())
-            if (numRx == 0):
-                runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
-                           DiffRhsMean * intdata['DiffEvals'].to_numpy() +
-                           RxRhsMean * intdata['AdvEvals'].to_numpy())
-            else:
-                runtime = (AdvRhsMean * intdata['AdvEvals'].to_numpy() +
-                           DiffRhsMean * intdata['DiffEvals'].to_numpy() +
-                           RxRhsMean * intdata['RxEvals'].to_numpy())
-            ltext = '%s' % (integrator)
-            DoPlot = True
-            if (integrators is not None):
-                if ltext not in integrators:
-                    DoPlot = False
-            if DoPlot:
-                ax1.loglog(runtime, accuracy, marker='.', color='k', linestyle='-', label=ltext)
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
-                accuracy = stsdata['Accuracy'].to_numpy()
-                numRx = np.sum(stsdata['RxEvals'].to_numpy())
-                if (numRx == 0):
-                    runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                               DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                               RxRhsMean * stsdata['AdvEvals'].to_numpy())
-                else:
-                    runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                               DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                               RxRhsMean * stsdata['RxEvals'].to_numpy())
-                #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
-                m,c,l = strang_line_style(sts)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -509,12 +596,12 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     #runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
-                            rxtxt = 'impl-R'
+                            rxtxt = ', impl-R'
                         else:
-                            rxtxt = 'expl-R'
+                            rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
+                    ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
@@ -548,42 +635,69 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in intdata['implicitrx'].unique():
+                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
+                        rtol = stsdata['rtol'].to_numpy()
+                        accuracy = stsdata['Accuracy'].to_numpy()
+                        if (len(intdata['implicitrx'].unique()) > 1):
+                            if (rxtype):
+                                rxtxt = ', impl-R'
+                            else:
+                                rxtxt = ', expl-R'
+                        else:
+                            rxtxt = ''
+                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        m,c,l = extsts_line_style(extsts,sts,rxtype)
+                        DoPlot = True
+                        if (integrators is not None):
+                            if ltext not in integrators:
+                                DoPlot = False
+                        if DoPlot:
+                            ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+
+        elif (integrator == 'PIROCK'):
+            for rxtype in intdata['implicitrx'].unique():
+                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                rtol = pdata['rtol'].to_numpy()
+                accuracy = pdata['Accuracy'].to_numpy()
+                if (len(intdata['implicitrx'].unique()) > 1):
+                    if (rxtype):
+                        rxtxt = ', impl-R'
+                        ls = '--'
+                    else:
+                        rxtxt = ', expl-R'
+                        ls = '-'
+                else:
+                    rxtxt = ''
+                ltext = '%s%s' % (integrator,rxtxt)
+                DoPlot = True
+                if (integrators is not None):
+                    if ltext not in integrators:
+                        DoPlot = False
+                if DoPlot:
+                    ax1.loglog(rtol, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+
+        elif (integrator == 'Strang'):
+            for sts in intdata['ststype'].unique():
+                for rxtype in intdata['implicitrx'].unique():
+                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
                     rtol = stsdata['rtol'].to_numpy()
                     accuracy = stsdata['Accuracy'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
-                    m,c,l = extsts_line_style(extsts,sts)
+                    if (len(intdata['implicitrx'].unique()) > 1):
+                        if (rxtype):
+                            rxtxt = ', impl-R'
+                        else:
+                            rxtxt = ', expl-R'
+                    else:
+                        rxtxt = ''
+                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
                         ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
-
-        elif (integrator == 'PIROCK'):
-            rtol = intdata['rtol'].to_numpy()
-            accuracy = intdata['Accuracy'].to_numpy()
-            ltext = '%s' % (integrator)
-            DoPlot = True
-            if (integrators is not None):
-                if ltext not in integrators:
-                    DoPlot = False
-            if DoPlot:
-                ax1.loglog(rtol, accuracy, marker='.', color='k', linestyle='-', label=ltext)
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
-                rtol = stsdata['rtol'].to_numpy()
-                accuracy = stsdata['Accuracy'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
-                m,c,l = strang_line_style(sts)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -593,12 +707,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     accuracy = tabledata['Accuracy'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
-                            rxtxt = 'impl-R'
+                            rxtxt = ', impl-R'
                         else:
-                            rxtxt = 'expl-R'
+                            rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s, %s' % (ark_table_name(table_id),rxtxt)
+                    ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
