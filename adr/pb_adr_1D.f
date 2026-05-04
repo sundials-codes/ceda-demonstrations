@@ -47,7 +47,7 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 c --- namelist definition
       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
+     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21, tend
 
 c --- read input from namelist file (if it exists) ---
         open(10, file='adr_1D_pirock_params.txt', status='old')
@@ -93,7 +93,7 @@ c        stop
 
 c ----- initial and end point of integration -----
         t = 0.0d0
-        tend = 3.d0
+c        tend = 3.d0
 
 c ----- initial values -----
         dx = 1.d0/(ns-1)

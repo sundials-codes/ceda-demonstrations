@@ -145,8 +145,8 @@ def read_spectrum_file(filename):
     return data
 
 # utility routine to run a single C++ test
-def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=100):
-    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --output_domeig --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
+def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, tf=3.0, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=100):
+    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --tf %e  --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --output_domeig --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, tf, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
@@ -231,13 +231,16 @@ eps = 1e-4
 nx = 512
 rtol = 1e-5
 atol = 1e-11
+tf_adr = 10.0
+tf_ad = 3.0
+tf_rd = 3.0
 
 # Advection-diffusion-reaction spectrum over the sets of diffusion coefficients
 if (DoAdvDiffRx):
     for d in dvals:
         diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='AdvDiffRx', inttype='ARK',
                                                   ststype=None, extststype=None, table_id=1, c=c, d=d,
-                                                  A=A, B=B, eps=eps, nx=nx, rtol=rtol, atol=atol,
+                                                  A=A, B=B, eps=eps, nx=nx, tf=tf_adr, rtol=rtol, atol=atol,
                                                   fixedh=0.0, nout=NumOut)
         # plot the spectra
         plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion-Reaction 1D Spectra ($d = %.1f$)' % d, picname='adr1d_spectrum_d%0.1f' % d)
@@ -248,7 +251,7 @@ if (DoAdvDiff):
     for d in dvals:
         diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='AdvDiff', inttype='ARK',
                                                   ststype=None, extststype=None, table_id=1, c=c, d=d,
-                                                  A=A, B=B, eps=eps, nx=nx, rtol=rtol, atol=atol,
+                                                  A=A, B=B, eps=eps, nx=nx, tf=tf_ad, rtol=rtol, atol=atol,
                                                   fixedh=0.0, nout=NumOut)
         # plot the spectra
         plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion 1D Spectra ($d = %.1f$)' % d, picname='ad1d_spectrum_d%0.1f' % d)
@@ -259,7 +262,7 @@ if (DoRxDiff):
     for d in dvals:
         diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='RxDiff', inttype='ARK',
                                                   ststype=None, extststype=None, table_id=6, d=d,
-                                                  A=A, B=B, eps=eps, nx=nx, rtol=rtol, atol=atol,
+                                                  A=A, B=B, eps=eps, nx=nx, tf=tf_rd, rtol=rtol, atol=atol,
                                                   fixedh=0.0, nout=NumOut)
         # plot the spectra
         plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Reaction-Diffusion 1D Spectra ($d = %.1f$)' % d, picname='rd1d_spectrum_d%0.1f' % d)
