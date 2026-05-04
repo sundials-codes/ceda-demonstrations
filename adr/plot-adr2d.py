@@ -154,7 +154,7 @@ def extsts_line_style(extsts,sts,implicitrx):
         if (sts == 'RKL'):
             return 'o', 'C14', ls
         else:
-            return 's', 'C14', ls'
+            return 's', 'C14', ls
     elif (extsts == 'SSP42'):
         if (sts == 'RKL'):
             return 'o', 'C15', ls
