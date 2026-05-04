@@ -20,7 +20,7 @@ c ----- to integrate with pirock.f
       logical fixedstep
 c --- namelist definition
       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21
+     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21,tend
 
 c --- read input from namelist file (if it exists) ---
       open(10, file='adr_1D_pirock_params.txt', status='old', err=100)
