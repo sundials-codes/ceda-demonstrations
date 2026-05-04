@@ -7,7 +7,7 @@ c ----- to integrate with pirock.f -----
 c --- Problem driver and dimension parameters
 	include 'pb_bruss2dadvreac.f'
       program main
-      parameter (nsd=400,npdes=0,neqn=nsd*nsd*2)
+      parameter (nsd=400,npdes=2,neqn=nsd*nsd*npdes)
 c ----------------------------------------------------
 	implicit double precision (a-h,o-z)
       external fd,fd2,fa,fr,fw
