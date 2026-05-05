@@ -62,7 +62,7 @@ def rk_line_style(table_id,implicitrx):
     elif (table_id == 5):
         return 'x', 'C7', ls
     elif (table_id == 6):
-        return '+', 'C8'
+        return '+', 'C8', ls
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
@@ -179,13 +179,14 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    for rxtype in intdata['implicitrx'].unique():
-                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                        stepsize = stsdata['fixedh'].to_numpy()
-                        accuracy = stsdata['Accuracy'].to_numpy()
+                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in stsdata['implicitrx'].unique():
+                        pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                        stepsize = pdata['fixedh'].to_numpy()
+                        accuracy = pdata['Accuracy'].to_numpy()
                         rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                         medrate = np.nanmedian(rates)
-                        if (len(intdata['implicitrx'].unique()) > 1):
+                        if (len(extstsdata['implicitrx'].unique()) > 1):
                             if (rxtype):
                                 rxtxt = ', impl-R'
                             else:
@@ -204,7 +205,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
-                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                pdata = intdata[intdata['implicitrx'] == rxtype]
                 stepsize = pdata['fixedh'].to_numpy()
                 accuracy = pdata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
@@ -218,6 +219,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                         ls = '-'
                 else:
                     rxtxt = ''
+                    ls = '-'
                 ltext = '%s%s' % (integrator,rxtxt)
                 rate = ' (rate = %.2f)' % (medrate)
                 DoPlot = True
@@ -229,10 +231,11 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                    stepsize = stsdata['fixedh'].to_numpy()
-                    accuracy = stsdata['Accuracy'].to_numpy()
+                stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                for rxtype in stsdata['implicitrx'].unique():
+                    pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                    stepsize = pdata['fixedh'].to_numpy()
+                    accuracy = pdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
                     if (len(intdata['implicitrx'].unique()) > 1):
@@ -254,13 +257,14 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
 
         else:
             for table_id in intdata['table_id'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
-                    stepsize = tabledata['fixedh'].to_numpy()
-                    accuracy = tabledata['Accuracy'].to_numpy()
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                for rxtype in tabledata['implicitrx'].unique():
+                    pdata = tabledata[tabledata['implicitrx'] == rxtype]
+                    stepsize = pdata['fixedh'].to_numpy()
+                    accuracy = pdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
-                    if (len(intdata['implicitrx'].unique()) > 1):
+                    if (len(tabledata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
                         else:
@@ -312,17 +316,18 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    for rxtype in intdata['implicitrx'].unique():
-                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                        accuracy = stsdata['Accuracy'].to_numpy()
-                        diffevals = stsdata['DiffEvals'].to_numpy()
+                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in stsdata['implicitrx'].unique():
+                        pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                        accuracy = pdata['Accuracy'].to_numpy()
+                        diffevals = pdata['DiffEvals'].to_numpy()
                         if (plot_adv):
-                            advevals = stsdata['AdvEvals'].to_numpy()
+                            advevals = pdata['AdvEvals'].to_numpy()
                         if (plot_rx):
-                            rxevals = stsdata['RxEvals'].to_numpy()
+                            rxevals = pdata['RxEvals'].to_numpy()
                             if (np.sum(rxevals) == 0):
-                                rxevals = stsdata['AdvEvals'].to_numpy()
-                        if (len(intdata['implicitrx'].unique()) > 1):
+                                rxevals = pdata['AdvEvals'].to_numpy()
+                        if (len(extstsdata['implicitrx'].unique()) > 1):
                             if (rxtype):
                                 rxtxt = ', impl-R'
                             else:
@@ -344,7 +349,7 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
-                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                pdata = intdata[intdata['implicitrx'] == rxtype]
                 accuracy = pdata['Accuracy'].to_numpy()
                 diffevals = pdata['DiffEvals'].to_numpy()
                 if (plot_adv):
@@ -362,6 +367,7 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         ls = '-'
                 else:
                     rxtxt = ''
+                    ls = '-'
                 ltext = '%s%s' % (integrator,rxtxt)
                 DoPlot = True
                 if (integrators is not None):
@@ -376,14 +382,15 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                    accuracy = stsdata['Accuracy'].to_numpy()
-                    diffevals = stsdata['DiffEvals'].to_numpy()
+                stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                for rxtype in stsdata['implicitrx'].unique():
+                    pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                    accuracy = pdata['Accuracy'].to_numpy()
+                    diffevals = pdata['DiffEvals'].to_numpy()
                     if (plot_adv):
-                        advevals = stsdata['AdvEvals'].to_numpy()
+                        advevals = pdata['AdvEvals'].to_numpy()
                     if (plot_rx):
-                        rxevals = stsdata['RxEvals'].to_numpy()
+                        rxevals = pdata['RxEvals'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
@@ -406,15 +413,16 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
 
         else:
             for table_id in intdata['table_id'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
-                    accuracy = tabledata['Accuracy'].to_numpy()
-                    diffevals = tabledata['DiffEvals'].to_numpy()
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                for rxtype in tabledata['implicitrx'].unique():
+                    pdata = tabledata[tabledata['implicitrx'] == rxtype]
+                    accuracy = pdata['Accuracy'].to_numpy()
+                    diffevals = pdata['DiffEvals'].to_numpy()
                     if (plot_adv):
-                        advevals = tabledata['AdvEvals'].to_numpy()
+                        advevals = pdata['AdvEvals'].to_numpy()
                     if (plot_rx):
-                        rxevals = tabledata['RxEvals'].to_numpy()
-                    if (len(intdata['implicitrx'].unique()) > 1):
+                        rxevals = pdata['RxEvals'].to_numpy()
+                    if (len(tabledata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
                         else:
@@ -491,19 +499,20 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    for rxtype in intdata['implicitrx'].unique():
-                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                        accuracy = stsdata['Accuracy'].to_numpy()
-                        numRx = np.sum(stsdata['RxEvals'].to_numpy())
+                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in stsdata['implicitrx'].unique():
+                        pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                        accuracy = pdata['Accuracy'].to_numpy()
+                        numRx = np.sum(pdata['RxEvals'].to_numpy())
                         if (numRx == 0):
-                            runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                    DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                    RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                            runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                    DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                    RxRhsMean * pdata['AdvEvals'].to_numpy())
                         else:
-                            runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                    DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                    RxRhsMean * stsdata['RxEvals'].to_numpy())
-                        if (len(intdata['implicitrx'].unique()) > 1):
+                            runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                    DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                    RxRhsMean * pdata['RxEvals'].to_numpy())
+                        if (len(extstsdata['implicitrx'].unique()) > 1):
                             if (rxtype):
                                 rxtxt = ', impl-R'
                             else:
@@ -521,7 +530,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
-                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                pdata = intdata[intdata['implicitrx'] == rxtype]
                 accuracy = pdata['Accuracy'].to_numpy()
                 numRx = np.sum(pdata['RxEvals'].to_numpy())
                 if (numRx == 0):
@@ -541,6 +550,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                         ls = '-'
                 else:
                     rxtxt = ''
+                    ls = '-'
                 ltext = '%s%s' % (integrator,rxtxt)
                 DoPlot = True
                 if (integrators is not None):
@@ -551,18 +561,19 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                    accuracy = stsdata['Accuracy'].to_numpy()
-                    numRx = np.sum(stsdata['RxEvals'].to_numpy())
+                stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                for rxtype in stsdata['implicitrx'].unique():
+                    pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                    accuracy = pdata['Accuracy'].to_numpy()
+                    numRx = np.sum(pdata['RxEvals'].to_numpy())
                     if (numRx == 0):
-                        runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                RxRhsMean * stsdata['AdvEvals'].to_numpy())
+                        runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                RxRhsMean * pdata['AdvEvals'].to_numpy())
                     else:
-                        runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
-                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
-                                RxRhsMean * stsdata['RxEvals'].to_numpy())
+                        runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                RxRhsMean * pdata['RxEvals'].to_numpy())
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
@@ -581,20 +592,20 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
 
         else:
             for table_id in intdata['table_id'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
-                    accuracy = tabledata['Accuracy'].to_numpy()
-                    numRx = np.sum(tabledata['RxEvals'].to_numpy())
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                for rxtype in tabledata['implicitrx'].unique():
+                    pdata = tabledata[tabledata['implicitrx'] == rxtype]
+                    accuracy = pdata['Accuracy'].to_numpy()
+                    numRx = np.sum(pdata['RxEvals'].to_numpy())
                     if (numRx == 0):
-                        runtime = (AdvRhsMean * tabledata['AdvEvals'].to_numpy() +
-                                   DiffRhsMean * tabledata['DiffEvals'].to_numpy() +
-                                   RxRhsMean * tabledata['AdvEvals'].to_numpy())
+                        runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * pdata['AdvEvals'].to_numpy())
                     else:
-                        runtime = (AdvRhsMean * tabledata['AdvEvals'].to_numpy() +
-                                   DiffRhsMean * tabledata['DiffEvals'].to_numpy() +
-                                   RxRhsMean * tabledata['RxEvals'].to_numpy())
-                    #runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
-                    if (len(intdata['implicitrx'].unique()) > 1):
+                        runtime = (AdvRhsMean * pdata['AdvEvals'].to_numpy() +
+                                   DiffRhsMean * pdata['DiffEvals'].to_numpy() +
+                                   RxRhsMean * pdata['RxEvals'].to_numpy())
+                    if (len(tabledata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
                         else:
@@ -635,11 +646,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
             for extsts in intdata['extststype'].unique():
                 extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
                 for sts in extstsdata['ststype'].unique():
-                    for rxtype in intdata['implicitrx'].unique():
-                        stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                        rtol = stsdata['rtol'].to_numpy()
-                        accuracy = stsdata['Accuracy'].to_numpy()
-                        if (len(intdata['implicitrx'].unique()) > 1):
+                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                    for rxtype in stsdata['implicitrx'].unique():
+                        pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                        rtol = pdata['rtol'].to_numpy()
+                        accuracy = pdata['Accuracy'].to_numpy()
+                        if (len(extstsdata['implicitrx'].unique()) > 1):
                             if (rxtype):
                                 rxtxt = ', impl-R'
                             else:
@@ -657,7 +669,7 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
-                pdata = intdata.groupby(['implicitrx',]).get_group([rxtype,])
+                pdata = intdata[intdata['implicitrx'] == rxtype]
                 rtol = pdata['rtol'].to_numpy()
                 accuracy = pdata['Accuracy'].to_numpy()
                 if (len(intdata['implicitrx'].unique()) > 1):
@@ -669,6 +681,7 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                         ls = '-'
                 else:
                     rxtxt = ''
+                    ls = '-'
                 ltext = '%s%s' % (integrator,rxtxt)
                 DoPlot = True
                 if (integrators is not None):
@@ -679,10 +692,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    stsdata = extstsdata.groupby(['ststype','implicitrx']).get_group((sts,rxtype))
-                    rtol = stsdata['rtol'].to_numpy()
-                    accuracy = stsdata['Accuracy'].to_numpy()
+                stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
+                for rxtype in stsdata['implicitrx'].unique():
+                    pdata = stsdata[stsdata['implicitrx'] == rxtype]
+                    rtol = pdata['rtol'].to_numpy()
+                    accuracy = pdata['Accuracy'].to_numpy()
                     if (len(intdata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
@@ -701,11 +715,12 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
         else:
             for table_id in intdata['table_id'].unique():
-                for rxtype in intdata['implicitrx'].unique():
-                    tabledata = intdata.groupby(['table_id','implicitrx']).get_group((table_id,rxtype))
-                    rtol = tabledata['rtol'].to_numpy()
-                    accuracy = tabledata['Accuracy'].to_numpy()
-                    if (len(intdata['implicitrx'].unique()) > 1):
+                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
+                for rxtype in tabledata['implicitrx'].unique():
+                    pdata = tabledata[tabledata['implicitrx'] == rxtype]
+                    rtol = pdata['rtol'].to_numpy()
+                    accuracy = pdata['Accuracy'].to_numpy()
+                    if (len(tabledata['implicitrx'].unique()) > 1):
                         if (rxtype):
                             rxtxt = ', impl-R'
                         else:
@@ -738,39 +753,39 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 # generate plots, loading data from stored output
 if (Plot_ADR):
     if (Plot_Fixed):
+        integrators=None
+        #integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK']
         data=pd.read_excel('AdvDiffRx2D-fixed.xlsx')
-        # make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence',
-        #                                  integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        # make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency',
-        #                                 integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        # make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency',
-        #                                         integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence')
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency')
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency')
+        data = data[data["ReturnCode"] == 0]
+        make_convergence_comparison_plot(data, 'AdvDiffRx Convergence', 'adr2d_fixed_convergence', integrators=integrators)
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency (Fixed)', 'adr2d_fixed_efficiency', integrators=integrators)
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency (Fixed)', 'adr2d_fixed_runtime_efficiency', integrators=integrators)
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx2D-adapt.xlsx')
-        # make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy',
-        #                               integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        # make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency',
-        #                                 integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        # make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency',
-        #                                         integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK'])
-        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy')
-        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency')
-        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency')
+        data = data[data["ReturnCode"] == 0]
+        integrators=None
+        #integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK']
+        make_accuracy_comparison_plot(data, 'AdvDiffRx Accuracy', 'adr2d_adaptive_accuracy', integrators=integrators)
+        make_efficiency_comparison_plot(data, 'AdvDiffRx Efficiency', 'adr2d_adaptive_efficiency', integrators=integrators)
+        make_runtime_efficiency_comparison_plot(data, 'AdvDiffRx Runtime Efficiency', 'adr2d_adaptive_runtime_efficiency', integrators=integrators)
 
 if (Plot_RD):
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff2D-fixed.xlsx')
-        #make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd2d_fixed_convergence')
-        make_efficiency_comparison_plot(data, 'RxDiff Efficiency (Fixed)', 'rd2d_fixed_efficiency', plot_adv=False)
-        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency (Fixed)', 'rd2d_fixed_runtime_efficiency')
+        data = data[data["ReturnCode"] == 0]
+        integrators=None
+        #integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK']
+        make_convergence_comparison_plot(data, 'RxDiff Convergence', 'rd2d_fixed_convergence', integrators=integrators)
+        make_efficiency_comparison_plot(data, 'RxDiff Efficiency (Fixed)', 'rd2d_fixed_efficiency', plot_adv=False, integrators=integrators)
+        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency (Fixed)', 'rd2d_fixed_runtime_efficiency', integrators=integrators)
     if (Plot_Adaptive):
         data=pd.read_excel('RxDiff2D-adapt.xlsx')
-        make_accuracy_comparison_plot(data, 'RxDiff Accuracy', 'rd2d_adaptive_accuracy')
-        make_efficiency_comparison_plot(data, 'RxDiff Efficiency', 'rd2d_adaptive_efficiency', plot_adv=False)
-        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency', 'rd2d_adaptive_runtime_efficiency')
+        data = data[data["ReturnCode"] == 0]
+        integrators=None
+        #integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK']
+        make_accuracy_comparison_plot(data, 'RxDiff Accuracy', 'rd2d_adaptive_accuracy', integrators=integrators)
+        make_efficiency_comparison_plot(data, 'RxDiff Efficiency', 'rd2d_adaptive_efficiency', plot_adv=False, integrators=integrators)
+        make_runtime_efficiency_comparison_plot(data, 'RxDiff Runtime Efficiency', 'rd2d_adaptive_runtime_efficiency', integrators=integrators)
 
 # display plots
 #plt.show()
