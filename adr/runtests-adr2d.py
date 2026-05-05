@@ -19,7 +19,7 @@ import tempfile
 
 
 # set maximum runtime before a test is considered a failure and canceled
-maxruntime = 30*60 # 30 minutes, converted to seconds
+maxruntime = 90*60 # 90 minutes, converted to seconds
 
 # Directory from which the script is being run
 topdir = os.getcwd()
@@ -200,7 +200,6 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
         # process the run results
         if (stats['ReturnCode'] != 0):
             print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-            #print(result.stderr)
         else:
             if(showcommand):
                 print("Run command: " + exe + " SUCCESS\n")
@@ -222,7 +221,7 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
     return stats
 
 
-# utility routine to run the PIROCK ADR executable
+# utility routine to run the PIROCK ADR executable with implicit reactions
 def runtest_ADR_pirock_imprx(exe='./bin/advection_diffusion_reaction_separate_2D_pirock', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 400):
         raise(ValueError, "To run without 400 spatial nodes, need to edit/recompile pb_bruss2dadv.f (and this error check)")
@@ -265,7 +264,6 @@ def runtest_ADR_pirock_imprx(exe='./bin/advection_diffusion_reaction_separate_2D
         # process the run results
         if (stats['ReturnCode'] != 0):
             print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-            #print(result.stderr)
         else:
             if(showcommand):
                 print("Run command: " + exe + " SUCCESS\n")
@@ -328,7 +326,6 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
         # process the run results
         if (stats['ReturnCode'] != 0):
             print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-            #print(result.stderr)
         else:
             if(showcommand):
                 print("Run command: " + exe + " SUCCESS\n")
@@ -340,18 +337,11 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
             lines = str(result.stdout).split('\\n')
             for line in lines:
                 if 'Number of f evaluations' in line:
-                    try:
-                        txt = line.split()
-                        stats['DiffEvals'] = abs(int(txt[4]))
-                        stats['AdvEvals'] = abs(int(txt[7]))
-                        stats['Steps'] = abs(int(txt[9]))
-                        stats['Fails'] = abs(int(txt[13]))
-                    except (IndexError, ValueError):
-                        print("Error parsing f evaluations line: " + line)
-                        print("current namelist file:")
-                        with open("rd_2D_pirock_params.txt",'r') as namefile:
-                            print(namefile.read())
-                        raise(ValueError,"Aborting due to parse error")
+                    txt = line.split()
+                    stats['DiffEvals'] = abs(int(txt[4]))
+                    stats['AdvEvals'] = abs(int(txt[7]))
+                    stats['Steps'] = abs(int(txt[9]))
+                    stats['Fails'] = abs(int(txt[13]))
                 elif 'Number of reaction VF' in line:
                     txt = line.split()
                     stats['RxEvals'] = abs(int(txt[5]))
@@ -360,9 +350,9 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
 
 
 # utility routine to run a single C++ test, storing the run options and solver statistics
-def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
-    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --nout 1 --output 1 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
+def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, showcommand=False, showoutput=False):
+    stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
+    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --maxl %d --nout 1 --output 1 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh, maxl) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
 
     # create a temporary directory to run the test
     with tempfile.TemporaryDirectory() as tempdir:
@@ -504,30 +494,35 @@ def main():
     #    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
 
     # AdvDiffRxSolvers = [['ARK', None, None, 1],
-    #                     ['ARK', None, None, 2]]
-    # AdvDiffRxSolversExpOnly = [
-    #                            ['ExtSTS', 'RKC', 'ARS', None],
-    #                            ['ExtSTS', 'RKL', 'ARS', None],
-    #                            ['ExtSTS', 'RKC', 'Giraldo', None],
-    #                            ['ExtSTS', 'RKL', 'Giraldo', None],
-    #                            ['ExtSTS', 'RKC', 'Ralston', None],
-    #                            ['ExtSTS', 'RKL', 'Ralston', None],
-    #                            ['ExtSTS', 'RKC', 'Heun-Euler', None],
-    #                            ['ExtSTS', 'RKL', 'Heun-Euler', None],
-    #                            ['ExtSTS', 'RKC', 'ERK22a', None],
-    #                            ['ExtSTS', 'RKL', 'ERK22a', None],
-    #                            ['ExtSTS', 'RKC', 'ERK22b', None],
-    #                            ['ExtSTS', 'RKL', 'ERK22b', None],
-    #                            ['ExtSTS', 'RKC', 'MERK21', None],
-    #                            ['ExtSTS', 'RKL', 'MERK21', None],
-    #                            ['ExtSTS', 'RKC', 'MERK32', None],
-    #                            ['ExtSTS', 'RKL', 'MERK32', None],
-    #                            ['ExtSTS', 'RKC', 'SSP22', None],
-    #                            ['ExtSTS', 'RKL', 'SSP22', None],
-    #                            ['ExtSTS', 'RKC', 'SSP32', None],
-    #                            ['ExtSTS', 'RKL', 'SSP32', None],
-    #                            ['ExtSTS', 'RKC', 'SSP42', None],
-    #                            ['ExtSTS', 'RKL', 'SSP42', None]]
+    #                     ['ARK', None, None, 2],
+    #                     ['ExtSTS', 'RKC', 'ARS', None],
+    #                     ['ExtSTS', 'RKL', 'ARS', None],
+    #                     ['ExtSTS', 'RKC', 'Giraldo', None],
+    #                     ['ExtSTS', 'RKL', 'Giraldo', None]]
+    # AdvDiffRxSolversExpRx = [['ARK', None, None, 1],
+    #                          ['ARK', None, None, 2],
+    #                          ['ExtSTS', 'RKC', 'ARS', None],
+    #                          ['ExtSTS', 'RKL', 'ARS', None],
+    #                          ['ExtSTS', 'RKC', 'Giraldo', None],
+    #                          ['ExtSTS', 'RKL', 'Giraldo', None],
+    #                          ['ExtSTS', 'RKC', 'Ralston', None],
+    #                          ['ExtSTS', 'RKL', 'Ralston', None],
+    #                          ['ExtSTS', 'RKC', 'Heun-Euler', None],
+    #                          ['ExtSTS', 'RKL', 'Heun-Euler', None],
+    #                          ['ExtSTS', 'RKC', 'ERK22a', None],
+    #                          ['ExtSTS', 'RKL', 'ERK22a', None],
+    #                          ['ExtSTS', 'RKC', 'ERK22b', None],
+    #                          ['ExtSTS', 'RKL', 'ERK22b', None],
+    #                          ['ExtSTS', 'RKC', 'MERK21', None],
+    #                          ['ExtSTS', 'RKL', 'MERK21', None],
+    #                          ['ExtSTS', 'RKC', 'MERK32', None],
+    #                          ['ExtSTS', 'RKL', 'MERK32', None],
+    #                          ['ExtSTS', 'RKC', 'SSP22', None],
+    #                          ['ExtSTS', 'RKL', 'SSP22', None],
+    #                          ['ExtSTS', 'RKC', 'SSP32', None],
+    #                          ['ExtSTS', 'RKL', 'SSP32', None],
+    #                          ['ExtSTS', 'RKC', 'SSP42', None],
+    #                          ['ExtSTS', 'RKL', 'SSP42', None]]
     # ADRStrangSolvers = [['Strang', 'RKC', None, None],
     #                     ['Strang', 'RKL', None, None]]
     # RxDiffSolvers = [['ARK', None, None, 1],
@@ -551,16 +546,16 @@ def main():
     AdvDiffRxSolvers = [['ARK', None, None, 1],
                         ['ExtSTS', 'RKC', 'ARS', None],
                         ['ExtSTS', 'RKC', 'Giraldo', None]]
-    AdvDiffRxSolversExpOnly = [['ARK', None, None, 1],
-                               ['ExtSTS', 'RKC', 'ARS', None],
-                               ['ExtSTS', 'RKC', 'Giraldo', None],
-                               ['ExtSTS', 'RKC', 'Heun-Euler', None],
-                               ['ExtSTS', 'RKC', 'ERK22a', None],
-                               ['ExtSTS', 'RKC', 'MERK21', None],
-                               ['ExtSTS', 'RKC', 'MERK32', None],
-                               ['ExtSTS', 'RKC', 'SSP22', None],
-                               ['ExtSTS', 'RKC', 'SSP32', None],
-                               ['ExtSTS', 'RKC', 'SSP42', None]]
+    AdvDiffRxSolversExpRx = [['ARK', None, None, 1],
+                             ['ExtSTS', 'RKC', 'ARS', None],
+                             ['ExtSTS', 'RKC', 'Giraldo', None],
+                             ['ExtSTS', 'RKC', 'Heun-Euler', None],
+                             ['ExtSTS', 'RKC', 'ERK22a', None],
+                             ['ExtSTS', 'RKC', 'MERK21', None],
+                             ['ExtSTS', 'RKC', 'MERK32', None],
+                             ['ExtSTS', 'RKC', 'SSP22', None],
+                             ['ExtSTS', 'RKC', 'SSP32', None],
+                             ['ExtSTS', 'RKC', 'SSP42', None]]
     ADRStrangSolvers = [['Strang', 'RKC', None, None]]
     RxDiffSolvers = [['ARK', None, None, 1],
                      ['ARK', None, None, 2],
@@ -590,6 +585,7 @@ def main():
         ny=400
         tf=10.0
         atol=1e-9
+        fixed_maxl=500
 
         # generate reference solution
         generate_ADR_reference(adrexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf)
@@ -611,12 +607,12 @@ def main():
                     for h in fixedh:
                         runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                              cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             ShowCommand, ShowOutput))
+                                             fixed_maxl, ShowCommand, ShowOutput))
                 for solver in ADRStrangSolvers:
                     for h in fixedh_strang:
                         runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                              cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             ShowCommand, ShowOutput))
+                                             fixed_maxl, ShowCommand, ShowOutput))
 
                 for h in fixedh_pirock:
                     runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
@@ -624,16 +620,16 @@ def main():
 
             # set up tests that treat reactions explicitly
             if (DoExplicitRx):
-                for solver in AdvDiffRxSolversExpOnly:
+                for solver in AdvDiffRxSolversExpRx:
                     for h in fixedh:
                         runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
                                              cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             ShowCommand, ShowOutput))
+                                             fixed_maxl, ShowCommand, ShowOutput))
                 for solver in ADRStrangSolvers:
                     for h in fixedh_strang:
                         runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
                                              cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             ShowCommand, ShowOutput))
+                                             fixed_maxl, ShowCommand, ShowOutput))
 
                 for h in fixedh_pirock:
                     runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
@@ -682,23 +678,25 @@ def main():
             # set tolerances for adaptive ADR tests
             rtol = np.logspace(-2.5, -6.5, 9)
             atol = 1e-11
+            adapt_maxl = 0
+
 
             # set up tests that treat reactions implicitly
             for solver in AdvDiffRxSolvers:
                 for rt in rtol:
                     runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                          cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         ShowCommand, ShowOutput))
+                                         adapt_maxl, ShowCommand, ShowOutput))
             for rt in rtol:
                 runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
                                                   rt, atol, 0.0, ShowCommand, ShowOutput))
 
             # set up tests that treat reactions explicitly
-            for solver in AdvDiffRxSolversExpOnly:
+            for solver in AdvDiffRxSolversExpRx:
                 for rt in rtol:
                     runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
                                          cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         ShowCommand, ShowOutput))
+                                         adapt_maxl, ShowCommand, ShowOutput))
 
             for rt in rtol:
                 runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
@@ -757,6 +755,7 @@ def main():
         ny=200
         tf=2.0
         atol=1e-9
+        fixed_maxl=500
 
         # generate reference solution
         generate_RD_reference(adrexe, d, A, B, nx, ny, tf)
@@ -778,12 +777,12 @@ def main():
                 for h in fixedh:
                     runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                          cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                         ShowCommand, ShowOutput))
+                                         fixed_maxl, ShowCommand, ShowOutput))
             for solver in RDStrangSolvers:
                 for h in fixedh_strang:
                     runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                          cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                         ShowCommand, ShowOutput))
+                                         fixed_maxl, ShowCommand, ShowOutput))
             for h in fixedh_pirock:
                 runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
                                             ShowCommand, ShowOutput))
@@ -824,12 +823,13 @@ def main():
             # set tolerances for adaptive RD tests
             rtol = np.logspace(-2.5, -6.5, 9)
             atol = 1e-11
+            adaptive_maxl = 0
 
             for solver in RxDiffSolvers:
                 for rt in rtol:
                     runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
                                          cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         ShowCommand, ShowOutput))
+                                         adaptive_maxl, ShowCommand, ShowOutput))
             for rt in rtol:
                 runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, rt, atol,
                                             0.0, ShowCommand, ShowOutput))
