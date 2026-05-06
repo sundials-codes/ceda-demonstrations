@@ -86,7 +86,7 @@ c                 If it is possible to give an estimate of
 c                 the spectral radius, it should be preferred to
 c                 the estimate computed internally by ROCK2.
 c
-c     IWORK(*):   Integer array of length 25 that gives information
+c     IWORK(*):   Integer*8 array of length 25 that gives information
 c                 on how the problem is to be solved and communicates
 c                 statistics about the integration process.
 c
@@ -250,7 +250,8 @@ c
      &     t,tend,h,uround,
      &     recf(4476),fp1(46),fp2(46),
      &     recf2(184),recalph(46),frjac(*)
-      integer iwork(25),ms(46),neqn,i,n1,n2,n3,n4,n5,n6,n7,n8,
+      integer*8 iwork(25)
+      integer ms(46),neqn,i,n1,n2,n3,n4,n5,n6,n7,n8,
      &     n9,n10,n11,n12,n13,n14,n15,ntol,idid,npdes,ijac(*)
       logical arret
       external f,fd2,fa,fr,fw
@@ -358,7 +359,8 @@ c ----------------------------------------------
      &     recf2(184),yks(neqn),beta,yjm3(neqn),yjm4(neqn),yjm5(neqn),
      &     ytmp(neqn),fnc(neqn),y2(neqn),yrk0(neqn),
      &     yerrA(neqn),yerrR(neqn),errD,errD2,errA,errR,frjac(*)
-      integer ms(46),mp(2),iwork(25),neqn,mdeg,i,ntol,
+      integer*8 iwork(25)
+      integer ms(46),mp(2),neqn,mdeg,i,ntol,
      &     nrho,mdego,nrej,idid,npdes,ijac(*),nell,nrejfac
       logical last,reject,arret
       external f,fd2,fa,fr,fw
@@ -635,7 +637,8 @@ c-----------------------------------------------
      &     yjm2(neqn),recf(4476),atol(*),rtol(*),
      &     fp1(46),fp2(46),recalph(46),err,t,h,ci1,ci2,ci3,ye(neqn),
      &     temp1,temp2,temp3,ato,rto,recf2(184),yks(neqn),beta,hn
-      integer mp(2),neqn,mdeg,mr,mz,i,j,ntol,iwork(*)
+      integer*8 iwork(*)
+      integer mp(2),neqn,mdeg,mr,mz,i,j,ntol
       external f
       double precision anor
 c *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
@@ -770,7 +773,8 @@ c-----------------------------------------------
      &     errA,errR,errD2,alpha,gamma,alpha2,alpha3,
      &     alphainv2,cbeta,h2,h3,h6,h23,h34,
      &     b1,b2,b3,bb1,bb2,cbeta2,tmp
-      integer neqn,npdes,i,j,ijac(*),im,ix,iwork(*),idid,nell
+      integer*8 iwork(*)
+      integer neqn,npdes,i,j,ijac(*),im,ix,idid,nell
       external f,fd2,fa,fr,fw
       logical is_frjac
 c coefficients of PRK method
@@ -814,6 +818,7 @@ c -------- First stage.--------
          is_frjac=.true.
          call ieuler(neqn,npdes,fr,t,gamma,yks,yrk1,ytmp,
      &        fnc,frjac,ijac,is_frjac,iwork,idid)
+         iwork(17)=iwork(17)+neqn/npdes
          do i=1,neqn
             yrk2(i)=yks(i)+alpha*fnc(i)
             yrk3(i)=yks(i)+(alpha+gamma)*fnc(i)
@@ -1000,7 +1005,8 @@ c-----------------------------------------------
      &     y0(neqn),y1(neqn),fnc(neqn),ytmp(neqn),frjac(*)
       integer neqn,i,j,k,ix,im,irec
       external fr
-      integer ier,ijac(*),iwork(*),idid
+      integer*8 iwork(*)
+      integer ier,ijac(*),idid
       logical is_frjac,dojac
       do i=1,neqn
          fnc(i)=0.d0
@@ -1014,7 +1020,7 @@ c recompute jacobian if iter>irec
          do k=1,50
             dojac=(is_frjac.and.k.eq.1).or.k.gt.irec
             call fr(neqn,npdes,ix,t,y1(ix),fnc(ix),frjac(im),dojac)
-            iwork(17)=iwork(17)+1
+c            iwork(17)=iwork(17)+1
             if (dojac) iwork(18)=iwork(18)+1
             do i=1,npdes
                ytmp(ix+i-1)=y1(ix+i-1)-y0(ix+i-1)-h*fnc(ix+i-1)
@@ -1074,7 +1080,8 @@ c-----------------------------------------------
      &     errD,errD2,errA,errR,alpha,gamma,alpha2,alpha3,
      &     alphainv2,h2,h3,h6,h23,h34,
      &     b1,b2,b3,tmp
-      integer neqn,npdes,i,j,ijac(*),im,ix,iwork(*),idid,nell
+      integer*8 iwork(*)
+      integer neqn,npdes,i,j,ijac(*),im,ix,idid,nell
       external f,fd2,fa,fr,fw
       logical is_frjac
 c coefficients of PRK method
@@ -1112,6 +1119,7 @@ c -------- First stage.--------
          is_frjac=.true.
          call ieuler(neqn,npdes,fr,t,gamma,yn,yrk1,ytmp,
      &        fnc,frjac,ijac,is_frjac,iwork,idid)
+         iwork(17)=iwork(17)+neqn/npdes
          do i=1,neqn
             yrk2(i)=yn(i)+alpha*fnc(i)
             yrk3(i)=yn(i)+(alpha+gamma)*fnc(i)
@@ -1300,7 +1308,8 @@ c-------------------------------------------------------------
       double precision y(neqn),yn(neqn),fn(neqn),z(neqn),
      &     work(*),fz(neqn),t,eigmax,eigmaxo,sqrtu,uround,znor,
      &     ynor,quot,dzyn,dfzfn,safe
-      integer iwork(12),neqn,n5,i,iter,maxiter,nind,ntest,
+      integer*8 iwork(12)
+      integer neqn,n5,i,iter,maxiter,nind,ntest,
      &     ind,idid
       parameter (maxiter=50)
       parameter (safe=1.2d0)

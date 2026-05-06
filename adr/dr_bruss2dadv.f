@@ -16,7 +16,8 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
-      integer iwork(25),idid,ijac(neqn)
+      integer*8 iwork(25)
+      integer idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
       namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,

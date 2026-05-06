@@ -1,4 +1,4 @@
-c Brusselator problem with advection, nonstiff reaction
+c Brusselator problem with advection, nonstiff reaction treated implicitly
 c--------------------------------------------------------
 c    2D Brusselator problem with nonstiff reaction and advection
 c--------------------------------------------------------
@@ -40,7 +40,7 @@ c --- read input from namelist file (if it exists) ---
       close(10)
 
 c ----- dimensions -----
-		  neqn   = nsd*nsd*2
+		  neqn   = nsd*nsd*npdes
 		  ns     = nsd
       nssq   = ns*ns
       nsnsm1 = ns*(ns-1)
@@ -67,7 +67,7 @@ c --------------- multiply by 1.d0 since Python doesn't write values with '.d'
 
 c ----- initial and end point of integration -----
       t    = 0.0d0
-      tend = 1.d0
+c      tend = 1.d0
 
 c ----- initial values -----
       ans=ns

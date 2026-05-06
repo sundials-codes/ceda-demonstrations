@@ -16,7 +16,8 @@ c --- common parameters for the problem -----
       external fd,fd2,fa,fr,fw
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
-      integer iwork(25),idid,ijac(neqn)
+      integer*8 iwork(25)
+      integer idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
       namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,

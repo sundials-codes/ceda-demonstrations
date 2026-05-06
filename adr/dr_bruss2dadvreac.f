@@ -16,7 +16,8 @@ c --- common parameters for the problem -----
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
-      integer iwork(25),idid,ijac(neqn)
+      integer*8 iwork(25)
+      integer idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
       namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
@@ -81,7 +82,7 @@ c iwork for stats
 	end do
 
 c note that we define the final time from the namelist input file, and not the hard-coded value in init()
-      call init(nsd,t,tend2,y)
+      call init(nsd,t,tend,y)
 
 c ----- integration -----
 	write (6,*) 'rtol',rtol
