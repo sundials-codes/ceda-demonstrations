@@ -232,19 +232,25 @@ if (DoAdvDiffRx):
     cuy=1.0
     cvx=0.4
     cvy=0.7
-    d=1e-2
+    Bvals=[3.0, 3e1, 3e2]
+    dvals=[1e-2, 1e-1, 1e0]
     A=1.0
-    B=3.0
     nx=400
     ny=400
-    tf=10.0
-    diff_eigs, adv_eigs, react_eigs= runtest(exe=adrexe, probtype='AdvDiffRx', implicitrx=True,
-                                             inttype='ARK', ststype=None, extststype=None, table_id=1,
-                                             cux=cux, cuy=cuy, cvx=cvx, cvy=cvy, d=d, A=A, B=B, nx=nx,
-                                             ny=ny, tf=tf, rtol=rtol, atol=atol, fixedh=0.0, nout=NumOut)
-    # plot the spectra
-    plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion-Reaction 2D Spectra',
-                 picname='adr2d_spectrum')
+    tf=5.0
+    for d in dvals:
+        for B in Bvals:
+            diff_eigs, adv_eigs, react_eigs= runtest(exe=adrexe, probtype='AdvDiffRx',
+                                                     implicitrx=True, inttype='ARK',
+                                                     ststype=None, extststype=None,
+                                                     table_id=1, cux=cux, cuy=cuy,
+                                                     cvx=cvx, cvy=cvy, d=d, A=A, B=B,
+                                                     nx=nx, ny=ny, tf=tf, rtol=rtol,
+                                                     atol=atol, fixedh=0.0, nout=NumOut)
+            # plot the spectra
+            plot_spectra(diff_eigs, adv_eigs, react_eigs,
+                         titletxt=r'Advection-Diffusion-Reaction 2D Spectra ($d = %.2f$, $B = %.1e$)' % (d, B),
+                         picname='adr2d_spectrum_d%0.2f_B%0.1e' % (d, B))
 
 # Reaction-diffusion tests
 if (DoRxDiff):
@@ -253,18 +259,24 @@ if (DoRxDiff):
     cuy=0.0
     cvx=0.0
     cvy=0.0
-    d=0.1
     A=1.3
-    B=2.e4
+    Bvals=[2.e1, 2.e4, 2.e7]
+    dvals=[0.01, 0.1, 1.0]
     nx=200
     ny=200
     tf=2.0
-    diff_eigs, adv_eigs, react_eigs= runtest(exe=adrexe, probtype='RxDiff', implicitrx=True,
-                                             inttype='ARK', ststype=None, extststype=None, table_id=1,
-                                             cux=cux, cuy=cuy, cvx=cvx, cvy=cvy, d=d, A=A, B=B, nx=nx,
-                                             ny=ny, tf=tf, rtol=rtol, atol=atol, fixedh=0.0, nout=NumOut)
+    for d in dvals:
+        for B in Bvals:
+            diff_eigs, adv_eigs, react_eigs= runtest(exe=adrexe, probtype='RxDiff',
+                                                     implicitrx=True, inttype='ARK',
+                                                     ststype=None, extststype=None,
+                                                     table_id=1, cux=cux, cuy=cuy,
+                                                     cvx=cvx, cvy=cvy, d=d, A=A, B=B,
+                                                     nx=nx, ny=ny, tf=tf, rtol=rtol,
+                                                     atol=atol, fixedh=0.0, nout=NumOut)
     # plot the spectra
-    plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Reaction-Diffusion 2D Spectra',
-                 picname='rd2d_spectrum')
+    plot_spectra(diff_eigs, adv_eigs, react_eigs,
+                 titletxt=r'Reaction-Diffusion 2D Spectra ($d = %.2f$, $B = %.1e$)' % (d, B),
+                 picname='rd2d_spectrum_d%0.2f_B%0.1e' % (d, B))
 
 # end of script

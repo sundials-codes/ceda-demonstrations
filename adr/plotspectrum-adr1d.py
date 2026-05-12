@@ -224,26 +224,27 @@ def plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt, picname):
 # Shared testing parameters
 Executable = './bin/advection_diffusion_reaction_1D'
 c = 0.5
-dvals = [1e-1, 1e0]
+dvals = [1.e-2, 1e-1, 1e0]
 A = 1.0
 B = 3.0
-eps = 1e-4
+epsvals = [1e-6, 1e-4, 1e-2, 1e0]
 nx = 512
 rtol = 1e-5
 atol = 1e-11
-tf_adr = 10.0
+tf_adr = 3.0
 tf_ad = 3.0
 tf_rd = 3.0
 
 # Advection-diffusion-reaction spectrum over the sets of diffusion coefficients
 if (DoAdvDiffRx):
     for d in dvals:
-        diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='AdvDiffRx', inttype='ARK',
-                                                  ststype=None, extststype=None, table_id=1, c=c, d=d,
-                                                  A=A, B=B, eps=eps, nx=nx, tf=tf_adr, rtol=rtol, atol=atol,
-                                                  fixedh=0.0, nout=NumOut)
-        # plot the spectra
-        plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion-Reaction 1D Spectra ($d = %.1f$)' % d, picname='adr1d_spectrum_d%0.1f' % d)
+        for eps in epsvals:
+            diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='AdvDiffRx', inttype='ARK',
+                                                      ststype=None, extststype=None, table_id=1, c=c, d=d,
+                                                      A=A, B=B, eps=eps, nx=nx, tf=tf_adr, rtol=rtol,
+                                                      atol=atol, fixedh=0.0, nout=NumOut)
+            # plot the spectra
+            plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion-Reaction 1D Spectra ($d = %.2f$, $\varepsilon = %.1e$)' % (d, eps), picname='adr1d_spectrum_d%0.2f_eps%0.1e' % (d, eps))
 
 
 # Advection-diffusion spectrum over the sets of diffusion coefficients
@@ -254,18 +255,19 @@ if (DoAdvDiff):
                                                   A=A, B=B, eps=eps, nx=nx, tf=tf_ad, rtol=rtol, atol=atol,
                                                   fixedh=0.0, nout=NumOut)
         # plot the spectra
-        plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion 1D Spectra ($d = %.1f$)' % d, picname='ad1d_spectrum_d%0.1f' % d)
+        plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Advection-Diffusion 1D Spectra ($d = %.2f$)' % d, picname='ad1d_spectrum_d%0.2f' % d)
 
 
 # Reaction-diffusion spectrum over the sets of diffusion coefficients
 if (DoRxDiff):
     for d in dvals:
-        diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='RxDiff', inttype='ARK',
-                                                  ststype=None, extststype=None, table_id=6, d=d,
-                                                  A=A, B=B, eps=eps, nx=nx, tf=tf_rd, rtol=rtol, atol=atol,
-                                                  fixedh=0.0, nout=NumOut)
-        # plot the spectra
-        plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Reaction-Diffusion 1D Spectra ($d = %.1f$)' % d, picname='rd1d_spectrum_d%0.1f' % d)
+        for eps in epsvals:
+            diff_eigs, adv_eigs, react_eigs = runtest(Executable, probtype='RxDiff', inttype='ARK',
+                                                    ststype=None, extststype=None, table_id=6, d=d,
+                                                    A=A, B=B, eps=eps, nx=nx, tf=tf_rd, rtol=rtol, atol=atol,
+                                                    fixedh=0.0, nout=NumOut)
+            # plot the spectra
+            plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt=r'Reaction-Diffusion 1D Spectra ($d = %.2f$, $\varepsilon = %.1e$)' % (d, eps), picname='rd1d_spectrum_d%0.2f_eps%0.1e' % (d, eps))
 
 
 # end of script

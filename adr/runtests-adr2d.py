@@ -141,21 +141,19 @@ def calc_error(nx, solfile, reffile):
 
 # utility routine to generate an ADR reference solution for a given problem configuration
 def generate_ADR_reference(exe='./bin/advection_diffusion_reaction_2D', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0):
-    if not os.path.isfile("adr_reference.dat"):
-        runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --nout 1 --calc_error --write_solution" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf) + int_method("AdvDiffRx", False, "ARK", None, None, 1)
-        print("Generating ADR reference solution with command: " + runcommand)
-        result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print(result.stdout.decode())
-        os.rename('reference.dat', 'adr_reference.dat')
+    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --nout 1 --calc_error --write_solution" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf) + int_method("AdvDiffRx", False, "ARK", None, None, 1)
+    print("Generating ADR reference solution with command: " + runcommand)
+    result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(result.stdout.decode())
+    os.rename('reference.dat', 'adr_reference.dat')
 
 # utility routine to generate a RD reference solution for a given problem configuration
 def generate_RD_reference(exe='./bin/advection_diffusion_reaction_2D', d=0.1, A=1.3, B=2.e7, nx=200, ny=200, tf=2.0):
-    if not os.path.isfile("rd_reference.dat"):
-        runcommand = "%s --d %e --A %e --B %e --nx %d --ny %d --tf %e --cux 0.0 --cuy 0.0 --cvx 0.0 --cvy 0.0 --nout 1 --calc_error --write_solution" % (exe, d, A, B, nx, ny, tf) + int_method("RxDiff", True, "ARK", None, None, 1)
-        print("Generating RD reference solution with command: " + runcommand)
-        result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print(result.stdout.decode())
-        os.rename('reference.dat', 'rd_reference.dat')
+    runcommand = "%s --d %e --A %e --B %e --nx %d --ny %d --tf %e --cux 0.0 --cuy 0.0 --cvx 0.0 --cvy 0.0 --nout 1 --calc_error --write_solution" % (exe, d, A, B, nx, ny, tf) + int_method("RxDiff", True, "ARK", None, None, 1)
+    print("Generating RD reference solution with command: " + runcommand)
+    result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(result.stdout.decode())
+    os.rename('reference.dat', 'rd_reference.dat')
 
 # utility routine to run the PIROCK ADR executable
 def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
@@ -476,11 +474,11 @@ def main():
     # testing setup
 
     # Flags to enable/disable categories of tests
-    DoImplicitRx = True
+    DoImplicitRx = False
     DoExplicitRx = True
     DoADRFixedTests = True
     DoADRAdaptiveTests = True
-    DoRDFixedTests = True
+    DoRDFixedTests = False
     DoRDAdaptiveTests = True
     ShowCommand = True
     ShowOutput = True
@@ -543,6 +541,9 @@ def main():
     # RDStrangSolvers = [['Strang', 'RKC', None, None],
     #                    ['Strang', 'RKL', None, None]]
 
+    # AdvDiffRxSolvers = [['ARK', None, None, 1],
+    #                     ['ExtSTS', 'RKC', 'ARS', None],
+    #                     ['ExtSTS', 'RKC', 'Giraldo', None]]
     AdvDiffRxSolvers = [['ARK', None, None, 1],
                         ['ExtSTS', 'RKC', 'ARS', None],
                         ['ExtSTS', 'RKC', 'Giraldo', None]]
@@ -562,7 +563,6 @@ def main():
                      ['ARK', None, None, 5],
                      ['ExtSTS', 'RKC', 'ARS', None],
                      ['ExtSTS', 'RKC', 'Giraldo', None],
-                     ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
                      ['ExtSTS', 'RKC', 'IRK21a', None]]
     RDStrangSolvers = [['Strang', 'RKC', None, None]]
 
@@ -578,162 +578,174 @@ def main():
         cuy=1.0
         cvx=0.4
         cvy=0.7
-        d=1e-2
         A=1.0
-        B=3.0
+        Bvals=[3.0, 3e1, 3e2]
+        dvals=[1e-2, 1e-1, 1e0]
         nx=400
         ny=400
-        tf=10.0
+        tf=5.0
         atol=1e-9
         fixed_maxl=500
 
-        # generate reference solution
-        generate_ADR_reference(adrexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf)
+        # loop over diffusion coefficients
+        FixedStats = []
+        AdaptStats = []
+        for d in dvals:
+            for B in Bvals:
+
+                # generate reference solution
+                generate_ADR_reference(adrexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf)
+
+                if (DoADRAdaptiveTests):
+                    runtest_args = []
+                    runtest_pirock_args = []
+                    runtest_pirock_imprx_args = []
+
+                    # set tolerances for adaptive ADR tests
+                    rtol = np.logspace(-2.5, -6.5, 9)
+                    atol = 1e-11
+                    adapt_maxl = 0
+
+
+                    # set up tests that treat reactions implicitly
+                    for solver in AdvDiffRxSolvers:
+                        for rt in rtol:
+                            runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                 solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt,
+                                                 atol, 0.0, adapt_maxl, ShowCommand, ShowOutput))
+                    for rt in rtol:
+                        runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx,
+                                                          ny, tf, rt, atol, 0.0, ShowCommand, ShowOutput))
+
+                    # set up tests that treat reactions explicitly
+                    for solver in AdvDiffRxSolversExpRx:
+                        for rt in rtol:
+                            runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2],
+                                                 solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt,
+                                                 atol, 0.0, adapt_maxl, ShowCommand, ShowOutput))
+
+                    for rt in rtol:
+                        runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                                    rt, atol, 0.0, ShowCommand, ShowOutput))
+
+                    # output argument lists if requested
+                    if (ShowArgs):
+                        print("ADR Adaptive Tests for d = " + str(d) + " and B = " + str(B) + ":")
+                        print("runtest_args:")
+                        for argset in runtest_args:
+                            print(argset)
+                        print("runtest_pirock_args:")
+                        for argset in runtest_pirock_args:
+                            print(argset)
+                        print("runtest_pirock_imprx_args:")
+                        for argset in runtest_pirock_imprx_args:
+                            print(argset)
+
+                    # run tests in parallel
+                    with multiprocessing.Pool(processes=maxprocs) as pool:
+                        ar = []
+                        for args in runtest_args:
+                            ar.append(pool.apply_async(runtest, args=args))
+                        for args in runtest_pirock_args:
+                            ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
+                        for args in runtest_pirock_imprx_args:
+                            ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
+                        for a in ar:
+                            st = a.get()
+                            print(st)
+                            AdaptStats.append(st)
+
+                if (DoADRFixedTests):
+                    runtest_args = []
+                    runtest_pirock_args = []
+                    runtest_pirock_imprx_args = []
+
+                    # set step sizes for fixed-step ADR tests
+                    fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+                    fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+                    fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
+
+                    # set up tests that treat reactions implicitly
+                    if (DoImplicitRx):
+                        for solver in AdvDiffRxSolvers:
+                            for h in fixedh:
+                                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                     solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max
+                                                     (1e-3*(h*h),1e-9), atol, h, fixed_maxl, ShowCommand,
+                                                     ShowOutput))
+                        for solver in ADRStrangSolvers:
+                            for h in fixedh_strang:
+                                runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                     solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max
+                                                     (1e-3*(h*h),1e-9), atol, h, fixed_maxl, ShowCommand,
+                                                     ShowOutput))
+
+                        for h in fixedh_pirock:
+                            runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B,
+                                                              nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                                              ShowCommand, ShowOutput))
+
+                    # set up tests that treat reactions explicitly
+                    if (DoExplicitRx):
+                        for solver in AdvDiffRxSolversExpRx:
+                            for h in fixedh:
+                                runtest_args.append((adrexe, probtype, False, solver[0], solver[1],
+                                                     solver[2], solver[3], cux, cuy, cvx, cvy, d, A, B, nx,
+                                                     ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                                     fixed_maxl, ShowCommand, ShowOutput))
+                        for solver in ADRStrangSolvers:
+                            for h in fixedh_strang:
+                                runtest_args.append((adrexe, probtype, False, solver[0], solver[1],
+                                                     solver[2], solver[3], cux, cuy, cvx, cvy, d, A, B, nx,
+                                                     ny, tf, max(1e-3*(h*h),1e-9), atol, h,
+                                                     fixed_maxl, ShowCommand, ShowOutput))
+
+                        for h in fixedh_pirock:
+                            runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                                        max(1e-3*(h*h),1e-9), atol, h, ShowCommand, ShowOutput))
+
+                    # output argument lists if requested
+                    if (ShowArgs):
+                        print("ADR Fixed Tests for d = " + str(d) + ":")
+                        print("runtest_args:")
+                        for argset in runtest_args:
+                            print(argset)
+                        print("runtest_pirock_args:")
+                        for argset in runtest_pirock_args:
+                            print(argset)
+                        print("runtest_pirock_imprx_args:")
+                        for argset in runtest_pirock_imprx_args:
+                            print(argset)
+
+                    # run tests in parallel
+                    with multiprocessing.Pool(processes=maxprocs) as pool:
+                        ar = []
+                        for args in runtest_args:
+                            ar.append(pool.apply_async(runtest, args=args))
+                        for args in runtest_pirock_args:
+                            ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
+                        for args in runtest_pirock_imprx_args:
+                            ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
+                        for a in ar:
+                            st = a.get()
+                            print(st)
+                            FixedStats.append(st)
+
+        # store results
+        if (DoADRAdaptiveTests):
+            Df = pd.DataFrame.from_records(AdaptStats)
+            print("Adaptive step AdvDiffRx2D test Df:")
+            print(Df)
+            print("Saving as Excel")
+            Df.to_excel('AdvDiffRx2D-adapt.xlsx', index=False)
 
         if (DoADRFixedTests):
-            Stats = []
-            runtest_args = []
-            runtest_pirock_args = []
-            runtest_pirock_imprx_args = []
-
-            # set step sizes for fixed-step ADR tests
-            fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-            fixedh_strang = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-            fixedh_pirock = 0.01 / np.array([16, 32, 64, 128], dtype=float)
-
-            # set up tests that treat reactions implicitly
-            if (DoImplicitRx):
-                for solver in AdvDiffRxSolvers:
-                    for h in fixedh:
-                        runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                             cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             fixed_maxl, ShowCommand, ShowOutput))
-                for solver in ADRStrangSolvers:
-                    for h in fixedh_strang:
-                        runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                             cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             fixed_maxl, ShowCommand, ShowOutput))
-
-                for h in fixedh_pirock:
-                    runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
-                                                      max(1e-3*(h*h),1e-9), atol, h, ShowCommand, ShowOutput))
-
-            # set up tests that treat reactions explicitly
-            if (DoExplicitRx):
-                for solver in AdvDiffRxSolversExpRx:
-                    for h in fixedh:
-                        runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
-                                             cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             fixed_maxl, ShowCommand, ShowOutput))
-                for solver in ADRStrangSolvers:
-                    for h in fixedh_strang:
-                        runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
-                                             cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                             fixed_maxl, ShowCommand, ShowOutput))
-
-                for h in fixedh_pirock:
-                    runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
-                                                max(1e-3*(h*h),1e-9), atol, h, ShowCommand, ShowOutput))
-
-            # output argument lists if requested
-            if (ShowArgs):
-                print("ADR Fixed Tests:")
-                print("runtest_args:")
-                for argset in runtest_args:
-                    print(argset)
-                print("runtest_pirock_args:")
-                for argset in runtest_pirock_args:
-                    print(argset)
-                print("runtest_pirock_imprx_args:")
-                for argset in runtest_pirock_imprx_args:
-                    print(argset)
-
-            # run tests in parallel
-            with multiprocessing.Pool(processes=maxprocs) as pool:
-                ar = []
-                for args in runtest_args:
-                    ar.append(pool.apply_async(runtest, args=args))
-                for args in runtest_pirock_args:
-                    ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
-                for args in runtest_pirock_imprx_args:
-                    ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
-                for a in ar:
-                    st = a.get()
-                    print(st)
-                    Stats.append(st)
-
-            # store results
-            Df = pd.DataFrame.from_records(Stats)
+            Df = pd.DataFrame.from_records(FixedStats)
             print("Fixed step AdvDiffRx2D test Df:")
             print(Df)
             print("Saving as Excel")
             Df.to_excel('AdvDiffRx2D-fixed.xlsx', index=False)
 
-        if (DoADRAdaptiveTests):
-            Stats = []
-            runtest_args = []
-            runtest_pirock_args = []
-            runtest_pirock_imprx_args = []
-
-            # set tolerances for adaptive ADR tests
-            rtol = np.logspace(-2.5, -6.5, 9)
-            atol = 1e-11
-            adapt_maxl = 0
-
-
-            # set up tests that treat reactions implicitly
-            for solver in AdvDiffRxSolvers:
-                for rt in rtol:
-                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         adapt_maxl, ShowCommand, ShowOutput))
-            for rt in rtol:
-                runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
-                                                  rt, atol, 0.0, ShowCommand, ShowOutput))
-
-            # set up tests that treat reactions explicitly
-            for solver in AdvDiffRxSolversExpRx:
-                for rt in rtol:
-                    runtest_args.append((adrexe, probtype, False, solver[0], solver[1], solver[2], solver[3],
-                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         adapt_maxl, ShowCommand, ShowOutput))
-
-            for rt in rtol:
-                runtest_pirock_args.append((adrpirockexe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
-                                            rt, atol, 0.0, ShowCommand, ShowOutput))
-
-            # output argument lists if requested
-            if (ShowArgs):
-                print("ADR Adaptive Tests:")
-                print("runtest_args:")
-                for argset in runtest_args:
-                    print(argset)
-                print("runtest_pirock_args:")
-                for argset in runtest_pirock_args:
-                    print(argset)
-                print("runtest_pirock_imprx_args:")
-                for argset in runtest_pirock_imprx_args:
-                    print(argset)
-
-            # run tests in parallel
-            with multiprocessing.Pool(processes=maxprocs) as pool:
-                ar = []
-                for args in runtest_args:
-                    ar.append(pool.apply_async(runtest, args=args))
-                for args in runtest_pirock_args:
-                    ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
-                for args in runtest_pirock_imprx_args:
-                    ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
-                for a in ar:
-                    st = a.get()
-                    print(st)
-                    Stats.append(st)
-
-            Df = pd.DataFrame.from_records(Stats)
-            print("Adaptive step AdvDiffRx2D test Df:")
-            print(Df)
-            print("Saving as Excel")
-            Df.to_excel('AdvDiffRx2D-adapt.xlsx', index=False)
 
 
     # Reaction-diffusion tests
@@ -747,120 +759,127 @@ def main():
         cuy=0.0
         cvx=0.0
         cvy=0.0
-        d=0.1
         A=1.3
-        #B=2.e7
-        B=2.e4
+        Bvals=[2.e1, 2.e4, 2.e7]
+        dvals=[0.01, 0.1, 1.0]
         nx=200
         ny=200
         tf=2.0
         atol=1e-9
         fixed_maxl=500
 
-        # generate reference solution
-        generate_RD_reference(adrexe, d, A, B, nx, ny, tf)
+        # loop over diffusion coefficients and reaction parameters
+        FixedStats = []
+        AdaptStats = []
+        for d in dvals:
+            for B in Bvals:
 
-        if (DoRDFixedTests):
-            Stats = []
-            runtest_args = []
-            runtest_pirock_args = []
+                # generate reference solution
+                generate_RD_reference(adrexe, d, A, B, nx, ny, tf)
 
-            # set step sizes for fixed-step RD tests
-            # fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-            # fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-            # fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
-            fixedh        = 0.001 / np.array([32, 64, 128, 256], dtype=float)
-            fixedh_strang = 0.001 / np.array([64, 128, 256], dtype=float)
-            fixedh_pirock = 0.001 / np.array([32, 64, 128, 256], dtype=float)
+                if (DoRDFixedTests):
+                    runtest_args = []
+                    runtest_pirock_args = []
 
-            for solver in RxDiffSolvers:
-                for h in fixedh:
-                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                         fixed_maxl, ShowCommand, ShowOutput))
-            for solver in RDStrangSolvers:
-                for h in fixedh_strang:
-                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                         fixed_maxl, ShowCommand, ShowOutput))
-            for h in fixedh_pirock:
-                runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                            ShowCommand, ShowOutput))
+                    # set step sizes for fixed-step RD tests
+                    # fixedh        = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+                    # fixedh_strang = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+                    # fixedh_pirock = 0.001 / np.array([16, 32, 64, 128], dtype=float)
+                    fixedh        = 0.001 / np.array([32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.001 / np.array([64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.001 / np.array([32, 64, 128, 256], dtype=float)
 
-            # output argument lists if requested
-            if (ShowArgs):
-                print("RD Fixed Tests:")
-                print("runtest_args:")
-                for argset in runtest_args:
-                    print(argset)
-                print("runtest_pirock_args:")
-                for argset in runtest_pirock_args:
-                    print(argset)
+                    for solver in RxDiffSolvers:
+                        for h in fixedh:
+                            runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                 solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                                 max(1e-3*(h*h),1e-9), atol, h,
+                                                 fixed_maxl, ShowCommand, ShowOutput))
+                    for solver in RDStrangSolvers:
+                        for h in fixedh_strang:
+                            runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                 solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf,
+                                                 max(1e-3*(h*h),1e-9), atol, h,
+                                                 fixed_maxl, ShowCommand, ShowOutput))
+                    for h in fixedh_pirock:
+                        runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, max(1e-3*(h*h),1e-9),
+                                                    atol, h, ShowCommand, ShowOutput))
 
-            # run tests in parallel
-            with multiprocessing.Pool(processes=maxprocs) as pool:
-                ar = []
-                for args in runtest_args:
-                    ar.append(pool.apply_async(runtest, args=args))
-                for args in runtest_pirock_args:
-                    ar.append(pool.apply_async(runtest_RD_pirock, args=args))
-                for a in ar:
-                    st = a.get()
-                    print(st)
-                    Stats.append(st)
+                    # output argument lists if requested
+                    if (ShowArgs):
+                        print("RD Fixed Tests:")
+                        print("runtest_args:")
+                        for argset in runtest_args:
+                            print(argset)
+                        print("runtest_pirock_args:")
+                        for argset in runtest_pirock_args:
+                            print(argset)
 
-            Df = pd.DataFrame.from_records(Stats)
-            print("Fixed step RxDiff2D test Df:")
-            print(Df)
-            print("Saving as Excel")
-            Df.to_excel('RxDiff2D-fixed.xlsx', index=False)
+                    # run tests in parallel
+                    with multiprocessing.Pool(processes=maxprocs) as pool:
+                        ar = []
+                        for args in runtest_args:
+                            ar.append(pool.apply_async(runtest, args=args))
+                        for args in runtest_pirock_args:
+                            ar.append(pool.apply_async(runtest_RD_pirock, args=args))
+                        for a in ar:
+                            st = a.get()
+                            print(st)
+                            FixedStats.append(st)
 
-        if (DoRDAdaptiveTests):
-            Stats = []
-            runtest_args = []
-            runtest_pirock_args = []
+                if (DoRDAdaptiveTests):
+                    runtest_args = []
+                    runtest_pirock_args = []
 
-            # set tolerances for adaptive RD tests
-            rtol = np.logspace(-2.5, -6.5, 9)
-            atol = 1e-11
-            adaptive_maxl = 0
+                    # set tolerances for adaptive RD tests
+                    rtol = np.logspace(-2.5, -6.5, 9)
+                    atol = 1e-11
+                    adaptive_maxl = 0
 
-            for solver in RxDiffSolvers:
-                for rt in rtol:
-                    runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2], solver[3],
-                                         cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt, atol, 0.0,
-                                         adaptive_maxl, ShowCommand, ShowOutput))
-            for rt in rtol:
-                runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, rt, atol,
-                                            0.0, ShowCommand, ShowOutput))
+                    for solver in RxDiffSolvers:
+                        for rt in rtol:
+                            runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
+                                                 solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt,
+                                                 atol, 0.0, adaptive_maxl, ShowCommand, ShowOutput))
+                    for rt in rtol:
+                        runtest_pirock_args.append((rdpirockexe, d, A, B, nx, ny, tf, rt, atol,
+                                                    0.0, ShowCommand, ShowOutput))
 
-            # output argument lists if requested
-            if (ShowArgs):
-                print("RD Adaptive Tests:")
-                print("runtest_args:")
-                for argset in runtest_args:
-                    print(argset)
-                print("runtest_pirock_args:")
-                for argset in runtest_pirock_args:
-                    print(argset)
+                    # output argument lists if requested
+                    if (ShowArgs):
+                        print("RD Adaptive Tests:")
+                        print("runtest_args:")
+                        for argset in runtest_args:
+                            print(argset)
+                        print("runtest_pirock_args:")
+                        for argset in runtest_pirock_args:
+                            print(argset)
 
-            # run tests in parallel
-            with multiprocessing.Pool(processes=maxprocs) as pool:
-                ar = []
-                for args in runtest_args:
-                    ar.append(pool.apply_async(runtest, args=args))
-                for args in runtest_pirock_args:
-                    ar.append(pool.apply_async(runtest_RD_pirock, args=args))
-                for a in ar:
-                    st = a.get()
-                    print(st)
-                    Stats.append(st)
+                    # run tests in parallel
+                    with multiprocessing.Pool(processes=maxprocs) as pool:
+                        ar = []
+                        for args in runtest_args:
+                            ar.append(pool.apply_async(runtest, args=args))
+                        for args in runtest_pirock_args:
+                            ar.append(pool.apply_async(runtest_RD_pirock, args=args))
+                        for a in ar:
+                            st = a.get()
+                            print(st)
+                            AdaptStats.append(st)
 
-            Df = pd.DataFrame.from_records(Stats)
-            print("Adaptive step RxDiff2D test Df:")
-            print(Df)
-            print("Saving as Excel")
-            Df.to_excel('RxDiff2D-adapt.xlsx', index=False)
+            if (DoRDFixedTests):
+                Df = pd.DataFrame.from_records(FixedStats)
+                print("Fixed step RxDiff2D test Df:")
+                print(Df)
+                print("Saving as Excel")
+                Df.to_excel('RxDiff2D-fixed.xlsx', index=False)
+
+            if (DoRDAdaptiveTests):
+                Df = pd.DataFrame.from_records(AdaptStats)
+                print("Adaptive step RxDiff2D test Df:")
+                print(Df)
+                print("Saving as Excel")
+                Df.to_excel('RxDiff2D-adapt.xlsx', index=False)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
