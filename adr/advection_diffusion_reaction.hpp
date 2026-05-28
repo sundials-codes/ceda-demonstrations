@@ -867,13 +867,13 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
       sunrealtype* ydata = N_VGetArrayPointer(y);
       if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
 
-      uopts.uout << t;
+      uopts.uout << setw(WIDTH) << t;
       for (sunindextype i = 0; i < udata.nx; i++)
-      {
-        uopts.uout << setw(WIDTH) << ydata[UIDX(i)];
-        uopts.uout << setw(WIDTH) << ydata[VIDX(i)];
-        uopts.uout << setw(WIDTH) << ydata[WIDX(i)];
-      }
+      { uopts.uout << setw(WIDTH) << ydata[UIDX(i)]; }
+      for (sunindextype i = 0; i < udata.nx; i++)
+      { uopts.uout << setw(WIDTH) << ydata[VIDX(i)]; }
+      for (sunindextype i = 0; i < udata.nx; i++)
+      { uopts.uout << setw(WIDTH) << ydata[WIDX(i)]; }
       uopts.uout << endl;
     }
   }
@@ -900,13 +900,13 @@ static int WriteOutput(sunrealtype t, N_Vector y, N_Vector yerr,
       sunrealtype* ydata = N_VGetArrayPointer(y);
       if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
 
-      uopts.uout << t;
+      uopts.uout << setw(WIDTH) << t;
       for (sunindextype i = 0; i < udata.nx; i++)
-      {
-        uopts.uout << setw(WIDTH) << ydata[UIDX(i)];
-        uopts.uout << setw(WIDTH) << ydata[VIDX(i)];
-        uopts.uout << setw(WIDTH) << ydata[WIDX(i)];
-      }
+      { uopts.uout << setw(WIDTH) << ydata[UIDX(i)]; }
+      for (sunindextype i = 0; i < udata.nx; i++)
+      { uopts.uout << setw(WIDTH) << ydata[VIDX(i)]; }
+      for (sunindextype i = 0; i < udata.nx; i++)
+      { uopts.uout << setw(WIDTH) << ydata[WIDX(i)]; }
       uopts.uout << endl;
     }
   }

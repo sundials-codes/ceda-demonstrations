@@ -174,10 +174,6 @@ int main(int argc, char* argv[])
   flag = OpenOutput(udata, uopts);
   if (check_flag(flag, "OpenOutput")) { return 1; }
 
-  flag = (uopts.calc_error) ? WriteOutput(t, y, yerr, udata, uopts)
-                            : WriteOutput(t, y, udata, uopts);
-  if (check_flag(flag, "WriteOutput")) { return 1; }
-
   // Loop over output times
   for (int iout = 0; iout < uopts.nout; iout++)
   {
@@ -934,7 +930,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
       else if (uopts.extsts_method == 1)  // Giraldo DIRK2
       { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
-      else  // SSP SDIRK 2 -- THIS NEEDS TO BE FIXED, AS IT GIVES DIFFERENT RESULTS THAN PREVIOUSLY
+      else
       {
         ARKodeButcherTable B = ARKodeButcherTable_Alloc(5, SUNTRUE);
         const sunrealtype one = SUN_RCONST(1.0);
