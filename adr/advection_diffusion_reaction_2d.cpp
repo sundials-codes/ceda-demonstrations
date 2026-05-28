@@ -17,9 +17,7 @@
  *   u(x,y,0) = 22 * y * (1 - y)^(1.5)
  *   v(x,y,0) = 27 * x * (1 - x)^(1.5)
  *
- * and periodic boundary conditions i.e.,
- *
- *   u(x+1, y, t) = u(x , y, t) = u(x, y+1, t) = 0.
+ * and periodic boundary conditions.
  *
  * The system is advanced in time using one of the following approaches based on
  * the --integrator <int> flag value. The following options are available:
@@ -822,9 +820,9 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     flag = ARKodeSetNonlinConvCoef(*arkode_mem, uopts.nlscoef);
     if (check_flag(flag, "ARKodeSetNonlinConvCoef")) { return 1; }
 
-    // // Use "deduce implicit RHS" option
-    // flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
-    // if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
+    // Use "deduce implicit RHS" option
+    flag = ARKodeSetDeduceImplicitRhs(*arkode_mem, SUNTRUE);
+    if (check_flag(flag, "ARKodeSetDeduceImplicitRhs")) { return 1; }
 
     // Set the predictor method
     flag = ARKodeSetPredictorMethod(*arkode_mem, uopts.predictor);
@@ -835,9 +833,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   MRIStepCoupling C = nullptr;
   if (uopts.extsts_method == 0) // ARS(2,2,2)
   {
-    if (udata.impl_reaction && udata.advection)
-    { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
-    else if (udata.impl_reaction)
+    if (udata.impl_reaction)
     { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARS222); }
     else
     {
@@ -848,9 +844,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
   else if (uopts.extsts_method == 1) // Giraldo
   {
-    if (udata.impl_reaction && udata.advection)
-    { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
-    else if (udata.impl_reaction)
+    if (udata.impl_reaction)
     { C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2); }
     else
     {
@@ -1235,14 +1229,14 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   if (check_ptr(fdata, "N_VGetArrayPointer")) { return -1; }
 
   // Compute advection RHS
-  const sunrealtype cux = ONE * udata->cux / (TWO * udata->dx);
-  const sunrealtype cuy = ONE * udata->cuy / (TWO * udata->dy);
-  const sunrealtype cvx = ONE * udata->cvx / (TWO * udata->dx);
-  const sunrealtype cvy = ONE * udata->cvy / (TWO * udata->dy);
+  const sunrealtype cux = udata->cux / (TWO * udata->dx);
+  const sunrealtype cuy = udata->cuy / (TWO * udata->dy);
+  const sunrealtype cvx = udata->cvx / (TWO * udata->dx);
+  const sunrealtype cvy = udata->cvy / (TWO * udata->dy);
   const sunindextype nx = udata->nx;
   const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < ny; j++)//periodic boundary conditions
+  for (sunindextype j = 0; j < ny; j++) // periodic boundary conditions
   {
     for (sunindextype i = 0; i < nx; i++)
     {
@@ -1338,7 +1332,7 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   // Compute reaction RHS
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++) // periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
@@ -1372,7 +1366,7 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return 1; }
   const sunindextype nx = udata->nx;
   SUNMatZero(J);
-  for (sunindextype j = 0; j < udata->ny; j++) //periodic boundary conditions
+  for (sunindextype j = 0; j < udata->ny; j++) // periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
     {
