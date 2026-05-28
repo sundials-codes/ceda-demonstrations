@@ -11,7 +11,7 @@ c --- Problem driver and dimension parameters
 c ----------------------------------------------------
 	implicit double precision (a-h,o-z)
 c --- common parameters for the problem -----
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
       external fd,fd2,fa,fr,fw
 c ----- to integrate with pirock.f
@@ -20,15 +20,17 @@ c ----- to integrate with pirock.f
       integer idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
-      namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21,
-     &                 tend
+      namelist /list1/ alf,uxadv,vxadv,wxadv,brussa,brussb,eps,
+     &                 atol,rtol,h,iwork20,iwork21,tend
 
 c --- read input from namelist file (if it exists) ---
       open(10, file='adr_1D_pirock_params.txt', status='old', err=100)
       read(10, nml=list1)
       close(10)
       goto 110
+      uyadv=0.d0
+      vyadv=0.d0
+      wyadv=0.d0
 
   100 continue
       write(6,*) 'Could not open namelist file'

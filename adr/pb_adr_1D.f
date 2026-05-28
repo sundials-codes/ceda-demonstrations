@@ -41,25 +41,33 @@ c-------------------------------------------------------------------------------
       double precision  pi, xx
       parameter(pi = 3.141592653589793d0)
 
-
 c --- common parameters for the problem -----
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 c --- namelist definition
-      namelist /list1/ alf,amult,uxadv,uyadv,vxadv,vyadv,wxadv,wyadv,
-     &                 brussa,brussb,eps,atol,rtol,h,iwork20,iwork21,
-     &                 tend
+      namelist /list1/ alf,uxadv,vxadv,wxadv,brussa,brussb,eps,
+     &                 atol,rtol,h,iwork20,iwork21,tend
 
 c --- read input from namelist file (if it exists) ---
-        open(10, file='adr_1D_pirock_params.txt', status='old')
-        read(10, nml=list1)
-        close(10)
+      open(10, file='adr_1D_pirock_params.txt', status='old')
+      read(10, nml=list1)
+      close(10)
 
-c ----- dimensions -----
-        neqn   = nsd*npdes
-	  ns     = nsd
-        nssq   = (ns-1)*(ns-1)
-        nsnsm1 = ns*(ns-1)
+c ----- dimensions and parameters -----
+      neqn   = nsd*npdes
+      ns     = nsd
+      nssq   = (ns-1)*(ns-1)
+      nsnsm1 = ns*(ns-1)
+      alf=alf*1.d0
+      uxadv=uxadv*1.d0
+      uyadv=0.d0
+      vxadv=vxadv*1.d0
+      vyadv=0.d0
+      wxadv=wxadv*1.d0
+      wyadv=0.d0
+      brussa=brussa*1.d0
+      brussb=brussb*1.d0
+      eps=eps*1.d0
 
 c c --- read input from namelist file (if it exists) ---
 c         open(10, file='namelist_read.txt', status='old', err=100)
@@ -70,44 +78,30 @@ c         goto 110
 c   100   continue
 c         write(6,*) 'Could not open namelist file'
 
-        write(6,*) 'Integration of the '
+      write(6,*) 'Integration of the '
      &   ,'1-dim Brusselator problem, ns=',ns
-        write(6,*) 'advection pb:', uxadv,vxadv,wxadv
-        write(6,*) 'diffusion pb:', alf
-        write(6,*) 'brusselator A:', brussa
-        write(6,*) 'brusselator B:', brussb
-        write(6,*) 'brusselator eps:', eps
-c --------------- multiplying by 1.d0 because of tests that are run from python script
-c --------------- because Python can't take in values with '.d'
-        alf=alf*1.d0
-        amult=amult*1.d0
-        uxadv=uxadv*1.d0
-        uyadv=uyadv*1.d0
-        vxadv=vxadv*1.d0
-        vyadv=vyadv*1.d0
-        wxadv=wxadv*1.d0
-        wyadv=wyadv*1.d0
-        brussa=brussa*1.d0
-        brussb=brussb*1.d0
-        eps=eps*1.d0
-c        stop
+      write(6,*) 'advection pb:', uxadv,vxadv,wxadv
+      write(6,*) 'diffusion pb:', alf
+      write(6,*) 'brusselator A:', brussa
+      write(6,*) 'brusselator B:', brussb
+      write(6,*) 'brusselator eps:', eps
 
 c ----- initial and end point of integration -----
-        t = 0.0d0
+      t = 0.0d0
 c        tend = 3.d0
 
 c ----- initial values -----
-        dx = 1.d0/(ns-1)
-        do i=1,ns
-            xx           = (i-1) * dx
-            y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
-            y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
-            y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
-        end do
+      dx = 1.d0/(ns-1)
+      do i=1,ns
+      xx           = (i-1) * dx
+      y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
+      y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
+      y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
+      end do
 
-	  radadv=rhoadv(neqn,t,y)
-	  write (6,*) 'amult',amult,'adv spectral radius',radadv
-        return
+      radadv=rhoadv(neqn,t,y)
+      write (6,*) 'adv spectral radius',radadv
+      return
       end
 
 c--------------------------------------------------------
@@ -118,7 +112,7 @@ c--------------------------------------------------------
       double precision  y(neqn),ytmp(neqn)
 
 c --- common parameters for the problem -----
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
 c ----- file for solution -----
@@ -139,7 +133,7 @@ c     once.
 c--------------------------------------------------------
       double precision function rhodiff(neqn,t,y)
       implicit double precision (a-h,o-z)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
       rhodiff = 4.0d0*(nssq)*alf
       return
@@ -152,7 +146,7 @@ c     once.
 c--------------------------------------------------------
       double precision function rhoadv(neqn,t,y)
       implicit double precision (a-h,o-z)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
       rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns-1)
       return
@@ -165,7 +159,7 @@ c--------------------------------------------------------
 c ----- brusselator with diffusion in 1 dim. space -----
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 c ----- zero boundary conditions -----
       f(1)      = 0.d0
@@ -204,7 +198,7 @@ c--------------------------------------------------------
       subroutine fa(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
 c ----- zero boundary conditions -----
@@ -243,7 +237,7 @@ c--------------------------------------------------------
       subroutine fd2(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
       write (6,*) 'warning, dummy function fd2 called !!'
 	do i=1,neqn
@@ -258,7 +252,7 @@ c--------------------------------------------------------
       subroutine fr(neqn,npdes,ieqn,x,y,f,frjac,is_frjac)
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 	logical is_frjac
       uij = y(1)
@@ -311,7 +305,7 @@ c--------------------------------------------------------
       subroutine fw(neqn,x,y,f)
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
-      common/trans/alf,amult,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 	write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
 	do i=1,neqn
