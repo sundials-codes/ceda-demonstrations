@@ -157,11 +157,8 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
         namefile.write("&list1\n")
         namefile.write("   alf = " + str(d) + "\n")
         namefile.write("   uxadv = " + str(c) + "\n")
-        namefile.write("   uyadv = 0.0\n")
         namefile.write("   vxadv = " + str(c) + "\n")
-        namefile.write("   vyadv = 0.0\n")
         namefile.write("   wxadv = " + str(c) + "\n")
-        namefile.write("   wyadv = 0.0\n")
         namefile.write("   brussa = " + str(A) + "\n")
         namefile.write("   brussb = " + str(B) + "\n")
         namefile.write("   eps = " + str(eps) + "\n")
@@ -213,7 +210,7 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
 # utility routine to run a single C++ test, storing the run options and solver statistics
 def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', inttype='ARK', ststype=None, extststype=None, table_id=0, c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, tf=3.0, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, nout=20, showcommand=False):
     stats = {'probtype': probtype, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --tf %e --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --calc_error --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, tf, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
+    runcommand = "%s --c %e --d %e --A %e --B %e --eps %e --nx %d --tf %e --rtol %e --atol %e --fixed_h %e --maxl %d --nout %d --output 3 --maxsteps 1000000" % (exe, c, d, A, B, eps, nx, tf, rtol, atol, fixedh, maxl, nout) + int_method(probtype, inttype, ststype, extststype, table_id)
 
     # run the test (and determine runtime)
     tstart = time.perf_counter()
@@ -228,6 +225,10 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
     else:
         if (showcommand):
             print("Run command " + runcommand + " SUCCESS")
+
+        # compute solution error and store this in the stats
+        stats['Accuracy'] = calc_error(nx, "advection_diffusion_reaction.out", "reference.dat")
+
         lines = str(result.stdout).split('\\n')
         if (inttype == "ARK"):
             for line in lines:
@@ -236,8 +237,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['Steps'] = int(txt[2])
                 if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
                     stats['Fails'] = int(txt[4])
-                elif (("Solution" in txt) and ("error" in txt)):
-                    stats['Accuracy'] = float(txt[3])
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx" or probtype == "RxDiff"):
                         stats['AdvEvals'] = int(txt[4])
@@ -265,8 +264,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['Steps'] = int(txt[2])
                 if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
                     stats['Fails'] = int(txt[4])
-                elif (("Solution" in txt) and ("error" in txt)):
-                    stats['Accuracy'] = float(txt[3])
                 elif (("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx"):
                         stats['AdvEvals'] = int(txt[3])
@@ -295,8 +292,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['Steps'] = int(txt[2])
                 if (("Error" in txt) and ("test" in txt) and ("fails" in txt)):
                     stats['Fails'] = int(txt[4])
-                elif (("Solution" in txt) and ("error" in txt)):
-                    stats['Accuracy'] = float(txt[3])
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     if (probtype == "AdvDiffRx" or probtype == "AdvDiff"):
                         stats['AdvEvals'] = int(txt[5])
@@ -324,8 +319,6 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
                     stats['Steps'] = int(txt[2])
                 if (("Error" in txt) and ("test" in txt) and ("fails" in txt) and stats['Fails'] == 1e10):
                     stats['Fails'] = int(txt[4])
-                elif (("Solution" in txt) and ("error" in txt)):
-                    stats['Accuracy'] = float(txt[3])
                 elif (("Explicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
                     stats['AdvEvals'] = int(txt[6])
                 elif (("Implicit" in txt) and ("RHS" in txt) and ("evals" in txt)):
@@ -434,7 +427,7 @@ c = 0.5
 dvals = [1e-2, 1e-1, 1e0]
 A = 1.0
 B = 3.0
-epsvals = [1e-6, 1e-4, 1e-2, 1e0]
+epsvals = [1e-6, 1e-4, 1e-2]
 nx = 512
 tf = 3.0
 fixed_maxl = 500
@@ -488,7 +481,7 @@ if (DoAdvDiffRx):
             if (DoAdaptiveTests):
 
                 # set tolerances for adaptive ADR tests
-                rtol = np.logspace(-2.5, -6.5, 7)
+                rtol = np.logspace(-2.5, -6.5, 9)
                 atol = 1e-11
 
                 for solver in AdvDiffRxSolvers:
@@ -562,7 +555,7 @@ if (DoAdvDiff):
         if (DoAdaptiveTests):
 
             # set tolerances for adaptive AD tests
-            rtol = np.logspace(-2.5, -6.5, 7)
+            rtol = np.logspace(-2.5, -6.5, 9)
             atol = 1e-11
 
             for solver in AdvDiffSolvers:
@@ -637,7 +630,7 @@ if (DoRxDiff):
             if (DoAdaptiveTests):
 
                 # set tolerances for adaptive RD tests
-                rtol = np.logspace(-2.5, -6.5, 7)
+                rtol = np.logspace(-2.5, -6.5, 9)
                 atol = 1e-11
 
                 for solver in RxDiffSolvers:

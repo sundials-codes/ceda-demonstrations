@@ -233,7 +233,7 @@ if (DoAdvDiffRx):
     cvx=0.4
     cvy=0.7
     Bvals=[3.0, 3e1, 3e2]
-    dvals=[1e-2, 1e-1, 1e0]
+    dvals=[1e-2, 1e-1]
     A=1.0
     nx=400
     ny=400
@@ -261,7 +261,7 @@ if (DoRxDiff):
     cvy=0.0
     A=1.3
     Bvals=[2.e1, 2.e4, 2.e7]
-    dvals=[0.01, 0.1, 1.0]
+    dvals=[0.01, 0.1]
     nx=200
     ny=200
     tf=2.0

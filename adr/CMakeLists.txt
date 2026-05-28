@@ -50,10 +50,6 @@ set(sources_pirock_bruss2dadv dr_bruss2dadv.f)
 set(target_pirock_bruss2dadv advection_diffusion_reaction_2D_pirock)
 add_executable(${target_pirock_bruss2dadv} ${sources_pirock_bruss2dadv})
 
-set(sources_pirock_bruss2dadvreac dr_bruss2dadvreac.f)
-set(target_pirock_bruss2dadvreac advection_diffusion_reaction_separate_2D_pirock)
-add_executable(${target_pirock_bruss2dadvreac} ${sources_pirock_bruss2dadvreac})
-
 set(sources_pirock_bruss2dreac dr_bruss2dreac.f)
 set(target_pirock_bruss2dreac reaction_diffusion_2D_pirock)
 add_executable(${target_pirock_bruss2dreac} ${sources_pirock_bruss2dreac})

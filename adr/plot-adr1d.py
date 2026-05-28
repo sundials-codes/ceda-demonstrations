@@ -595,7 +595,7 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
 # generate plots, loading data from stored output
 dvals = [1e-2, 1e-1, 1e0]
-epsvals = [1e-6, 1e-4, 1e-2, 1e0]
+epsvals = [1e-6, 1e-4, 1e-2]
 if (Plot_ADR):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')

@@ -219,72 +219,6 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
     return stats
 
 
-# utility routine to run the PIROCK ADR executable with implicit reactions
-def runtest_ADR_pirock_imprx(exe='./bin/advection_diffusion_reaction_separate_2D_pirock', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
-    if (nx != 400):
-        raise(ValueError, "To run without 400 spatial nodes, need to edit/recompile pb_bruss2dadv.f (and this error check)")
-    stats = {'probtype': 'AdvDiffRx', 'implicitrx': True, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': None, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-
-    # create a temporary directory to run the test
-    with tempfile.TemporaryDirectory() as tempdir:
-        pwd = os.getcwd()
-        os.chdir(tempdir)
-
-        # modify parameters in namelist file and turn on/off advection/reaction
-        with open("adr_2D_pirock_params.txt",'w') as namefile:
-            namefile.write("&inputs\n")
-            namefile.write("   alf = " + str(d) + "\n")
-            namefile.write("   uxadv = " + str(cux) + "\n")
-            namefile.write("   uyadv = " + str(cuy) + "\n")
-            namefile.write("   vxadv = " + str(cvx) + "\n")
-            namefile.write("   vyadv = " + str(cvy) + "\n")
-            namefile.write("   brussa = " + str(A) + "\n")
-            namefile.write("   brussb = " + str(B) + "\n")
-            namefile.write("   atol = " + str(atol) + "\n")
-            namefile.write("   rtol = " + str(rtol) + "\n")
-            namefile.write("   h = " + str(fixedh) + "\n")
-            namefile.write("   tend = " + str(tf) + "\n")
-            namefile.write("/\n")
-
-        # run the test (and determine runtime)
-        tstart = time.perf_counter()
-        try:
-            result = subprocess.run(shlex.split(exe), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=maxruntime)
-            stats['ReturnCode'] = result.returncode
-            # print output to screen if requested
-            if (showoutput):
-                print(result.stdout.decode())
-        except subprocess.TimeoutExpired:
-            print('Test exceeded maximum run time and was terminated')
-            stats['ReturnCode'] = -1
-        stats['RunTime'] = time.perf_counter() - tstart
-
-        # process the run results
-        if (stats['ReturnCode'] != 0):
-            print("Run command " + exe + " FAILURE: " + str(stats['ReturnCode']))
-        else:
-            if(showcommand):
-                print("Run command: " + exe + " SUCCESS\n")
-
-            # compute solution error and store this in the stats
-            stats['Accuracy'] = calc_error(nx, "sol.dat", topdir + "/adr_reference.dat")
-
-            # get remaining stats from stdout
-            lines = str(result.stdout).split('\\n')
-            for line in lines:
-                if 'Number of f evaluations' in line:
-                    txt = line.split()
-                    stats['DiffEvals'] = abs(int(txt[4]))
-                    stats['AdvEvals'] = abs(int(txt[7]))
-                    stats['Steps'] = abs(int(txt[9]))
-                    stats['Fails'] = abs(int(txt[13]))
-                elif 'Number of reaction VF' in line:
-                    txt = line.split()
-                    stats['RxEvals'] = abs(int(txt[5]))
-        os.chdir(pwd)
-    return stats
-
-
 # utility routine to run the PIROCK RD executable
 def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B=2.e7, nx=200, ny=200, tf=2.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False, showoutput=False):
     if (nx != 200):
@@ -350,7 +284,7 @@ def runtest_RD_pirock(exe='./bin/reaction_diffusion_2D_pirock', d=1e-1, A=1.3, B
 # utility routine to run a single C++ test, storing the run options and solver statistics
 def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', implicitrx=False, inttype='ARK', ststype=None, extststype=None, table_id=0, cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0, rtol=1e-4, atol=1e-9, fixedh=0.0, maxl=0, showcommand=False, showoutput=False):
     stats = {'probtype': probtype, 'implicitrx': implicitrx, 'inttype': inttype, 'ststype': ststype, 'extststype': extststype, 'table_id': table_id, 'cux': cux, 'cuy': cuy, 'cvx': cvx, 'cvy': cvy, 'd': d, 'A': A, 'B': B, 'nx': nx, 'ny': ny, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': maxl, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
-    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --maxl %d --nout 1 --output 1 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh, maxl) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
+    runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol %e --atol %e --fixed_h %e --maxl %d --nout 1 --output 3 --maxsteps 10000000" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rtol, atol, fixedh, maxl) + int_method(probtype, implicitrx, inttype, ststype, extststype, table_id)
 
     # create a temporary directory to run the test
     with tempfile.TemporaryDirectory() as tempdir:
@@ -478,7 +412,7 @@ def main():
     DoExplicitRx = True
     DoADRFixedTests = True
     DoADRAdaptiveTests = True
-    DoRDFixedTests = False
+    DoRDFixedTests = True
     DoRDAdaptiveTests = True
     ShowCommand = True
     ShowOutput = True
@@ -572,7 +506,6 @@ def main():
         # shared problem parameters
         adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
         adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
-        adrpirockimprxexe=topdir + '/bin/advection_diffusion_reaction_separate_2D_pirock'
         probtype='AdvDiffRx'
         cux=-0.5
         cuy=1.0
@@ -580,7 +513,9 @@ def main():
         cvy=0.7
         A=1.0
         Bvals=[3.0, 3e1, 3e2]
-        dvals=[1e-2, 1e-1, 1e0]
+        dvals=[1e-2, 1e-1]
+        #Bvals=[3.0]
+        #dvals=[1e-2]
         nx=400
         ny=400
         tf=5.0
@@ -599,7 +534,6 @@ def main():
                 if (DoADRAdaptiveTests):
                     runtest_args = []
                     runtest_pirock_args = []
-                    runtest_pirock_imprx_args = []
 
                     # set tolerances for adaptive ADR tests
                     rtol = np.logspace(-2.5, -6.5, 9)
@@ -613,9 +547,6 @@ def main():
                             runtest_args.append((adrexe, probtype, True, solver[0], solver[1], solver[2],
                                                  solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, rt,
                                                  atol, 0.0, adapt_maxl, ShowCommand, ShowOutput))
-                    for rt in rtol:
-                        runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B, nx,
-                                                          ny, tf, rt, atol, 0.0, ShowCommand, ShowOutput))
 
                     # set up tests that treat reactions explicitly
                     for solver in AdvDiffRxSolversExpRx:
@@ -637,9 +568,6 @@ def main():
                         print("runtest_pirock_args:")
                         for argset in runtest_pirock_args:
                             print(argset)
-                        print("runtest_pirock_imprx_args:")
-                        for argset in runtest_pirock_imprx_args:
-                            print(argset)
 
                     # run tests in parallel
                     with multiprocessing.Pool(processes=maxprocs) as pool:
@@ -648,8 +576,6 @@ def main():
                             ar.append(pool.apply_async(runtest, args=args))
                         for args in runtest_pirock_args:
                             ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
-                        for args in runtest_pirock_imprx_args:
-                            ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
                         for a in ar:
                             st = a.get()
                             print(st)
@@ -658,7 +584,6 @@ def main():
                 if (DoADRFixedTests):
                     runtest_args = []
                     runtest_pirock_args = []
-                    runtest_pirock_imprx_args = []
 
                     # set step sizes for fixed-step ADR tests
                     fixedh        = 0.01 / np.array([16, 32, 64, 128], dtype=float)
@@ -679,11 +604,6 @@ def main():
                                                      solver[3], cux, cuy, cvx, cvy, d, A, B, nx, ny, tf, max
                                                      (1e-3*(h*h),1e-9), atol, h, fixed_maxl, ShowCommand,
                                                      ShowOutput))
-
-                        for h in fixedh_pirock:
-                            runtest_pirock_imprx_args.append((adrpirockimprxexe, cux, cuy, cvx, cvy, d, A, B,
-                                                              nx, ny, tf, max(1e-3*(h*h),1e-9), atol, h,
-                                                              ShowCommand, ShowOutput))
 
                     # set up tests that treat reactions explicitly
                     if (DoExplicitRx):
@@ -713,9 +633,6 @@ def main():
                         print("runtest_pirock_args:")
                         for argset in runtest_pirock_args:
                             print(argset)
-                        print("runtest_pirock_imprx_args:")
-                        for argset in runtest_pirock_imprx_args:
-                            print(argset)
 
                     # run tests in parallel
                     with multiprocessing.Pool(processes=maxprocs) as pool:
@@ -724,8 +641,6 @@ def main():
                             ar.append(pool.apply_async(runtest, args=args))
                         for args in runtest_pirock_args:
                             ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
-                        for args in runtest_pirock_imprx_args:
-                            ar.append(pool.apply_async(runtest_ADR_pirock_imprx, args=args))
                         for a in ar:
                             st = a.get()
                             print(st)
@@ -760,8 +675,10 @@ def main():
         cvx=0.0
         cvy=0.0
         A=1.3
+        #Bvals=[2.e7]
+        #dvals=[0.1]
         Bvals=[2.e1, 2.e4, 2.e7]
-        dvals=[0.01, 0.1, 1.0]
+        dvals=[0.01, 0.1]
         nx=200
         ny=200
         tf=2.0
