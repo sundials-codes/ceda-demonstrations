@@ -38,12 +38,19 @@ c --- read input from namelist file (if it exists) ---
       open(10, file='adr_2D_pirock_params.txt', status='old')
       read(10, nml=inputs)
       close(10)
-c ----- dimensions -----
+c ----- dimensions and parameters -----
 		  neqn   = nsd*nsd*2
 		  ns     = nsd
       nssq   = ns*ns
       nsnsm1 = ns*(ns-1)
       amult  = 1.d0
+      alf=alf*1.d0
+      uxadv=uxadv*1.d0
+      uyadv=uyadv*1.d0
+      vxadv=vxadv*1.d0
+      vyadv=vyadv*1.d0
+      brussa=brussa*1.d0
+      brussb=brussb*1.d0
 
       write(6,*) 'Integration of the '
      &   ,'2-dim Brusselator advection-diffusion-reaction '
@@ -53,19 +60,9 @@ c ----- dimensions -----
       write(6,*) 'diffusion:', alf
       write(6,*) 'brusselator A:', brussa
       write(6,*) 'brusselator B:', brussb
-c --------------- multiply by 1.d0 since Python doesn't write values with '.d'
-      alf=alf*1.d0
-      uxadv=uxadv*1.d0
-      uyadv=uyadv*1.d0
-      vxadv=vxadv*1.d0
-      vyadv=vyadv*1.d0
-      wxadv=wxadv*1.d0
-      wyadv=wyadv*1.d0
-      brussa=brussa*1.d0
-      brussb=brussb*1.d0
 
 c ----- initial and end point of integration -----
-      t    = 0.0d0
+      t = 0.0d0
 c      tend = 1.d0
 
 c ----- initial values -----
@@ -142,9 +139,6 @@ c ----- brusselator with diffusion in 2 dim. space -----
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-c ----- constants for inhomogenity -----
-      ans=ns
-      radsq=0.1d0**2
 c ----- big loop -----
       do i=1,nssq
 c ----- left neighbour -----
