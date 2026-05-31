@@ -82,8 +82,13 @@ struct UserData
   sunindextype ny = 400;
 
   // Mesh spacing
+#ifdef STATIONARY
+  sunrealtype dx = (xu - xl) / (nx-1);
+  sunrealtype dy = (yu - yl) / (ny-1);
+#else
   sunrealtype dx = (xu - xl) / (nx);
   sunrealtype dy = (yu - yl) / (ny);
+#endif
 
   // Number of equations
   sunindextype neq = NSPECIES * nx * ny;
@@ -583,8 +588,13 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   udata.profiling = !noprofiling;
 
   // Recompute mesh spacing and total number of nodes
+#ifdef STATIONARY
+  udata.dx  = (udata.xu - udata.xl) / (udata.nx - 1);
+  udata.dy  = (udata.yu - udata.yl) / (udata.ny - 1);
+#else
   udata.dx  = (udata.xu - udata.xl) / (udata.nx);
   udata.dy  = (udata.yu - udata.yl) / (udata.ny);
+#endif
   udata.neq = NSPECIES * udata.nx * udata.ny;
 
   // Create workspace
@@ -627,6 +637,9 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   cout << endl;
   cout << "Problem parameters and options:" << endl;
   cout << " --------------------------------- " << endl;
+#ifdef STATIONARY
+  cout << "  stationary BCs" << endl;
+#endif
   cout << "  cux              = " << udata.cux << endl;
   cout << "  cuy              = " << udata.cuy << endl;
   cout << "  cvx              = " << udata.cvx << endl;

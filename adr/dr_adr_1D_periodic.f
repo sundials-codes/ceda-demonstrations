@@ -5,44 +5,51 @@ c ----- to integrate with pirock.f -----
       include 'pirock.f'
       include 'decsol.f'
 c --- Problem driver and dimension parameters
-	include 'pb_bruss2dadvreac.f'
+	include 'pb_adr_1D_periodic.f'
       program main
-      parameter (nsd=400,npdes=2,neqn=nsd*nsd*npdes)
+      parameter(nsd=512,npdes=3,neqn=nsd*npdes)
 c ----------------------------------------------------
 	implicit double precision (a-h,o-z)
-      external fd,fd2,fa,fr,fw
 c --- common parameters for the problem -----
-      common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+      common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+      external fd,fd2,fa,fr,fw
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
       integer*8 iwork(25)
       integer idid,ijac(neqn)
       logical fixedstep
 c --- namelist definition
-      namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
-     &    atol,rtol,h,tend
+      namelist /list1/ alf,uxadv,vxadv,wxadv,brussa,brussb,eps,
+     &                 atol,rtol,h,iwork20,iwork21,tend
+
 c --- read input from namelist file (if it exists) ---
-      open(10, file='adr_2D_pirock_params.txt', status='old', err=100)
-      read(10, nml=inputs)
+      open(10, file='adr_1D_pirock_params.txt', status='old', err=100)
+      read(10, nml=list1)
       close(10)
       goto 110
+      uyadv=0.d0
+      vyadv=0.d0
+      wyadv=0.d0
 
   100 continue
       write(6,*) 'Could not open namelist file'
 c ----- initial step size -----
   110	if (h .le. 0.d0) then
           fixedstep=.false.
-          h=1.d-5
+          h=1.d-3
           write(6,*) 'Initial step size h=',h
       else
           fixedstep=.true.
           write(6,*) 'Fixed step size h=',h
       end if
-c note that we multiply by input tolerances and final time by 1.d0 since Python doesn't write values with '.d'
+c      write(6,*) 'advection driver:', uxadv,vxadv,wxadv
+c      write(6,*) 'diffusion driver:', alf
+c      write(6,*) 'reaction driver:', brussa,brussb,eps
+c --------------- multiplying by 1.d0 because of tests that are run from python script
+c --------------- because Python can't take in values with '.d'
       atol=atol*1.d0
       rtol=rtol*1.d0
-      tend=tend*1.d0
 
 c--------------------------------------------------------
 c     Initialize iwork:
@@ -54,6 +61,9 @@ c      iwork(4)=0  Atol and rtol are scalars.
       iwork(2)=1
       iwork(3)=0
       iwork(4)=0
+c c
+c       write(7,*) 'Starting values:'
+c       iwork(1) = iwork1
 c--------------------------------------------------------
 c     iwork(19)   =2 Stepsize control with  memory
 c                 =1 Stepsize control without memory
@@ -64,6 +74,9 @@ c     iwork(22)   =1 Enable F_W (noise, constant stepsize)
 c     iwork(23)   =1 Verbose (print stepsizes and errors)
 c     iwork(24)   =0 (symmetric diffusion operator)
 c--------------------------------------------------------
+c	 iwork(19)=2
+c	 iwork(23)=0
+c	 iwork(24)=0
       if (fixedstep) then
           iwork(19)=0
       else
@@ -72,8 +85,11 @@ c--------------------------------------------------------
 	iwork(23)=0
 	iwork(24)=0
 c
-	iwork(20)=1
-	iwork(21)=1
+c	 iwork(20)=1
+c	 iwork(21)=1
+c	 iwork(22)=0
+      iwork(20)=iwork20
+	iwork(21)=iwork21
 	iwork(22)=0
 
 c iwork for stats
@@ -81,17 +97,15 @@ c iwork for stats
 	    iwork(i)=0
 	end do
 
-c note that we define the final time from the namelist input file, and not the hard-coded value in init()
       call init(nsd,t,tend,y)
 
 c ----- integration -----
 	write (6,*) 'rtol',rtol
 	write (6,*) 'atol',atol
-
 	CALL CPU_TIME(time0)
 c ----- to integrate with rock2.f
       call pirock(neqn,npdes,t,tend,h,y,fd,fd2,fa,fr,fw,atol,rtol,
-     &           frjac,ijac,work,iwork,idid)
+     &            frjac,ijac,work,iwork,idid)
       CALL CPU_TIME(time1)
 	write (6,*) 'CPU time',time1-time0
 c ----- print statistics -----

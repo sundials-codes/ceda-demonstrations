@@ -14,8 +14,17 @@ target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
 target_link_libraries(${target} PRIVATE
   SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
 
+set(sources_periodic ${shared_sources} advection_diffusion_reaction.cpp)
+set(target_periodic advection_diffusion_reaction_1D_periodic)
+add_executable(${target_periodic} ${sources_periodic})
+target_include_directories(${target_periodic} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
+target_link_libraries(${target_periodic} PRIVATE
+  SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
+target_compile_definitions(${target_periodic} PRIVATE PERIODIC)
+
 #   request installation of the target into the overall "bin" folder
-install(TARGETS ${target} DESTINATION ${demonstration_bin})
+install(TARGETS ${target} ${target_periodic}
+        DESTINATION ${demonstration_bin})
 
 
 ### Set up C++ executable for 2D advection_diffusion_reaction ###
@@ -34,8 +43,17 @@ target_include_directories(${target_2d} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
 target_link_libraries(${target_2d} PRIVATE
   SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
 
+set(sources_2d_stationary ${shared_sources} advection_diffusion_reaction_2d.cpp)
+set(target_2d_stationary advection_diffusion_reaction_2D_stationary)
+add_executable(${target_2d_stationary} ${sources_2d_stationary})
+target_include_directories(${target_2d_stationary} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/")
+target_link_libraries(${target_2d_stationary} PRIVATE
+  SUNDIALS::arkode SUNDIALS::nvecserial SUNDIALS::sundomeigestpower)
+target_compile_definitions(${target_2d_stationary} PRIVATE STATIONARY)
+
 #   request installation of the target into the overall "bin" folder
-install(TARGETS ${target_2d} DESTINATION ${demonstration_bin})
+install(TARGETS ${target_2d} ${target_2d_stationary}
+        DESTINATION ${demonstration_bin})
 
 
 ### Set up PIROCK executables ###
@@ -46,9 +64,17 @@ set(sources_pirock_adr1D dr_adr_1D.f)
 set(target_pirock_adr1D advection_diffusion_reaction_1D_pirock)
 add_executable(${target_pirock_adr1D} ${sources_pirock_adr1D})
 
+set(sources_pirock_adr1D_periodic dr_adr_1D_periodic.f)
+set(target_pirock_adr1D_periodic advection_diffusion_reaction_1D_periodic_pirock)
+add_executable(${target_pirock_adr1D_periodic} ${sources_pirock_adr1D_periodic})
+
 set(sources_pirock_bruss2dadv dr_bruss2dadv.f)
 set(target_pirock_bruss2dadv advection_diffusion_reaction_2D_pirock)
 add_executable(${target_pirock_bruss2dadv} ${sources_pirock_bruss2dadv})
+
+set(sources_pirock_bruss2dadv_stationary dr_bruss2dadv_stationary.f)
+set(target_pirock_bruss2dadv_stationary advection_diffusion_reaction_2D_stationary_pirock)
+add_executable(${target_pirock_bruss2dadv_stationary} ${sources_pirock_bruss2dadv_stationary})
 
 set(sources_pirock_bruss2dreac dr_bruss2dreac.f)
 set(target_pirock_bruss2dreac reaction_diffusion_2D_pirock)
@@ -64,8 +90,9 @@ endif()
 
 #   request installation of the targets into the overall "bin" folder
 install(TARGETS ${target_pirock_adr1D}
+                ${target_pirock_adr1D_periodic}
                 ${target_pirock_bruss2dadv}
-                ${target_pirock_bruss2dadvreac}
+                ${target_pirock_bruss2dadv_stationary}
                 ${target_pirock_bruss2dreac}
         DESTINATION ${demonstration_bin})
 

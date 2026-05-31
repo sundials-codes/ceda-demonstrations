@@ -349,8 +349,10 @@ DoFixedTests = True
 DoAdaptiveTests = True
 
 # Shared testing parameters
-Executable = './bin/advection_diffusion_reaction_1D'
-PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
+#Executable = './bin/advection_diffusion_reaction_1D'
+#PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
+Executable = './bin/advection_diffusion_reaction_1D_periodic'
+PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock_periodic'
 
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21

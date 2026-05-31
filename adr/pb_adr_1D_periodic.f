@@ -56,7 +56,7 @@ c --- read input from namelist file (if it exists) ---
 c ----- dimensions and parameters -----
       neqn   = nsd*npdes
       ns     = nsd
-      nssq   = (ns-1)*(ns-1)
+      nssq   = ns*ns
       nsnsm1 = ns*(ns-1)
       alf=alf*1.d0
       uxadv=uxadv*1.d0
@@ -80,6 +80,7 @@ c         write(6,*) 'Could not open namelist file'
 
       write(6,*) 'Integration of the '
      &   ,'1-dim Brusselator problem, ns=',ns
+      write(6,*) 'periodic boundary conditions'
       write(6,*) 'advection pb:', uxadv,vxadv,wxadv
       write(6,*) 'diffusion pb:', alf
       write(6,*) 'brusselator A:', brussa
@@ -91,7 +92,7 @@ c ----- initial and end point of integration -----
 c        tend = 3.d0
 
 c ----- initial values -----
-      dx = 1.d0/(ns-1)
+      dx = 1.d0/ns
       do i=1,ns
         xx       = (i-1) * dx
         y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
@@ -148,7 +149,7 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
-      rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns-1)
+      rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns)
       return
       end
 c--------------------------------------------------------
@@ -162,24 +163,30 @@ c ----- brusselator with diffusion in 1 dim. space -----
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 c ----- zero boundary conditions -----
-      f(1)      = 0.d0
-      f(2)      = 0.d0
-      f(3)      = 0.d0
-      f(3*ns-2) = 0.d0
-      f(3*ns-1) = 0.d0
-      f(3*ns)   = 0.d0
-      dx = 1.d0 / (ns-1)
+      dx = 1.d0 / (ns)
       d = alf / dx / dx
 c ----- big loop -----
-      do i=2,ns-1
+      do i=1,ns
 c ----- left neighbour -----
-        uleft=y((i-1)*3-2)
-        vleft=y((i-1)*3-1)
-        wleft=y((i-1)*3)
+        if(i == 1) then
+          uleft=y((ns-1)*3-2)
+          vleft=y((ns-1)*3-1)
+          wleft=y((ns-1)*3)
+        else
+          uleft=y((i-1)*3-2)
+          vleft=y((i-1)*3-1)
+          wleft=y((i-1)*3)
+        end if
 c ----- right neighbour -----
-        uright=y((i+1)*3-2)
-        vright=y((i+1)*3-1)
-        wright=y((i+1)*3)
+        if (i == ns) then
+          uright=y(1)
+          vright=y(2)
+          wright=y(3)
+        else
+          uright=y((i+1)*3-2)
+          vright=y((i+1)*3-1)
+          wright=y((i+1)*3)
+        end if
 c ----- the derivative -----
         uij=y(i*3-2)
         vij=y(i*3-1)
@@ -202,31 +209,37 @@ c--------------------------------------------------------
      &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
 
 c ----- zero boundary conditions -----
-      f(1)      = 0.d0
-      f(2)      = 0.d0
-      f(3)      = 0.d0
-      f(3*ns-2) = 0.d0
-      f(3*ns-1) = 0.d0
-      f(3*ns)   = 0.d0
+      dx = 1.d0 / ns
 c ----- big loop -----
-      dx = 1.d0 / (ns-1)
       c = -1.d0 * uxadv / (2.d0 * dx)
-      do i=2,ns-1
+      do i=1,ns
 c ----- left neighbour -----
+        if(i == 1) then
+          uleft=y((ns-1)*3-2)
+          vleft=y((ns-1)*3-1)
+          wleft=y((ns-1)*3)
+        else
           uleft=y((i-1)*3-2)
           vleft=y((i-1)*3-1)
           wleft=y((i-1)*3)
+        end if
 c ----- right neighbour -----
+        if (i == ns) then
+          uright=y(1)
+          vright=y(2)
+          wright=y(3)
+        else
           uright=y((i+1)*3-2)
           vright=y((i+1)*3-1)
           wright=y((i+1)*3)
+        end if
 c ----- the derivative -----
-          uij=y(i*3-2)
-          vij=y(i*3-1)
-          wij=y(i*3)
-	    f(i*3-2) = c * (uright - uleft)
-          f(i*3-1) = c * (vright - vleft)
-          f(i*3)   = c * (wright - wleft)
+        uij=y(i*3-2)
+        vij=y(i*3-1)
+        wij=y(i*3)
+	  f(i*3-2) = c * (uright - uleft)
+        f(i*3-1) = c * (vright - vleft)
+        f(i*3)   = c * (wright - wleft)
 	end do
       return
       end
@@ -259,42 +272,22 @@ c--------------------------------------------------------
       vij = y(2)
       wij = y(3)
 
-      if ((ieqn .eq. 1) .or. (ieqn .eq. neqn-2)) then
-          f(1) = 0.d0
-          f(2) = 0.d0
-          f(3) = 0.d0
-      else
-          f(1) = brussa - (wij+1.d0)*uij + vij*uij*uij
-          f(2) = wij*uij - vij*uij*uij
-          f(3) = (brussb - wij)/eps - wij*uij
-      end if
+      f(1) = brussa - (wij+1.d0)*uij + vij*uij*uij
+      f(2) = wij*uij - vij*uij*uij
+      f(3) = (brussb - wij)/eps - wij*uij
 
       if (is_frjac) then
-          if ((ieqn .eq. 1) .or. (ieqn .eq. neqn-2)) then
-              frjac(1,1) = 0.d0
-              frjac(2,1) = 0.d0
-              frjac(3,1) = 0.d0
+        frjac(1,1) = -(wij+1.d0) + 2.d0*uij*vij
+        frjac(1,2) = uij*uij
+        frjac(1,3) = -uij
 
-              frjac(1,2) = 0.d0
-              frjac(2,2) = 0.d0
-              frjac(3,2) = 0.d0
+        frjac(2,1) = wij - 2.d0*uij*vij
+        frjac(2,2) = -uij*uij
+        frjac(2,3) = uij
 
-              frjac(1,3) = 0.d0
-              frjac(2,3) = 0.d0
-              frjac(3,3) = 0.d0
-          else
-              frjac(1,1) = -(wij+1.d0) + 2.d0*uij*vij
-              frjac(1,2) = uij*uij
-              frjac(1,3) = -uij
-
-              frjac(2,1) = wij - 2.d0*uij*vij
-              frjac(2,2) = -uij*uij
-              frjac(2,3) = uij
-
-              frjac(3,1) = -wij
-              frjac(3,2) = 0.d0
-              frjac(3,3) = -(1.d0/eps) - uij
-          end if
+        frjac(3,1) = -wij
+        frjac(3,2) = 0.d0
+        frjac(3,3) = -(1.d0/eps) - uij
       end if
 	return
       end

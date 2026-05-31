@@ -410,10 +410,10 @@ def main():
     # Flags to enable/disable categories of tests
     DoImplicitRx = False
     DoExplicitRx = True
-    DoADRFixedTests = True
+    DoADRFixedTests = False
     DoADRAdaptiveTests = True
-    DoRDFixedTests = True
-    DoRDAdaptiveTests = True
+    DoRDFixedTests = False
+    DoRDAdaptiveTests = False
     ShowCommand = True
     ShowOutput = True
     ShowArgs = True
@@ -504,18 +504,20 @@ def main():
     if (DoADRFixedTests or DoADRAdaptiveTests):
 
         # shared problem parameters
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
-        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
         probtype='AdvDiffRx'
         cux=-0.5
         cuy=1.0
         cvx=0.4
         cvy=0.7
         A=1.0
-        Bvals=[3.0, 3e1, 3e2]
-        dvals=[1e-2, 1e-1]
-        #Bvals=[3.0]
-        #dvals=[1e-2]
+        #Bvals=[3.0, 3e1, 3e2]
+        #dvals=[1e-2, 1e-1]
+        Bvals=[3.0]
+        dvals=[1e-2]
         nx=400
         ny=400
         tf=5.0

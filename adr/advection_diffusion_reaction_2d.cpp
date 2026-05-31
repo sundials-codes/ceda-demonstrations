@@ -17,7 +17,11 @@
  *   u(x,y,0) = 22 * y * (1 - y)^(1.5)
  *   v(x,y,0) = 27 * x * (1 - x)^(1.5)
  *
+ #ifdef STATIONARY
+ * and stationary boundary conditions.
+ #else
  * and periodic boundary conditions.
+ #endif
  *
  * The system is advanced in time using one of the following approaches based on
  * the --integrator <int> flag value. The following options are available:
@@ -113,7 +117,7 @@ int main(int argc, char* argv[])
   // LSRKStep integrator for ExtSTS and Strang splitting methods
   void* lsrkstep_mem = nullptr;
 
-  // ARKStep integrator for Strang splitting method
+  // ARKStep integrators for Strang splitting method
   SUNStepper steppers[2];
   void* arkstep_mem = nullptr;
 
@@ -1236,10 +1240,27 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   const sunindextype nx = udata->nx;
   const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
-  for (sunindextype j = 0; j < ny; j++) // periodic boundary conditions
+#ifdef STATIONARY
+  for (sunindextype j = 1; j < ny-1; j++) //stationary boundary conditions
+  {
+    for (sunindextype i = 1; i < nx-1; i++)
+#else
+  for (sunindextype j = 0; j < ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < nx; i++)
+#endif
     {
+#ifdef STATIONARY
+      const sunrealtype ulx = ydata[UIDX(i - 1, j, nx)];
+      const sunrealtype urx = ydata[UIDX(i + 1, j, nx)];
+      const sunrealtype uby = ydata[UIDX(i, j - 1, nx)];
+      const sunrealtype uty = ydata[UIDX(i, j + 1, nx)];
+
+      const sunrealtype vlx = ydata[VIDX(i - 1, j, nx)];
+      const sunrealtype vrx = ydata[VIDX(i + 1, j, nx)];
+      const sunrealtype vby = ydata[VIDX(i, j - 1, nx)];
+      const sunrealtype vty = ydata[VIDX(i, j + 1, nx)];
+#else
       const sunrealtype ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
       const sunrealtype urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
       const sunrealtype uby = (j > 0)      ? ydata[UIDX(i, j - 1, nx)] : ydata[UIDX(i, ny - 1, nx)];
@@ -1249,7 +1270,7 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
       const sunrealtype vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
       const sunrealtype vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
       const sunrealtype vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
-
+#endif
       fdata[UIDX(i, j, nx)] = cux * (urx - ulx) + cuy * (uty - uby);
       fdata[VIDX(i, j, nx)] = cvx * (vrx - vlx) + cvy * (vty - vby);
     }
@@ -1285,10 +1306,29 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   const sunindextype nx = udata->nx;
   const sunindextype ny = udata->ny;
   N_VConst(ZERO, f);
+#ifdef STATIONARY
+  for (sunindextype j = 1; j < ny-1; j++) //stationary boundary conditions
+  {
+    for (sunindextype i = 1; i < nx-1; i++)
+#else
   for (sunindextype j = 0; j < ny; j++) //periodic boundary conditions
   {
     for (sunindextype i = 0; i < nx; i++)
+#endif
     {
+#ifdef STATIONARY
+      const sunrealtype uc  = ydata[UIDX(i, j, nx)];
+      const sunrealtype ulx = ydata[UIDX(i - 1, j, nx)];
+      const sunrealtype urx = ydata[UIDX(i + 1, j, nx)];
+      const sunrealtype uby = ydata[UIDX(i, j - 1, nx)];
+      const sunrealtype uty = ydata[UIDX(i, j + 1, nx)];
+
+      const sunrealtype vc  = ydata[VIDX(i, j, nx)];
+      const sunrealtype vlx = ydata[VIDX(i - 1, j, nx)];
+      const sunrealtype vrx = ydata[VIDX(i + 1, j, nx)];
+      const sunrealtype vby = ydata[VIDX(i, j - 1, nx)];
+      const sunrealtype vty = ydata[VIDX(i, j + 1, nx)];
+#else
       const sunrealtype uc  = ydata[UIDX(i, j, nx)];
       const sunrealtype ulx = (i > 0)      ? ydata[UIDX(i - 1, j, nx)] : ydata[UIDX(nx - 1, j, nx)];
       const sunrealtype urx = (i < nx - 1) ? ydata[UIDX(i + 1, j, nx)] : ydata[UIDX(0, j, nx)];
@@ -1300,7 +1340,7 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
       const sunrealtype vrx = (i < nx - 1) ? ydata[VIDX(i + 1, j, nx)] : ydata[VIDX(0, j, nx)];
       const sunrealtype vby = (j > 0)      ? ydata[VIDX(i, j - 1, nx)] : ydata[VIDX(i, ny - 1, nx)];
       const sunrealtype vty = (j < ny - 1) ? ydata[VIDX(i, j + 1, nx)] : ydata[VIDX(i, 0, nx)];
-
+#endif
       fdata[UIDX(i, j, nx)] = d * dxinv2 * (ulx + urx - TWO * uc)
                             + d * dyinv2 * (uby + uty - TWO * uc);
       fdata[VIDX(i, j, nx)] = d * dxinv2 * (vlx + vrx - TWO * vc)
@@ -1332,9 +1372,15 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
 
   // Compute reaction RHS
   N_VConst(ZERO, f);
+#ifdef STATIONARY
+  for (sunindextype j = 1; j < udata->ny - 1; j++) // stationary boundary conditions
+  {
+    for (sunindextype i = 1; i < udata->nx - 1; i++)
+#else
   for (sunindextype j = 0; j < udata->ny; j++) // periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
+#endif
     {
       const sunrealtype u = ydata[UIDX(i, j, udata->nx)];
       const sunrealtype v = ydata[VIDX(i, j, udata->nx)];
@@ -1366,9 +1412,15 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return 1; }
   const sunindextype nx = udata->nx;
   SUNMatZero(J);
+#ifdef STATIONARY
+  for (sunindextype j = 1; j < udata->ny - 1; j++) // stationary boundary conditions
+  {
+    for (sunindextype i = 1; i < udata->nx - 1; i++)
+#else
   for (sunindextype j = 0; j < udata->ny; j++) // periodic boundary conditions
   {
     for (sunindextype i = 0; i < udata->nx; i++)
+#endif
     {
       const sunrealtype u = ydata[UIDX(i, j, nx)];
       const sunrealtype v = ydata[VIDX(i, j, nx)];

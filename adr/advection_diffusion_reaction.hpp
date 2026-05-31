@@ -80,7 +80,11 @@ struct UserData
   sunindextype nx = 512;
 
   // Mesh spacing
+#ifdef PERIODIC
+  sunrealtype dx = (xu - xl) / nx;
+#else
   sunrealtype dx = (xu - xl) / (nx - 1);
+#endif
 
   // Number of equations
   sunindextype neq = NSPECIES * nx;
@@ -573,7 +577,11 @@ static int ReadInputs(vector<string>& args, UserData& udata, UserOptions& uopts,
   udata.profiling = !noprofiling;
 
   // Recompute mesh spacing and total number of nodes
+#ifdef PERIODIC
+  udata.dx  = (udata.xu - udata.xl) / (udata.nx);
+#else
   udata.dx  = (udata.xu - udata.xl) / (udata.nx - 1);
+#endif
   udata.neq = NSPECIES * udata.nx;
 
   // Create workspace
@@ -625,6 +633,9 @@ static int PrintSetup(UserData& udata, UserOptions& uopts)
   cout << endl;
   cout << "Problem parameters and options:" << endl;
   cout << " --------------------------------- " << endl;
+#ifdef PERIODIC
+  cout << "  periodic BCs" << endl;
+#endif
   cout << "  c                = " << udata.c << endl;
   cout << "  d                = " << udata.d << endl;
   cout << "  A                = " << udata.A << endl;

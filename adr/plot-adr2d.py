@@ -23,8 +23,8 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 Plot_ADR = True
-Plot_RD = True
-Plot_Fixed = True
+Plot_RD = False
+Plot_Fixed = False
 Plot_Adaptive = True
 
 # utility functions to generate plots
@@ -752,8 +752,10 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
 # generate plots, loading data from stored output
 if (Plot_ADR):
-    dvals=[1e-2, 1e-1]
-    Bvals=[3.0, 3e1, 3e2]
+    #dvals=[1e-2, 1e-1]
+    #Bvals=[3.0, 3e1, 3e2]
+    dvals=[1e-2]
+    Bvals=[3.0]
     if (Plot_Fixed):
         integrators=None
         #integrators=['ExtSTS+ARS+RKC, expl-R', 'ExtSTS+Giraldo+RKC, expl-R', 'ExtSTS+SSP22+RKC', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP42+RKC', 'PIROCK, expl-R', 'Strang+RKC, expl-R']

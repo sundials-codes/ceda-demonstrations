@@ -1,4 +1,4 @@
-c Brusselator problem with advection, nonstiff reaction treated implicitly
+c Brusselator problem with advection, nonstiff reaction
 c--------------------------------------------------------
 c    2D Brusselator problem with nonstiff reaction and advection
 c--------------------------------------------------------
@@ -14,9 +14,7 @@ c
 c       u(x,y,0) = 22 * y * (1-y)^{3/2}
 c       v(x,y,0) = 27 * x * (1-x)^{3/2}
 c
-c    and periodic boundary conditions
-c
-c        u(x+1,y,t) = u(x,y,t),  v(x,y+1,t) = v(x,y,t).
+c    and stationary boundary conditions.
 c
 c    We discretize the space variables with x_i=i/(N+1), y_i=i/(N+1)
 c    for i=0,1,...,N, with N=400. We obtain a system of 320000
@@ -25,7 +23,7 @@ c
 c--------------------------------------------------------
 
       SUBROUTINE init(nsd,t,tend,y)
-		  implicit double precision (a-h,o-z)
+	implicit double precision (a-h,o-z)
       double precision  y(*)
 
 c --- common parameters for the problem -----
@@ -38,59 +36,57 @@ c --- read input from namelist file (if it exists) ---
       open(10, file='adr_2D_pirock_params.txt', status='old')
       read(10, nml=inputs)
       close(10)
-
-c ----- dimensions -----
-		  neqn   = nsd*nsd*npdes
-		  ns     = nsd
+c ----- dimensions and parameters -----
+      neqn   = nsd*nsd*2
+	ns     = nsd
       nssq   = ns*ns
       nsnsm1 = ns*(ns-1)
       amult  = 1.d0
+      alf    = alf*1.d0
+      uxadv  = uxadv*1.d0
+      uyadv  = uyadv*1.d0
+      vxadv  = vxadv*1.d0
+      vyadv  = vyadv*1.d0
+      brussa = brussa*1.d0
+      brussb = brussb*1.d0
 
       write(6,*) 'Integration of the '
      &   ,'2-dim Brusselator advection-diffusion-reaction '
      &   ,'problem, ns=',ns
+      write(6,*) 'stationary boundary conditions'
       write(6,*) 'u advection:', uxadv, uyadv
       write(6,*) 'v advection:', vxadv, vyadv
       write(6,*) 'diffusion:', alf
       write(6,*) 'brusselator A:', brussa
       write(6,*) 'brusselator B:', brussb
-c --------------- multiply by 1.d0 since Python doesn't write values with '.d'
-      alf=alf*1.d0
-      uxadv=uxadv*1.d0
-      uyadv=uyadv*1.d0
-      vxadv=vxadv*1.d0
-      vyadv=vyadv*1.d0
-      wxadv=wxadv*1.d0
-      wyadv=wyadv*1.d0
-      brussa=brussa*1.d0
-      brussb=brussb*1.d0
 
 c ----- initial and end point of integration -----
-      t    = 0.0d0
+      t = 0.0d0
 c      tend = 1.d0
 
 c ----- initial values -----
-      ans=ns
+      dx=1.d0/(ns-1)
+      dy=1.d0/(ns-1)
       do j=1,ns
-        yy=(j-1)/ans
+        yy=(j-1)*dy
         do i=1,ns
           y(((j-1)*ns+i)*2-1) = 22.d0*yy*(1.d0-yy)**(1.5d0)
         end do
       end do
       do i=1,ns
-        xx=(i-1)/ans
+        xx=(i-1)*dx
         do j=1,ns
           y(((j-1)*ns+i)*2) = 27.d0*xx*(1.d0-xx)**(1.5d0)
         end do
       end do
 c
-		  radadv=rhoadv(neqn,t,y)
-		  write (6,*) 'amult',amult,'adv spectral radius',radadv
+	radadv=rhoadv(neqn,t,y)
+	write (6,*) 'amult',amult,'adv spectral radius',radadv
       return
       end
 
       SUBROUTINE solout(neqn,t,tend,y,ytmp)
-		  implicit double precision (a-h,o-z)
+	implicit double precision (a-h,o-z)
       double precision  y(neqn),ytmp(neqn)
 
 c --- common parameters for the problem -----
@@ -100,11 +96,10 @@ c --- common parameters for the problem -----
 c ----- file for solution -----
       open(8,file='sol.dat')
       rewind 8
-		  write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
+	write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
      &   ((y(((j-1)*ns+i)*2),i=1,ns),j=1,ns)
-
-		  write(6,*) 'Solution is tabulated in file sol.dat'
-		  close(8)
+	write(6,*) 'Solution is tabulated in file sol.dat'
+	close(8)
       return
       end
 c--------------------------------------------------------
@@ -117,7 +112,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-      rhodiff = 8.0d0*nssq*alf
+      dx = 1.d0/(ns-1)
+      rhodiff = 8.0d0*alf/dx/dx
       return
       end
 c--------------------------------------------------------
@@ -130,7 +126,7 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-      rhoadv = (abs(uxadv)+abs(vxadv)+abs(uyadv)+abs(vyadv))*ns
+      rhoadv = (abs(uxadv)+abs(vxadv)+abs(uyadv)+abs(vyadv))*(ns-1)
       return
       end
 c--------------------------------------------------------
@@ -143,48 +139,33 @@ c ----- brusselator with diffusion in 2 dim. space -----
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-c ----- constants for inhomogenity -----
-      ans=ns
-      radsq=0.1d0**2
+      dx = 1.d0/(ns-1)
 c ----- big loop -----
       do i=1,nssq
+c ----- set fd to zero on the physical boundaries -----
+        if((mod(i,ns).eq.1) .or. (mod(i,ns).eq.0)
+     &     .or. (i.le.ns) .or. (i.gt.nsnsm1)) then
+          f(i*2-1)=0.d0
+          f(i*2)=0.d0
+          cycle
+        end if
 c ----- left neighbour -----
-        if(mod(i,ns).eq.1)then
-          uleft=y((i+ns-1)*2-1)
-          vleft=y((i+ns-1)*2)
-        else
-          uleft=y((i-1)*2-1)
-          vleft=y((i-1)*2)
-        end if
+        uleft=y((i-1)*2-1)
+        vleft=y((i-1)*2)
 c ----- right neighbour -----
-        if(mod(i,ns).eq.0)then
-          uright=y((i-ns+1)*2-1)
-          vright=y((i-ns+1)*2)
-        else
-          uright=y((i+1)*2-1)
-          vright=y((i+1)*2)
-        end if
+        uright=y((i+1)*2-1)
+        vright=y((i+1)*2)
 c ----- lower neighbour -----
-        if(i.le.ns)then
-          ulow=y((i+nsnsm1)*2-1)
-          vlow=y((i+nsnsm1)*2)
-        else
-          ulow=y((i-ns)*2-1)
-          vlow=y((i-ns)*2)
-        end if
+        ulow=y((i-ns)*2-1)
+        vlow=y((i-ns)*2)
 c ----- upper neighbour -----
-        if(i.gt.nsnsm1)then
-          uup=y((i-nsnsm1)*2-1)
-          vup=y((i-nsnsm1)*2)
-        else
-          uup=y((i+ns)*2-1)
-          vup=y((i+ns)*2)
-        end if
+        uup=y((i+ns)*2-1)
+        vup=y((i+ns)*2)
 c ----- the derivative -----
         uij=y(i*2-1)
         vij=y(i*2)
-        f(i*2-1)=alf*nssq*(uleft+uright+ulow+uup-4.d0*uij)
-        f(i*2)=alf*nssq*(vleft+vright+vlow+vup-4.d0*vij)
+        f(i*2-1)=alf/dx/dx*(uleft+uright+ulow+uup-4.d0*uij)
+        f(i*2)=alf/dx/dx*(vleft+vright+vlow+vup-4.d0*vij)
       end do
       return
       end
@@ -198,46 +179,36 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+      dx = 1.d0/(ns-1)
 c ----- big loop -----
       do i=1,nssq
+c ----- set fa to zero on the physical boundaries -----
+        if((mod(i,ns).eq.1) .or. (mod(i,ns).eq.0)
+     &     .or. (i.le.ns) .or. (i.gt.nsnsm1)) then
+          f(i*2-1)=0.d0
+          f(i*2)=0.d0
+          cycle
+        end if
 c ----- left neighbour -----
-        if(mod(i,ns).eq.1)then
-          uleft=y((i+ns-1)*2-1)
-          vleft=y((i+ns-1)*2)
-        else
-          uleft=y((i-1)*2-1)
-          vleft=y((i-1)*2)
-        end if
+        uleft=y((i-1)*2-1)
+        vleft=y((i-1)*2)
 c ----- right neighbour -----
-        if(mod(i,ns).eq.0)then
-          uright=y((i-ns+1)*2-1)
-          vright=y((i-ns+1)*2)
-        else
-          uright=y((i+1)*2-1)
-          vright=y((i+1)*2)
-        end if
+        uright=y((i+1)*2-1)
+        vright=y((i+1)*2)
 c ----- lower neighbour -----
-        if(i.le.ns)then
-          ulow=y((i+nsnsm1)*2-1)
-          vlow=y((i+nsnsm1)*2)
-        else
-          ulow=y((i-ns)*2-1)
-          vlow=y((i-ns)*2)
-        end if
+        ulow=y((i-ns)*2-1)
+        vlow=y((i-ns)*2)
 c ----- upper neighbour -----
-        if(i.gt.nsnsm1)then
-          uup=y((i-nsnsm1)*2-1)
-          vup=y((i-nsnsm1)*2)
-        else
-          uup=y((i+ns)*2-1)
-          vup=y((i+ns)*2)
-        end if
+        uup=y((i+ns)*2-1)
+        vup=y((i+ns)*2)
 c ----- the derivative -----
         uij=y(i*2-1)
         vij=y(i*2)
-		    f(i*2-1)=0.5d0*ns*(uxadv*(uright-uleft)+uyadv*(uup-ulow))
-        f(i*2)=0.5d0*ns*(vxadv*(vright-vleft)+vyadv*(vup-vlow))
-		  end do
+	  f(i*2-1)=0.5d0/dx*(uxadv*(uright-uleft)+uyadv*(uup-ulow))
+     &      + brussa + uij*uij*vij - (brussb+1.d0)*uij
+        f(i*2)=0.5d0/dx*(vxadv*(vright-vleft)+vyadv*(vup-vlow))
+     &      + brussb*uij - uij*uij*vij
+	end do
       return
       end
 c--------------------------------------------------------
@@ -249,11 +220,11 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-		  write (6,*) 'warning, dummy function fd2 called !!'
-		  do i=1,neqn
-		    f(i)=0.0d0
-		  end do
-		  return
+	write (6,*) 'warning, dummy function fd2 called !!'
+	do i=1,neqn
+	  f(i)=0.0d0
+	end do
+	return
       end
 c--------------------------------------------------------
 c     The subroutine FR (reaction terms)
@@ -262,21 +233,19 @@ c--------------------------------------------------------
       subroutine fr(neqn,npdes,ieqn,x,y,f,frjac,is_frjac)
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
-      common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
+      common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-			logical is_frjac
-			uij=y(1)
-      vij=y(2)
-      f(1)=brussa + uij*uij*vij - (brussb+1.d0)*uij
-      f(2)=brussb*uij - uij*uij*vij
-			if (is_frjac) then
-			frjac(1,1)=2.d0*uij*vij-(brussb+1.d0)
-			frjac(2,1)=brussb - 2.d0*uij*vij
-			frjac(1,2)=uij*uij
-			frjac(2,2)=-uij*uij
-			end if
-
-		  return
+	logical is_frjac
+      write (6,*) 'WARNING DUMMY FUNCTION FR CALLED'
+	f(1)=0.d0
+	f(2)=0.d0
+	if (is_frjac) then
+	  frjac(1,1)=0.d0
+	  frjac(2,1)=0.d0
+	  frjac(1,2)=0.d0
+	  frjac(2,2)=0.d0
+	end if
+    	return
       end
 c--------------------------------------------------------
 c     The subroutine FW (noise terms)
@@ -287,9 +256,9 @@ c--------------------------------------------------------
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
      &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
-		  write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
-		  do i=1,neqn
-		    f(i)=0.d0
-		  end do
-		  return
+	write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
+	do i=1,neqn
+	  f(i)=0.d0
+	end do
+	return
       end

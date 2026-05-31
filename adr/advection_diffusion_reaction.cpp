@@ -20,11 +20,15 @@
  *   v(0,x) = B/A + 0.1 * sin(pi * x)
  *   w(0,x) =  B  + 0.1 * sin(pi * x)
  *
+ #ifdef PERIODIC
+ * and periodic boundary conditions i.e.,
+ *
+ *   u(t,0) = u(t,1), v(t,0) = v(t,1), w(t,0) = w(t,1).
+ #else
  * and stationary boundary conditions i.e.,
  *
- *   u_t(t,0) = u_t(t,1) = 0,
- *   v_t(t,0) = v_t(t,1) = 0,
- *   w_t(t,0) = w_t(t,1) = 0.
+ *   u_t(t,0) = u_t(t,1) = v_t(t,0) = v_t(t,1) = w_t(t,0) = w_t(t,1) = 0.
+ #endif
  *
  * The system is advanced in time using one of the following approaches based on
  * the --integrator <int> flag value. The following options are available:
@@ -123,7 +127,7 @@ int main(int argc, char* argv[])
   // LSRKStep integrator for ExtSTS and Strang splitting methods
   void* lsrkstep_mem = nullptr;
 
-  // ARKStep integrator for Strang splitting method
+  // ARKStep integrators for Strang splitting method
   SUNStepper steppers[2];
   void* arkstep_mem = nullptr;
 
@@ -1221,16 +1225,27 @@ int f_advection(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype c = -ONE * udata->c / (TWO * udata->dx);
 
   N_VConst(ZERO, f);
+#ifdef PERIODIC
+  for (sunindextype i = 0; i < udata->nx; i++)
+#else
   for (sunindextype i = 1; i < udata->nx - 1; i++)
+#endif
   {
+#ifdef periodic
+    ul = (i > 0)    ? ydata[UIDX(i - 1)] : ydata[UIDX(nx - 1)];
+    ur = (i < nx-1) ? ydata[UIDX(i + 1)] : ydata[UIDX(0)];
+    vl = (i > 0)    ? ydata[VIDX(i - 1)] : ydata[VIDX(nx - 1)];
+    vr = (i < nx-1) ? ydata[VIDX(i + 1)] : ydata[VIDX(0)];
+    wl = (i > 0)    ? ydata[WIDX(i - 1)] : ydata[WIDX(nx - 1)];
+    wr = (i < nx-1) ? ydata[WIDX(i + 1)] : ydata[WIDX(0)];
+#else
     ul = ydata[UIDX(i - 1)];
     ur = ydata[UIDX(i + 1)];
-
     vl = ydata[VIDX(i - 1)];
     vr = ydata[VIDX(i + 1)];
-
     wl = ydata[WIDX(i - 1)];
     wr = ydata[WIDX(i + 1)];
+#endif
 
     fdata[UIDX(i)] = c * (ur - ul);
     fdata[VIDX(i)] = c * (vr - vl);
@@ -1268,19 +1283,30 @@ int f_diffusion(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype d = udata->d / (udata->dx * udata->dx);
 
   N_VConst(ZERO, f);
+#ifdef PERIODIC
+  for (sunindextype i = 0; i < udata->nx; i++)
+#else
   for (sunindextype i = 1; i < udata->nx - 1; i++)
+#endif
   {
+#ifdef periodic
+    ul = (i > 0)    ? ydata[UIDX(i - 1)] : ydata[UIDX(nx - 1)];
+    ur = (i < nx-1) ? ydata[UIDX(i + 1)] : ydata[UIDX(0)];
+    vl = (i > 0)    ? ydata[VIDX(i - 1)] : ydata[VIDX(nx - 1)];
+    vr = (i < nx-1) ? ydata[VIDX(i + 1)] : ydata[VIDX(0)];
+    wl = (i > 0)    ? ydata[WIDX(i - 1)] : ydata[WIDX(nx - 1)];
+    wr = (i < nx-1) ? ydata[WIDX(i + 1)] : ydata[WIDX(0)];
+#else
     ul = ydata[UIDX(i - 1)];
-    uc = ydata[UIDX(i)];
     ur = ydata[UIDX(i + 1)];
-
     vl = ydata[VIDX(i - 1)];
-    vc = ydata[VIDX(i)];
     vr = ydata[VIDX(i + 1)];
-
     wl = ydata[WIDX(i - 1)];
-    wc = ydata[WIDX(i)];
     wr = ydata[WIDX(i + 1)];
+#endif
+    uc = ydata[UIDX(i)];
+    vc = ydata[VIDX(i)];
+    wc = ydata[WIDX(i)];
 
     fdata[UIDX(i)] = d * (ul - TWO * uc + ur);
     fdata[VIDX(i)] = d * (vl - TWO * vc + vr);
@@ -1305,19 +1331,37 @@ int J_diffusion(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   sunrealtype d = udata->d / (udata->dx * udata->dx);
 
   SUNMatZero(J);
+#ifdef PERIODIC
+  for (sunindextype i = 0; i < udata->nx; i++)
+#else
   for (sunindextype i = 1; i < udata->nx - 1; i++)
+#endif
   {
+#ifdef PERIODIC
+    if (i > 0)
+    {
+      SM_ELEMENT_B(J, UIDX(i), UIDX(i - 1)) = d;
+      SM_ELEMENT_B(J, VIDX(i), VIDX(i - 1)) = d;
+      SM_ELEMENT_B(J, WIDX(i), WIDX(i - 1)) = d;
+    }
+    if (i < udata->nx - 1)
+    {
+      SM_ELEMENT_B(J, UIDX(i), UIDX(i + 1)) = d;
+      SM_ELEMENT_B(J, VIDX(i), VIDX(i + 1)) = d;
+      SM_ELEMENT_B(J, WIDX(i), WIDX(i + 1)) = d;
+    }
+#else
     SM_ELEMENT_B(J, UIDX(i), UIDX(i - 1)) = d;
-    SM_ELEMENT_B(J, UIDX(i), UIDX(i))     = -d * TWO;
-    SM_ELEMENT_B(J, UIDX(i), UIDX(i + 1)) = d;
-
     SM_ELEMENT_B(J, VIDX(i), VIDX(i - 1)) = d;
-    SM_ELEMENT_B(J, VIDX(i), VIDX(i))     = -d * TWO;
-    SM_ELEMENT_B(J, VIDX(i), VIDX(i + 1)) = d;
-
     SM_ELEMENT_B(J, WIDX(i), WIDX(i - 1)) = d;
-    SM_ELEMENT_B(J, WIDX(i), WIDX(i))     = -d * TWO;
+
+    SM_ELEMENT_B(J, UIDX(i), UIDX(i + 1)) = d;
+    SM_ELEMENT_B(J, VIDX(i), VIDX(i + 1)) = d;
     SM_ELEMENT_B(J, WIDX(i), WIDX(i + 1)) = d;
+#endif
+    SM_ELEMENT_B(J, UIDX(i), UIDX(i)) = -d * TWO;
+    SM_ELEMENT_B(J, VIDX(i), VIDX(i)) = -d * TWO;
+    SM_ELEMENT_B(J, WIDX(i), WIDX(i)) = -d * TWO;
   }
 
   return 0;
@@ -1342,7 +1386,11 @@ int f_reaction(sunrealtype t, N_Vector y, N_Vector f, void* user_data)
   sunrealtype u, v, w;
 
   N_VConst(ZERO, f);
+#ifdef PERIODIC
+  for (sunindextype i = 0; i < udata->nx; i++)
+#else
   for (sunindextype i = 1; i < udata->nx - 1; i++)
+#endif
   {
     u = ydata[UIDX(i)];
     v = ydata[VIDX(i)];
@@ -1377,7 +1425,11 @@ int J_reaction(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix J,
   sunrealtype u, v, w;
 
   SUNMatZero(J);
+#ifdef PERIODIC
+  for (sunindextype i = 0; i < udata->nx; i++)
+#else
   for (sunindextype i = 1; i < udata->nx - 1; i++)
+#endif
   {
     u = ydata[UIDX(i)];
     v = ydata[VIDX(i)];
