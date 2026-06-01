@@ -130,7 +130,7 @@ def int_method(probtype, inttype, ststype, extststype, table_id):
 def calc_error(nx, solfile, reffile):
     soldata = np.loadtxt(solfile)
     refdata = np.loadtxt(reffile)
-    uerr = soldata[1:]-refdata[1:]
+    uerr = soldata[-1,1:]-refdata[-1,1:]
     return np.sqrt(np.dot(uerr,uerr) / nx / 3)
 
 # utility routine to run the C++ executable to generate a reference solution for a given problem configuration

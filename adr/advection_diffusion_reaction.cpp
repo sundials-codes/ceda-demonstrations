@@ -178,6 +178,11 @@ int main(int argc, char* argv[])
   flag = OpenOutput(udata, uopts);
   if (check_flag(flag, "OpenOutput")) { return 1; }
 
+  // Output solution
+  flag = (uopts.calc_error) ? WriteOutput(t, y, yerr, udata, uopts)
+                            : WriteOutput(t, y, udata, uopts);
+  if (check_flag(flag, "WriteOutput")) { return 1; }
+
   // Loop over output times
   for (int iout = 0; iout < uopts.nout; iout++)
   {

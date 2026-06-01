@@ -43,10 +43,11 @@ c-------------------------------------------------------------------------------
 
 c --- common parameters for the problem -----
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 c --- namelist definition
       namelist /list1/ alf,uxadv,vxadv,wxadv,brussa,brussb,eps,
-     &                 atol,rtol,h,iwork20,iwork21,tend
+     &                 atol,rtol,h,iwork20,iwork21,tend,nout
 
 c --- read input from namelist file (if it exists) ---
       open(10, file='adr_1D_pirock_params.txt', status='old')
@@ -114,15 +115,24 @@ c--------------------------------------------------------
 
 c --- common parameters for the problem -----
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 
 c ----- file for solution -----
-      open(8,file='sol.dat')
-      rewind 8
+      if (iout .eq. 0) then
+        open(8,file='sol.dat')
+        rewind 8
+      else
+        open(8,file='sol.dat',position='append',status='old')
+      end if
+
 	write (8,*) t,(y(i*3-2),i=1,ns),
      &      (y(i*3-1),i=1,ns), (y(i*3),i=1,ns)
 
-	write(6,*) 'Solution is tabulated in file sol.dat'
+      if (iout .eq. nout) then
+        write(6,*) 'Solution is tabulated in file sol.dat'
+      end if
+
 	close(8)
       return
       end
@@ -135,7 +145,8 @@ c--------------------------------------------------------
       double precision function rhodiff(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
       rhodiff = 4.0d0*(nssq)*alf
       return
       end
@@ -148,7 +159,8 @@ c--------------------------------------------------------
       double precision function rhoadv(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
       rhoadv = (abs(uxadv)+abs(vxadv)+abs(wxadv))*(ns)
       return
       end
@@ -161,7 +173,8 @@ c ----- brusselator with diffusion in 1 dim. space -----
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 c ----- zero boundary conditions -----
       dx = 1.d0 / (ns)
       d = alf / dx / dx
@@ -206,7 +219,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 
 c ----- zero boundary conditions -----
       dx = 1.d0 / ns
@@ -251,7 +265,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
       write (6,*) 'warning, dummy function fd2 called !!'
 	do i=1,neqn
 	    f(i)=0.0d0
@@ -266,7 +281,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 	logical is_frjac
       uij = y(1)
       vij = y(2)
@@ -299,7 +315,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/alf,ns,nssq,nsnsm1,nsm1sq,eps,atol,rtol,
-     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,imeth,iwork20,iwork21
+     &    brussa,brussb,uxadv,vxadv,wxadv,uyadv,vyadv,wyadv,
+     &    imeth,iwork20,iwork21,iout,nout
 	write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
 	do i=1,neqn
 	    f(i)=0.d0

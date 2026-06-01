@@ -12,4 +12,5 @@
    iwork20 = 1
    iwork21 = 1
    tend = 3.0
+   nout = 1
 /
