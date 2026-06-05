@@ -11,8 +11,8 @@ c       v_t = u - u^2 * v + (vxadv * v_x + vyadv * v_y) + alf * (v_{xx} + v_{yy}
 c
 c    for t>=0, 0<= x <= 1, 0<= y <= 1, with initial conditions
 c
-c       u(x,y,0) = 22 * y * (1-y)^{3/2}
-c       v(x,y,0) = 27 * x * (1-x)^{3/2}
+c       u(x,y,0) = 22 * y^{3/2} * (1-y)^{3/2}
+c       v(x,y,0) = 27 * x^{3/2} * (1-x)^{3/2}
 c
 c    and periodic boundary conditions
 c
@@ -30,10 +30,11 @@ c--------------------------------------------------------
 
 c --- common parameters for the problem -----
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c --- namelist definition
       namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
-     &    atol,rtol,h,tend
+     &    atol,rtol,h,tend,nout
 c --- read input from namelist file (if it exists) ---
       open(10, file='adr_2D_pirock_params.txt', status='old')
       read(10, nml=inputs)
@@ -70,13 +71,13 @@ c ----- initial values -----
       do j=1,ns
         yy=(j-1)/ans
         do i=1,ns
-          y(((j-1)*ns+i)*2-1) = 22.d0*yy*(1.d0-yy)**(1.5d0)
+          y(((j-1)*ns+i)*2-1) = 22.d0*yy**(1.5d0)*(1.d0-yy)**(1.5d0)
         end do
       end do
       do i=1,ns
         xx=(i-1)/ans
         do j=1,ns
-          y(((j-1)*ns+i)*2) = 27.d0*xx*(1.d0-xx)**(1.5d0)
+          y(((j-1)*ns+i)*2) = 27.d0*xx**(1.5d0)*(1.d0-xx)**(1.5d0)
         end do
       end do
 c
@@ -91,16 +92,25 @@ c
 
 c --- common parameters for the problem -----
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 
 c ----- file for solution -----
-      open(8,file='sol.dat')
-      rewind 8
-		  write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
-     &   ((y(((j-1)*ns+i)*2),i=1,ns),j=1,ns)
+      if (iout .eq. 0) then
+        open(8,file='sol.dat')
+        rewind 8
+      else
+        open(8,file='sol.dat',position='append',status='old')
+      end if
 
-		  write(6,*) 'Solution is tabulated in file sol.dat'
-		  close(8)
+		  write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
+     &     ((y(((j-1)*ns+i)*2),i=1,ns),j=1,ns)
+
+      if (iout .eq. nout) then
+        write(6,*) 'Solution is tabulated in file sol.dat'
+      end if
+
+    	close(8)
       return
       end
 c--------------------------------------------------------
@@ -112,7 +122,8 @@ c--------------------------------------------------------
       double precision function rhodiff(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
       rhodiff = 8.0d0*nssq*alf
       return
       end
@@ -125,7 +136,8 @@ c--------------------------------------------------------
       double precision function rhoadv(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
       rhoadv = (abs(uxadv)+abs(vxadv)+abs(uyadv)+abs(vyadv))*ns
       return
       end
@@ -138,7 +150,8 @@ c ----- brusselator with diffusion in 2 dim. space -----
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c ----- big loop -----
       do i=1,nssq
 c ----- left neighbour -----
@@ -190,7 +203,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c ----- big loop -----
       do i=1,nssq
 c ----- left neighbour -----
@@ -243,7 +257,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 		  write (6,*) 'warning, dummy function fd2 called !!'
 		  do i=1,neqn
 		    f(i)=0.0d0
@@ -258,7 +273,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 		  logical is_frjac
       write (6,*) 'WARNING DUMMY FUNCTION FR CALLED'
 		  f(1)=0.d0
@@ -280,7 +296,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 		  write (6,*) 'WARNING DUMMY FUNCTION FW CALLED'
 		  do i=1,neqn
 		    f(i)=0.d0

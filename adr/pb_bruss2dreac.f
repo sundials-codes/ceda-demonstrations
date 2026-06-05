@@ -10,7 +10,7 @@ c    v_t=2.e7*u-u^2*v+0.1*(v_{xx}+v_{yy})     for t>=0, 0<= x <= 1, 0<= y <= 1
 c
 c    with initial conditions
 c
-c    u(x,y,0)=22*y*(1-y)^{3/2}  v(x,y,0)=27*x*(1-x)^{3/2}
+c    u(x,y,0)=22*y^{3/2}*(1-y)^{3/2}  v(x,y,0)=27*x^{3/2}*(1-x)^{3/2}
 c
 c    and periodic boundary conditions
 c
@@ -29,9 +29,10 @@ c--------------------------------------------------------
 
 c --- common parameters for the problem -----
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c --- namelist definition
-      namelist /inputs/ alf,brussa,brussb,atol,rtol,h,tend
+      namelist /inputs/ alf,brussa,brussb,atol,rtol,h,tend,nout
 c --- read input from namelist file (if it exists) ---
       open(10, file='rd_2D_pirock_params.txt', status='old')
       read(10, nml=inputs)
@@ -80,13 +81,13 @@ c ----- initial values -----
       do j=1,ns
         yy=(j-1)/ans
         do i=1,ns
-          y(((j-1)*ns+i)*2-1)=22.d0*yy*(1.d0-yy)**(1.5d0)
+          y(((j-1)*ns+i)*2-1)=22.d0*yy**(1.5d0)*(1.d0-yy)**(1.5d0)
         end do
       end do
       do i=1,ns
         xx=(i-1)/ans
         do j=1,ns
-           y(((j-1)*ns+i)*2)=27.d0*xx*(1.d0-xx)**(1.5d0)
+           y(((j-1)*ns+i)*2)=27.d0*xx**(1.5d0)*(1.d0-xx)**(1.5d0)
         end do
       end do
 
@@ -99,15 +100,25 @@ c ----- initial values -----
 
 c --- common parameters for the problem -----
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 
 c ----- file for solution -----
-      open(8,file='sol.dat')
-      rewind 8
+      if (iout .eq. 0) then
+        open(8,file='sol.dat')
+        rewind 8
+      else
+        open(8,file='sol.dat',position='append',status='old')
+      end if
+
 		  write (8,*) t,((y(((j-1)*ns+i)*2-1),i=1,ns),j=1,ns),
      &     ((y(((j-1)*ns+i)*2),i=1,ns),j=1,ns)
 
-			write(6,*) 'Solution is tabulated in file sol.dat'
+      if (iout .eq. nout) then
+        write(6,*) 'Solution is tabulated in file sol.dat'
+      end if
+
+    	close(8)
       return
       end
 c--------------------------------------------------------
@@ -119,7 +130,8 @@ c--------------------------------------------------------
       double precision function rhodiff(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c      rhodiff = 8.0d0*nssq*alf + 2.d0
       rhodiff = 8.0d0*nssq*alf
       return
@@ -133,7 +145,8 @@ c--------------------------------------------------------
       double precision function rhoadv(neqn,t,y)
       implicit double precision (a-h,o-z)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
       rhoadv = 0.d0
       return
       end
@@ -146,7 +159,8 @@ c ----- brusselator with diffusion in 2 dim. space -----
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c ----- constants for inhomogenity -----
       ans=ns
       radsq=0.1d0**2
@@ -205,7 +219,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(npdes),f(npdes),frjac(npdes,npdes)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 			logical is_frjac
 			uij=y(1)
       vij=y(2)
@@ -228,7 +243,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 
 		  do i=1,neqn
 			  f(i)=0.d0
@@ -243,7 +259,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 		  write (6,*) 'warning, dummy function fa called !!'
 			do i=1,neqn
 			  f(i)=0.0d0
@@ -258,7 +275,8 @@ c--------------------------------------------------------
       implicit double precision (a-h,o-z)
       dimension y(neqn),f(neqn)
       common/trans/rtol,atol,alf,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 		  write (6,*) 'warning, dummy function fd2 called !!'
 			do i=1,neqn
 			  f(i)=0.0d0

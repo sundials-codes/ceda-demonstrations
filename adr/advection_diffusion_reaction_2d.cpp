@@ -162,6 +162,10 @@ int main(int argc, char* argv[])
   flag = OpenOutput(udata, uopts);
   if (check_flag(flag, "OpenOutput")) { return 1; }
 
+  // Output solution
+  flag = WriteOutput(t, y, udata, uopts);
+  if (check_flag(flag, "WriteOutput")) { return 1; }
+
   // Timers
   sunrealtype ref_time = 0.0;
   sunrealtype solve_time = 0.0;
@@ -232,6 +236,10 @@ int main(int argc, char* argv[])
       auto solver_end = chrono::high_resolution_clock::now();
       solve_time += chrono::duration<sunrealtype>(solver_end - solver_start).count();
 
+      // Output solution
+      flag = WriteOutput(t, y, udata, uopts);
+      if (check_flag(flag, "WriteOutput")) { return 1; }
+
       // Output dominant eigenvalue estimates
       if (uopts.output_domeig)
       {
@@ -244,10 +252,6 @@ int main(int argc, char* argv[])
       tout = (tout > udata.tf) ? udata.tf : tout;
     }
   }
-
-  // Output solution
-  flag = WriteOutput(udata.tf, y, udata, uopts);
-  if (check_flag(flag, "WriteOutput")) { return 1; }
 
   // Close output
   flag = CloseOutput(uopts);
@@ -1565,8 +1569,8 @@ int SetIC(N_Vector y, UserData& udata)
     for (sunindextype i = 0; i < udata.nx; i++)
     {
       const sunrealtype x = udata.xl + i * udata.dx;
-      ydata[UIDX(i, j, udata.nx)] = 22.0 * y * SUNRpowerR((ONE - y), 1.5);
-      ydata[VIDX(i, j, udata.nx)] = 27.0 * x * SUNRpowerR((ONE - x), 1.5);
+      ydata[UIDX(i, j, udata.nx)] = 22.0 * SUNRpowerR(y * (ONE - y), 1.5);
+      ydata[VIDX(i, j, udata.nx)] = 27.0 * SUNRpowerR(x * (ONE - x), 1.5);
     }
   }
 

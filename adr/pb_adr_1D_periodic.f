@@ -21,17 +21,17 @@ c    constant concentration over time are A = 0.6 and B = 2.0.
 c
 c    The problem is evolved for t in [0, 3] and x in [0, 1], with initial conditions given by
 c
-c            u(0,x) =  A  + 0.1 * sin(pi * x)
-c            v(0,x) = B/A + 0.1 * sin(pi * x)
-c            w(0,x) =  B  + 0.1 * sin(pi * x)
+c            u(0,x) =  A  + 0.1 * sin(2 * pi * x)
+c            v(0,x) = B/A + 0.1 * sin(2 * pi * x)
+c            w(0,x) =  B  + 0.1 * sin(2 * pi * x)
 c
-c    and stationary boundary conditions i.e.,
+c    and periodic boundary conditions i.e.,
 c
-c           u_t(t,0) = u_t(t,1) = 0,
-c           v_t(t,0) = v_t(t,1) = 0,
-c           w_t(t,0) = w_t(t,1) = 0.
+c           u(t,0) = u(t,1),
+c           v(t,0) = v(t,1),
+c           w(t,0) = w(t,1).
 c
-c    We discretize the space variables with x_i=(i-1)/(N-1), for i=1,...,N, with N=512.
+c    We discretize the space variables with x_i=(i-1)/N, for i=1,...,N, with N=512.
 c    We obtain a system of 3N equations.
 c--------------------------------------------------------------------------------------------
 
@@ -81,6 +81,7 @@ c         write(6,*) 'Could not open namelist file'
 
       write(6,*) 'Integration of the '
      &   ,'1-dim Brusselator problem, ns=',ns
+      write(6,*) 'dx=',1.d0/ns
       write(6,*) 'periodic boundary conditions'
       write(6,*) 'advection pb:', uxadv,vxadv,wxadv
       write(6,*) 'diffusion pb:', alf
@@ -96,9 +97,9 @@ c ----- initial values -----
       dx = 1.d0/ns
       do i=1,ns
         xx       = (i-1) * dx
-        y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
-        y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
-        y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
+        y(i*3-2) = brussa          + (1.d-1)*SIN(2.d0*pi*xx)
+        y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(2.d0*pi*xx)
+        y(i*3)   = brussb          + (1.d-1)*SIN(2.d0*pi*xx)
       end do
 
       radadv=rhoadv(neqn,t,y)
@@ -165,7 +166,7 @@ c--------------------------------------------------------
       return
       end
 c--------------------------------------------------------
-c     The subroutine FBRUS compute the value of f(x,y) and
+c     The subroutine FD compute the value of f(x,y) and
 c     has to be declared as external.
 c--------------------------------------------------------
       subroutine fd(neqn,x,y,f)

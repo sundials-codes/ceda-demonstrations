@@ -13,7 +13,8 @@ c ----------------------------------------------------
       external fd,fd2,fa,fr,fw
 c --- common parameters for the problem -----
       common/trans/atol,rtol,alf,amult,ns,nssq,nsnsm1,nsm1sq,
-     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth
+     &    brussa,brussb,uxadv,vxadv,uyadv,vyadv,imeth,
+     &    iout,nout
 c ----- to integrate with pirock.f
       dimension y(neqn),work(15*neqn),frjac(neqn*npdes)
       integer*8 iwork(25)
@@ -21,7 +22,7 @@ c ----- to integrate with pirock.f
       logical fixedstep
 c --- namelist definition
       namelist /inputs/ alf,uxadv,uyadv,vxadv,vyadv,brussa,brussb,
-     &    atol,rtol,h,tend
+     &    atol,rtol,h,tend,nout
 c --- read input from namelist file (if it exists) ---
       open(10, file='adr_2D_pirock_params.txt', status='old', err=100)
       read(10, nml=inputs)
@@ -83,18 +84,30 @@ c iwork for stats
 
 c note that we define the final time from the namelist input file, and not the hard-coded value in init()
       call init(nsd,t,tend2,y)
+      iout = 0
+      call solout(neqn,t,tend,y,work)
 
 c ----- integration -----
 	write (6,*) 'rtol',rtol
 	write (6,*) 'atol',atol
+      write (6,*) 'nout',nout
+c ----- to integrate with pirock.f
+      time_tot = 0.d0
+      dtout = tend/nout
+      do i=1,nout
+        tout = i*dtout
+        iout = i
+        CALL CPU_TIME(time0)
+        call pirock(neqn,npdes,t,tout,h,y,fd,fd2,fa,fr,fw,atol,rtol,
+     &              frjac,ijac,work,iwork,idid)
+        t = tout
+        call solout(neqn,t,tend,y,work)
+        CALL CPU_TIME(time1)
+        time_tot = time_tot + time1 - time0
+      end do
 
-	CALL CPU_TIME(time0)
-c ----- to integrate with rock2.f
-      call pirock(neqn,npdes,t,tend,h,y,fd,fd2,fa,fr,fw,atol,rtol,
-     &           frjac,ijac,work,iwork,idid)
-      CALL CPU_TIME(time1)
-	write (6,*) 'CPU time',time1-time0
 c ----- print statistics -----
+	write(6,*) 'CPU time',time_tot
       write(6,*) 'The value of IDID is',idid
       write(6,*) 'Max estimation of the spectral radius=',iwork(11)
       write(6,*) 'Min estimation of the spectral radius=',iwork(12)
@@ -111,8 +124,6 @@ c ----- print statistics -----
      &   iwork(17),(iwork(17)*npdes)/neqn
 	write (6,*) 'Number of reaction Jacobian',
      &   iwork(18),(iwork(18)*npdes)/neqn
-
-	call solout(neqn,t,tend,y,work)
 
 c--------------------------------------------------------
 c     End of main program

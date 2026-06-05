@@ -825,6 +825,28 @@ static int OpenOutput(UserData& udata, UserOptions& uopts)
     cout << "-------------------------" << endl;
   }
 
+  // Open output stream and output problem information
+  if (uopts.output >= 2)
+  {
+    // Open output stream
+    stringstream fname;
+    fname << "solution.dat";
+    uopts.uout.open(fname.str());
+
+    uopts.uout << scientific;
+    uopts.uout << setprecision(numeric_limits<sunrealtype>::digits10);
+    uopts.uout << "# title Advection-Diffusion-Reaction (Brusselator)" << endl;
+    uopts.uout << "# nvar 2" << endl;
+    uopts.uout << "# vars u v" << endl;
+    uopts.uout << "# nt " << uopts.nout + 1 << endl;
+    uopts.uout << "# nx " << udata.nx << endl;
+    uopts.uout << "# ny " << udata.ny << endl;
+    uopts.uout << "# xl " << udata.xl << endl;
+    uopts.uout << "# xu " << udata.xu << endl;
+    uopts.uout << "# yl " << udata.yl << endl;
+    uopts.uout << "# yu " << udata.yu << endl;
+  }
+
   return 0;
 }
 
@@ -834,32 +856,35 @@ static int WriteOutput(sunrealtype t, N_Vector y, UserData& udata,
 {
   if (uopts.output)
   {
-    sunrealtype* ydata = N_VGetArrayPointer(y);
-    if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
-    stringstream fname;
-    fname << "solution.dat";
-    ofstream usol;
-    usol.open(fname.str());
-    usol << setprecision(numeric_limits<sunrealtype>::digits10) << t;
-    for (sunindextype j = 0; j< udata.ny; j++)
+     // Compute rms norm of the state
+    sunrealtype urms = sqrt(N_VDotProd(y, y) / udata.nx);
+    cout << setw(22) << t << setw(25) << urms << endl;
+
+    // Write solution to disk
+    if (uopts.output >= 2)
     {
-      for (sunindextype i = 0; i< udata.nx; i++)
+      sunrealtype* ydata = N_VGetArrayPointer(y);
+      if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
+
+      uopts.uout << setprecision(numeric_limits<sunrealtype>::digits10) << t;
+      for (sunindextype j = 0; j< udata.ny; j++)
       {
-        usol << setprecision(numeric_limits<sunrealtype>::digits10)
-            << " " << ydata[UIDX(i, j, udata.nx)];
+        for (sunindextype i = 0; i< udata.nx; i++)
+        {
+          uopts.uout << setprecision(numeric_limits<sunrealtype>::digits10)
+              << " " << ydata[UIDX(i, j, udata.nx)];
+        }
       }
-    }
-    for (sunindextype j = 0; j< udata.ny; j++)
-    {
-      for (sunindextype i = 0; i< udata.nx; i++)
+      for (sunindextype j = 0; j< udata.ny; j++)
       {
-        usol << setprecision(numeric_limits<sunrealtype>::digits10)
-            << " " << ydata[VIDX(i, j, udata.nx)];
+        for (sunindextype i = 0; i< udata.nx; i++)
+        {
+          uopts.uout << setprecision(numeric_limits<sunrealtype>::digits10)
+              << " " << ydata[VIDX(i, j, udata.nx)];
+        }
       }
+      uopts.uout << endl;
     }
-    usol << endl;
-    usol.close();
-    cout << "Solution is written to solution.dat" << endl;
   }
 
   return 0;

@@ -38,7 +38,7 @@ c --- read input from namelist file (if it exists) ---
 c ----- initial step size -----
   110	if (h .le. 0.d0) then
           fixedstep=.false.
-          h=1.d-3
+          h=min(1.d-3,tend/nout/10.d0)
           write(6,*) 'Initial step size h=',h
       else
           fixedstep=.true.

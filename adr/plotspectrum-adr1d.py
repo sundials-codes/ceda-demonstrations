@@ -222,7 +222,8 @@ def plot_spectra(diff_eigs, adv_eigs, react_eigs, titletxt, picname):
 # testing setup
 
 # Shared testing parameters
-Executable = './bin/advection_diffusion_reaction_1D'
+#Executable = './bin/advection_diffusion_reaction_1D'
+Executable = './bin/advection_diffusion_reaction_1D_periodic'
 c = 0.5
 dvals = [1.e-2, 1e-1, 1e0]
 A = 1.0

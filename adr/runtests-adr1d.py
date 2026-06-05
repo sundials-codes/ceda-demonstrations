@@ -130,7 +130,10 @@ def int_method(probtype, inttype, ststype, extststype, table_id):
 def calc_error(nx, solfile, reffile):
     soldata = np.loadtxt(solfile)
     refdata = np.loadtxt(reffile)
-    uerr = soldata[-1,1:]-refdata[-1,1:]
+    if (soldata.shape != refdata.shape):
+        uerr = soldata[-1,1:]-refdata[1:]
+    else:
+        uerr = soldata[-1,1:]-refdata[-1,1:]
     return np.sqrt(np.dot(uerr,uerr) / nx / 3)
 
 # utility routine to run the C++ executable to generate a reference solution for a given problem configuration
@@ -140,10 +143,10 @@ def generate_reference(exe='./bin/advection_diffusion_reaction_1D', probtype='Ad
 
 
 # utility routine to run the PIROCK executable
-def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, tf=3.0, rtol=1e-4, atol=1e-9, fixedh=0.0, showcommand=False):
+def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype='AdvDiffRx', c=1e-2, d=1e-1, A=0.6, B=2.0, eps=1e-2, nx=512, tf=3.0, rtol=1e-4, atol=1e-9, fixedh=0.0, nout=20, showcommand=False):
     if (nx != 512):
         raise(ValueError, "To run without 512 spatial nodes, need to edit/recompile pb_adr_1D.f (and this error check)")
-    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': 1, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
+    stats = {'probtype': probtype, 'inttype': 'PIROCK', 'ststype': None, 'extststype': None, 'table_id': 0, 'c': c, 'd': d, 'A': A, 'B': B, 'eps': eps, 'nx': nx, 'tf': tf, 'rtol': rtol, 'atol': atol, 'fixedh': fixedh, 'maxl': 0, 'nout': nout, 'ReturnCode': 1, 'Steps': np.nan, 'Fails': np.nan, 'Accuracy': np.nan, 'AdvEvals': np.nan, 'DiffEvals': np.nan, 'RxEvals': np.nan, 'AdvTime': np.nan, 'DiffTime': np.nan, 'RxTime': np.nan, 'RxJacTime': np.nan}
 
     advec_iwork20 = 1  # True
     reac_iwork21 = 1   # True
@@ -168,6 +171,7 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
         namefile.write("   iwork20 = " + str(advec_iwork20) + "\n")
         namefile.write("   iwork21 = " + str(reac_iwork21) + "\n")
         namefile.write("   tend = " + str(tf) + "\n")
+        namefile.write("   nout = " + str(nout) + "\n")
         namefile.write("/\n")
 
     # run the test (and determine runtime)
@@ -352,7 +356,7 @@ DoAdaptiveTests = True
 #Executable = './bin/advection_diffusion_reaction_1D'
 #PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 Executable = './bin/advection_diffusion_reaction_1D_periodic'
-PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock_periodic'
+PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
 
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21
@@ -478,7 +482,7 @@ if (DoAdvDiffRx):
                                             nx=nx, tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
                 for h in fixedh_pirock:
                     FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
-                                            B=B, eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+                                            B=B, eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
 
             if (DoAdaptiveTests):
 
@@ -494,7 +498,7 @@ if (DoAdvDiffRx):
                                             eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
                 for rt in rtol:
                     AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
-                                            B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0))
+                                            B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
     if (DoFixedTests):
         Df = pd.DataFrame.from_records(FixedStats)
@@ -551,7 +555,7 @@ if (DoAdvDiff):
                                         tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
             for h in fixedh_pirock:
                 FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
-                                            nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+                                            nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
 
 
         if (DoAdaptiveTests):
@@ -568,7 +572,7 @@ if (DoAdvDiff):
                                         tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
             for rt in rtol:
                 AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
-                                            nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0))
+                                            nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
     if (DoFixedTests):
         Df = pd.DataFrame.from_records(FixedStats)
@@ -627,7 +631,7 @@ if (DoRxDiff):
                                             tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
                 for h in fixedh_pirock:
                     FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d, A=A, B=B,
-                                            eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h))
+                                            eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
 
             if (DoAdaptiveTests):
 
@@ -643,7 +647,7 @@ if (DoRxDiff):
                                             tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
                 for rt in rtol:
                     AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d,
-                                            A=A, B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0))
+                                            A=A, B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
     if (DoFixedTests):
         Df = pd.DataFrame.from_records(FixedStats)

@@ -938,17 +938,17 @@ static int WriteSolution(sunrealtype t, N_Vector y,
     ofstream uref;
     uref.open(fname.str());
     uref << setprecision(numeric_limits<sunrealtype>::digits10) << t;
-    for (sunindextype i = 0; i< udata.nx; i++)
+    for (sunindextype i = 0; i < udata.nx; i++)
     {
       uref << setprecision(numeric_limits<sunrealtype>::digits10)
            << " " << ydata[UIDX(i)];
     }
-    for (sunindextype i = 0; i< udata.nx; i++)
+    for (sunindextype i = 0; i < udata.nx; i++)
     {
       uref << setprecision(numeric_limits<sunrealtype>::digits10)
            << " " << ydata[VIDX(i)];
     }
-    for (sunindextype i = 0; i< udata.nx; i++)
+    for (sunindextype i = 0; i < udata.nx; i++)
     {
       uref << setprecision(numeric_limits<sunrealtype>::digits10)
            << " " << ydata[WIDX(i)];
