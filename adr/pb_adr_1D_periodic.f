@@ -183,9 +183,9 @@ c ----- big loop -----
       do i=1,ns
 c ----- left neighbour -----
         if(i == 1) then
-          uleft=y((ns-1)*3-2)
-          vleft=y((ns-1)*3-1)
-          wleft=y((ns-1)*3)
+          uleft=y(ns*3-2)
+          vleft=y(ns*3-1)
+          wleft=y(ns*3)
         else
           uleft=y((i-1)*3-2)
           vleft=y((i-1)*3-1)
@@ -230,9 +230,9 @@ c ----- big loop -----
       do i=1,ns
 c ----- left neighbour -----
         if(i == 1) then
-          uleft=y((ns-1)*3-2)
-          vleft=y((ns-1)*3-1)
-          wleft=y((ns-1)*3)
+          uleft=y(ns*3-2)
+          vleft=y(ns*3-1)
+          wleft=y(ns*3)
         else
           uleft=y((i-1)*3-2)
           vleft=y((i-1)*3-1)
