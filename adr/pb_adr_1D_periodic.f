@@ -1,4 +1,3 @@
-
 c    Programmer(s): Sylvia Amihere @ UMBC
 c    Based on the Based on the SUNDIALS example ark_advection_diffusion_reaction.cpp by
 c    David J. Gardner @ LLNL and Daniel Reynolds @ UMBC

@@ -353,10 +353,10 @@ DoFixedTests = True
 DoAdaptiveTests = True
 
 # Shared testing parameters
-#Executable = './bin/advection_diffusion_reaction_1D'
-#PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
-Executable = './bin/advection_diffusion_reaction_1D_periodic'
-PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
+Executable = './bin/advection_diffusion_reaction_1D'
+PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
+#Executable = './bin/advection_diffusion_reaction_1D_periodic'
+#PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
 
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21
@@ -412,25 +412,35 @@ PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
 # StrangSolvers = [['Strang', 'RKC', None, None],
 #                  ['Strang', 'RKL', None, None]]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
+                    ['ARK', None, None, 2],
                     ['ExtSTS', 'RKC', 'ARS', None],
-                    ['ExtSTS', 'RKC', 'Giraldo', None]]
+                    ['ExtSTS', 'RKC', 'Giraldo', None],
+                    ['ExtSTS', 'RKC', 'MRISR21', None]]
 AdvDiffSolvers = [['ARK', None, None, 1],
+                  ['ARK', None, None, 2],
                   ['ExtSTS', 'RKC', 'ARS', None],
                   ['ExtSTS', 'RKC', 'Giraldo', None],
+                  ['ExtSTS', 'RKC', 'MRISR21', None],
                   ['ExtSTS', 'RKC', 'Ralston', None],
                   ['ExtSTS', 'RKC', 'ERK22a', None],
+                  ['ExtSTS', 'RKC', 'ERK22b', None],
                   ['ExtSTS', 'RKC', 'MERK21', None],
+                  ['ExtSTS', 'RKC', 'MERK32', None],
                   ['ExtSTS', 'RKC', 'SSP22', None],
                   ['ExtSTS', 'RKC', 'SSP32', None],
                   ['ExtSTS', 'RKC', 'SSP42', None]]
-RxDiffSolvers = [['ARK', None, None, 6],
+RxDiffSolvers = [['ARK', None, None, 5],
+                 ['ARK', None, None, 6],
                  ['ExtSTS', 'RKC', 'ARS', None],
                  ['ExtSTS', 'RKC', 'Giraldo', None],
-                 ['ExtSTS', 'RKC', 'IRK21a', None]]
+                 ['ExtSTS', 'RKC', 'MRISR21', None],
+                 ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKC', 'IRK21a', None],
+                 ['ExtSTS', 'RKC', 'ESDIRK34a', None]]
 StrangSolvers = [['Strang', 'RKC', None, None]]
 #c = 1e-2
 c = 0.5
-dvals = [1e-2, 1e-1, 1e0]
+dvals = [1e-2, 1e-1]
 A = 1.0
 B = 3.0
 epsvals = [1e-6, 1e-4, 1e-2]
@@ -457,8 +467,8 @@ if (DoAdvDiffRx):
                 # set step sizes for fixed-step ADR tests
                 if (d == 1e-2):
                     fixedh        = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.2 / np.array([4, 8, 16, 32, 64, 128], dtype=float)
-                    fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 elif (d == 1e-1):
                     fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                     fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
@@ -531,15 +541,15 @@ if (DoAdvDiff):
             if (d == 1e-2):
                 fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
             elif (d == 1e-1):
                 fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.025 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
             else:
                 fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.025 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
             for solver in AdvDiffSolvers:
                 for h in fixedh:
