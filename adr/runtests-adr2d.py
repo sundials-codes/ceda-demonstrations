@@ -415,10 +415,10 @@ def main():
     # Flags to enable/disable categories of tests
     DoImplicitRx = False
     DoExplicitRx = True
-    DoADRFixedTests = False
+    DoADRFixedTests = True
     DoADRAdaptiveTests = True
-    DoRDFixedTests = False
-    DoRDAdaptiveTests = False
+    DoRDFixedTests = True
+    DoRDAdaptiveTests = True
     ShowCommand = True
     ShowOutput = True
     ShowArgs = True
@@ -480,15 +480,15 @@ def main():
     # RDStrangSolvers = [['Strang', 'RKC', None, None],
     #                    ['Strang', 'RKL', None, None]]
 
-    # AdvDiffRxSolvers = [['ARK', None, None, 1],
-    #                     ['ExtSTS', 'RKC', 'ARS', None],
-    #                     ['ExtSTS', 'RKC', 'Giraldo', None]]
     AdvDiffRxSolvers = [['ARK', None, None, 1],
+                        ['ARK', None, None, 2],
                         ['ExtSTS', 'RKC', 'ARS', None],
                         ['ExtSTS', 'RKC', 'Giraldo', None]]
     AdvDiffRxSolversExpRx = [['ARK', None, None, 1],
+                             ['ARK', None, None, 2],
                              ['ExtSTS', 'RKC', 'ARS', None],
                              ['ExtSTS', 'RKC', 'Giraldo', None],
+                             ['ExtSTS', 'RKC', 'Ralston', None],
                              ['ExtSTS', 'RKC', 'Heun-Euler', None],
                              ['ExtSTS', 'RKC', 'ERK22a', None],
                              ['ExtSTS', 'RKC', 'MERK21', None],
@@ -502,27 +502,30 @@ def main():
                      ['ARK', None, None, 5],
                      ['ExtSTS', 'RKC', 'ARS', None],
                      ['ExtSTS', 'RKC', 'Giraldo', None],
-                     ['ExtSTS', 'RKC', 'IRK21a', None]]
+                     ['ExtSTS', 'RKC', 'MRISR21', None],
+                     ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                     ['ExtSTS', 'RKC', 'IRK21a', None],
+                     ['ExtSTS', 'RKC', 'ESDIRK34a', None]]
     RDStrangSolvers = [['Strang', 'RKC', None, None]]
 
     # Advection-diffusion-reaction tests
     if (DoADRFixedTests or DoADRAdaptiveTests):
 
         # shared problem parameters
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
-        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
-        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
-        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
+        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
         probtype='AdvDiffRx'
         cux=-0.5
         cuy=1.0
         cvx=0.4
         cvy=0.7
         A=1.0
-        #Bvals=[3.0, 3e1, 3e2]
-        #dvals=[1e-2, 1e-1]
-        Bvals=[3.0]
-        dvals=[1e-2]
+        Bvals=[3.0, 3e1, 3e2]
+        dvals=[1e-2, 1e-1]
+        #Bvals=[3.0]
+        #dvals=[1e-2]
         nx=400
         ny=400
         tf=5.0
@@ -675,8 +678,8 @@ def main():
     if (DoRDFixedTests or DoRDAdaptiveTests):
 
         # shared problem parameters
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
-        rdpirockexe=topdir + '/bin/reaction_diffusion_2D_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        rdpirockexe=topdir + '/bin/reaction_diffusion_2D_stationary_pirock'
         probtype='RxDiff'
         cux=0.0
         cuy=0.0

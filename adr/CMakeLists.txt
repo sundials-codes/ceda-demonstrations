@@ -80,6 +80,10 @@ set(sources_pirock_bruss2dreac dr_bruss2dreac.f)
 set(target_pirock_bruss2dreac reaction_diffusion_2D_pirock)
 add_executable(${target_pirock_bruss2dreac} ${sources_pirock_bruss2dreac})
 
+set(sources_pirock_bruss2dreac_stationary dr_bruss2dreac_stationary.f)
+set(target_pirock_bruss2dreac_stationary reaction_diffusion_2D_stationary_pirock)
+add_executable(${target_pirock_bruss2dreac_stationary} ${sources_pirock_bruss2dreac_stationary})
+
 # Detect compiler and set legacy flags accordingly
 get_filename_component(Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
@@ -94,12 +98,14 @@ install(TARGETS ${target_pirock_adr1D}
                 ${target_pirock_bruss2dadv}
                 ${target_pirock_bruss2dadv_stationary}
                 ${target_pirock_bruss2dreac}
+                ${target_pirock_bruss2dreac_stationary}
         DESTINATION ${demonstration_bin})
 
 
 ### install testing scripts and input file ###
 install(FILES runtests-adr1d.py runtests-adr2d.py
         plot-adr1d.py plot-adr2d.py
+        plot-adr1d-solution.py plot-adr2d-solution.py
         plotspectrum-adr1d.py plotspectrum-adr2d.py
         adr_1D_pirock_params.txt adr_2D_pirock_params.txt rd_2D_pirock_params.txt
         DESTINATION ${demonstration_bin})
