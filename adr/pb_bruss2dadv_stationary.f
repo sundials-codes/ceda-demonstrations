@@ -11,8 +11,8 @@ c       v_t = u - u^2 * v + (vxadv * v_x + vyadv * v_y) + alf * (v_{xx} + v_{yy}
 c
 c    for t>=0, 0<= x <= 1, 0<= y <= 1, with initial conditions
 c
-c       u(x,y,0) = 22 * y * (1-y)^{3/2}
-c       v(x,y,0) = 27 * x * (1-x)^{3/2}
+c       u(x,y,0) = 22 * y^{3/2} * (1-y)^{3/2}
+c       v(x,y,0) = 27 * x^{3/2} * (1-x)^{3/2}
 c
 c    and stationary boundary conditions.
 c
@@ -70,13 +70,13 @@ c ----- initial values -----
       do j=1,ns
         yy=(j-1)*dy
         do i=1,ns
-          y(((j-1)*ns+i)*2-1) = 22.d0*yy*(1.d0-yy)**(1.5d0)
+          y(((j-1)*ns+i)*2-1) = 22.d0*yy**(1.5d0)*(1.d0-yy)**(1.5d0)
         end do
       end do
       do i=1,ns
         xx=(i-1)*dx
         do j=1,ns
-          y(((j-1)*ns+i)*2) = 27.d0*xx*(1.d0-xx)**(1.5d0)
+          y(((j-1)*ns+i)*2) = 27.d0*xx**(1.5d0)*(1.d0-xx)**(1.5d0)
         end do
       end do
 c
