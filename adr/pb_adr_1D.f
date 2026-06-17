@@ -21,9 +21,9 @@ c    constant concentration over time are A = 0.6 and B = 2.0.
 c
 c    The problem is evolved for t in [0, 3] and x in [0, 1], with initial conditions given by
 c
-c            u(0,x) =  A  + 0.1 * sin(pi * x)
-c            v(0,x) = B/A + 0.1 * sin(pi * x)
-c            w(0,x) =  B  + 0.1 * sin(pi * x)
+c            u(0,x) =  A  + 0.1 * sin(2 * pi * x)
+c            v(0,x) = B/A + 0.1 * sin(2 * pi * x)
+c            w(0,x) =  B  + 0.1 * sin(2 * pi * x)
 c
 c    and stationary boundary conditions i.e.,
 c
@@ -95,9 +95,9 @@ c ----- initial values -----
       dx = 1.d0/(ns-1)
       do i=1,ns
         xx       = (i-1) * dx
-        y(i*3-2) = brussa          + (1.d-1)*SIN(pi*xx)
-        y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(pi*xx)
-        y(i*3)   = brussb          + (1.d-1)*SIN(pi*xx)
+        y(i*3-2) = brussa          + (1.d-1)*SIN(2.d0*pi*xx)
+        y(i*3-1) = (brussb/brussa) + (1.d-1)*SIN(2.d0*pi*xx)
+        y(i*3)   = brussb          + (1.d-1)*SIN(2.d0*pi*xx)
       end do
 
       radadv=rhoadv(neqn,t,y)

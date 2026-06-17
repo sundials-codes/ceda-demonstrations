@@ -596,6 +596,8 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 # generate plots, loading data from stored output
 dvals = [1e-2, 1e-1]
 epsvals = [1e-6, 1e-4, 1e-2]
+bctype = 'stationary'
+#bctype = 'periodic'
 if (Plot_ADR):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')
@@ -603,34 +605,34 @@ if (Plot_ADR):
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_fixed_convergence_d%.2f_eps%.1e' % (d, eps))
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_fixed_efficiency_d%.2f_eps%.1e' % (d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_fixed_runtime_efficiency_d%.2f_eps%.1e' % (d, eps))
+                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx-adapt.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_adaptive_accuracy_d%.2f_eps%.1e' % (d, eps))
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_adaptive_efficiency_d%.2f_eps%.1e' % (d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (d, eps))
+                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
 
 if (Plot_AD):
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiff-fixed.xlsx')
         for d in dvals:
             ddata = data[data['d'] == d]
-            make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad_fixed_convergence_d%.2f' % d)
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad_fixed_efficiency_d%.2f' % d)
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad_fixed_runtime_efficiency_d%.2f' % d)
+            make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad1D_%s_fixed_convergence_d%.2f' % (bctype, d))
+            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_efficiency_d%.2f' % (bctype, d))
+            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_runtime_efficiency_d%.2f' % (bctype, d))
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiff-adapt.xlsx')
         for d in dvals:
             ddata = data[data['d'] == d]
-            make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad_adaptive_accuracy_d%.2f' % d)
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad_adaptive_efficiency_d%.2f' % d)
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad_adaptive_runtime_efficiency_d%.2f' % d)
+            make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad1D_%s_adaptive_accuracy_d%.2f' % (bctype, d))
+            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_efficiency_d%.2f' % (bctype, d))
+            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (bctype, d))
 
 if (Plot_RD):
     if (Plot_Fixed):
@@ -639,18 +641,18 @@ if (Plot_RD):
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_fixed_convergence_d%.2f_eps%.1e' % (d, eps))
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_fixed_efficiency_d%.2f_eps%.1e' % (d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_fixed_runtime_efficiency_d%.2f_eps%.1e' % (d, eps))
+                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
     if (Plot_Adaptive):
         data=pd.read_excel('RxDiff-adapt.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_adaptive_accuracy_d%.2f_eps%.1e' % (d, eps))
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_adaptive_efficiency_d%.2f_eps%.1e' % (d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (d, eps))
+                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s__adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
 
 # display plots
 if (ShowPlots):

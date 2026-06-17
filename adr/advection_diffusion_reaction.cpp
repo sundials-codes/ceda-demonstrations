@@ -16,16 +16,16 @@
  * The problem is evolved for t in [0, 3] and x in [0, 1], with initial
  * conditions given by
  *
- *   u(0,x) =  A  + 0.1 * sin(c * pi * x)
- *   v(0,x) = B/A + 0.1 * sin(c * pi * x)
- *   w(0,x) =  B  + 0.1 * sin(c * pi * x)
+ *   u(0,x) =  A  + 0.1 * sin(2 * pi * x)
+ *   v(0,x) = B/A + 0.1 * sin(2 * pi * x)
+ *   w(0,x) =  B  + 0.1 * sin(2 * pi * x)
  *
  #ifdef PERIODIC
- * where c = 2, and periodic boundary conditions i.e.,
+ * and periodic boundary conditions i.e.,
  *
  *   u(t,0) = u(t,1), v(t,0) = v(t,1), w(t,0) = w(t,1).
  #else
- * where c = 1, and stationary boundary conditions i.e.,
+ * and stationary boundary conditions i.e.,
  *
  *   u_t(t,0) = u_t(t,1) = v_t(t,0) = v_t(t,1) = w_t(t,0) = w_t(t,1) = 0.
  #endif
@@ -1576,17 +1576,10 @@ int SetIC(N_Vector y, UserData& udata)
   sunrealtype* ydata = N_VGetArrayPointer(y);
   if (check_ptr(ydata, "N_VGetArrayPointer")) { return -1; }
 
-  sunrealtype x, p;
-#ifdef PERIODIC
-  const sunrealtype c = SUN_RCONST(2.0);
-#else
-  const sunrealtype c = SUN_RCONST(1.0);
-#endif
-
   for (sunindextype i = 0; i < udata.nx; i++)
   {
-    x              = udata.xl + i * udata.dx;
-    p              = SUN_RCONST(0.1) * sin(c * M_PI * x);
+    const sunrealtype x = udata.xl + i * udata.dx;
+    const sunrealtype p = SUN_RCONST(0.1) * sin(SUN_RCONST(2.0) * M_PI * x);
     ydata[UIDX(i)] = udata.A + p;
     ydata[VIDX(i)] = udata.B / udata.A + p;
     ydata[WIDX(i)] = udata.B + p;

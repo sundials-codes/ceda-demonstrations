@@ -466,9 +466,9 @@ if (DoAdvDiffRx):
 
                 # set step sizes for fixed-step ADR tests
                 if (d == 1e-2):
-                    fixedh        = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.2 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 elif (d == 1e-1):
                     fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                     fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
@@ -539,9 +539,9 @@ if (DoAdvDiff):
 
             # set step sizes for fixed-step AD tests
             if (d == 1e-2):
-                fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
             elif (d == 1e-1):
                 fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
                 fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
