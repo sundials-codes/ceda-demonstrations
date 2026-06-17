@@ -14,8 +14,8 @@
  * The problem is evolved for t in [0, 1] and (x,y) in [0, 1]^2, with initial
  * conditions given by
  *
- *   u(x,y,0) = 22 * y * (1 - y)^(1.5)
- *   v(x,y,0) = 27 * x * (1 - x)^(1.5)
+ *   u(x,y,0) = 22 * y^(1.5) * (1 - y)^(1.5)
+ *   v(x,y,0) = 27 * x^(1.5) * (1 - x)^(1.5)
  *
  #ifdef STATIONARY
  * and stationary boundary conditions.
