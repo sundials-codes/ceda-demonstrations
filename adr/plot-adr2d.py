@@ -23,8 +23,8 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 Plot_ADR = True
-Plot_RD = False
-Plot_Fixed = False
+Plot_RD = True
+Plot_Fixed = True
 Plot_Adaptive = True
 
 # utility functions to generate plots

@@ -136,10 +136,15 @@ def int_method(probtype, implicitrx, inttype, ststype, extststype, table_id):
 def calc_error(nx, solfile, reffile):
     soldata = np.loadtxt(solfile)
     refdata = np.loadtxt(reffile)
-    if (soldata.shape != refdata.shape):
-        uerr = soldata[-1,1:]-refdata[1:]
+    if (soldata.ndim > 1):
+        sol = soldata[-1,1:]
     else:
-        uerr = soldata[-1,1:]-refdata[-1,1:]
+        sol = soldata[1:]
+    if (refdata.ndim > 1):
+        ref = refdata[-1,1:]
+    else:
+        ref = refdata[1:]
+    uerr = sol-ref
     return np.sqrt(np.dot(uerr,uerr) / nx / nx / 2)
 
 # utility routine to generate an ADR reference solution for a given problem configuration
