@@ -23,7 +23,7 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 Plot_ADR = True
-Plot_RD = True
+Plot_RD = False
 Plot_Fixed = True
 Plot_Adaptive = True
 
@@ -751,11 +751,13 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
 
 # generate plots, loading data from stored output
+bctype = 'stationary'
+#bctype = 'periodic'
 if (Plot_ADR):
-    #dvals=[1e-2, 1e-1]
-    #Bvals=[3.0, 3e1, 3e2]
-    dvals=[1e-2]
-    Bvals=[3.0]
+    dvals=[1e-2, 1e-1]
+    Bvals=[3.0, 3e1, 3e2]
+    #dvals=[1e-2]
+    #Bvals=[3.0]
     if (Plot_Fixed):
         integrators=None
         #integrators=['ExtSTS+ARS+RKC, expl-R', 'ExtSTS+Giraldo+RKC, expl-R', 'ExtSTS+SSP22+RKC', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP42+RKC', 'PIROCK, expl-R', 'Strang+RKC, expl-R']
@@ -765,9 +767,9 @@ if (Plot_ADR):
             for B in Bvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['B'] == B]
-                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2d_fixed_convergence_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'adr2d_fixed_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'adr2d_fixed_runtime_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
+                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2D_%s_fixed_convergence_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'adr2D_%s_fixed_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'adr2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
 
     if (Plot_Adaptive):
         integrators=None
@@ -778,9 +780,9 @@ if (Plot_ADR):
             for B in Bvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['B'] == B]
-                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2d_adaptive_accuracy_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2d_adaptive_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2d_adaptive_runtime_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
+                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2D_%s_adaptive_accuracy_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2D_%s_adaptive_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'adr2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
 
 if (Plot_RD):
     Bvals=[2.e1, 2.e4, 2.e7]
@@ -794,9 +796,9 @@ if (Plot_RD):
             for B in Bvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['B'] == B]
-                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2d_fixed_convergence_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2d_fixed_efficiency_d%.2f_B%.1e' % (d, B), plot_adv=False, integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2d_fixed_runtime_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
+                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2D_%s_fixed_convergence_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2D_%s_fixed_efficiency_d%.2f_B%.1e' % (bctype, d, B), plot_adv=False, integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
     if (Plot_Adaptive):
         integrators=None
         #integrators=['ARS-ARK21', 'ExtSTS+Giraldo+RKC', 'ExtSTS+IRK21a', 'PIROCK']
@@ -806,9 +808,9 @@ if (Plot_RD):
             for B in Bvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['B'] == B]
-                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2d_adaptive_accuracy_d%.2f_B%.1e' % (d, B), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2d_adaptive_efficiency_d%.2f_B%.1e' % (d, B), plot_adv=False, integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2d_adaptive_runtime_efficiency_d%.2f_B%.1e' % (d, B), integrators=integrators)
+                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2D_%s_adaptive_accuracy_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2D_%s_adaptive_efficiency_d%.2f_B%.1e' % (bctype, d, B), plot_adv=False, integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, B), 'rd2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
 
 # display plots
 #plt.show()
