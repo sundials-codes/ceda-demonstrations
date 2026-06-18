@@ -751,8 +751,8 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 
 
 # generate plots, loading data from stored output
-bctype = 'stationary'
-#bctype = 'periodic'
+#bctype = 'stationary'
+bctype = 'periodic'
 if (Plot_ADR):
     dvals=[1e-2, 1e-1]
     Bvals=[3.0, 3e1, 3e2]

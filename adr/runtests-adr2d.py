@@ -517,10 +517,10 @@ def main():
     if (DoADRFixedTests or DoADRAdaptiveTests):
 
         # shared problem parameters
-        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
-        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
-        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
         probtype='AdvDiffRx'
         cux=-0.5
         cuy=1.0
@@ -683,8 +683,10 @@ def main():
     if (DoRDFixedTests or DoRDAdaptiveTests):
 
         # shared problem parameters
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
-        rdpirockexe=topdir + '/bin/reaction_diffusion_2D_stationary_pirock'
+        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        # rdpirockexe=topdir + '/bin/reaction_diffusion_2D_stationary_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+        rdpirockexe=topdir + '/bin/reaction_diffusion_2D_pirock'
         probtype='RxDiff'
         cux=0.0
         cuy=0.0
