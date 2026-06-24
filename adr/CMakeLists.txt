@@ -107,5 +107,6 @@ install(FILES runtests-adr1d.py runtests-adr2d.py
         plot-adr1d.py plot-adr2d.py
         plot-adr1d-solution.py plot-adr2d-solution.py
         plotspectrum-adr1d.py plotspectrum-adr2d.py
+        plotrhs-adr1d.py plotrhs-adr2d.py
         adr_1D_pirock_params.txt adr_2D_pirock_params.txt rd_2D_pirock_params.txt
         DESTINATION ${demonstration_bin})
