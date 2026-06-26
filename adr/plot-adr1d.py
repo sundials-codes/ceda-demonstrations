@@ -169,27 +169,29 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     accuracy = stsdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
-                    ltext = '%s+%s+%s (rate = %.2f)' % (integrator,extsts,sts,medrate)
+                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    rate = ' (rate = %.2f)' % (medrate)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
-                        ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                        ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext+rate)
 
         elif (integrator == 'PIROCK'):
             stepsize = intdata['fixedh'].to_numpy()
             accuracy = intdata['Accuracy'].to_numpy()
             rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
             medrate = np.nanmedian(rates)
-            ltext = '%s (rate = %.2f)' % (integrator,medrate)
+            ltext = '%s' % (integrator)
+            rate = ' (rate = %.2f)' % (medrate)
             DoPlot = True
             if (integrators is not None):
                 if ltext not in integrators:
                     DoPlot = False
             if DoPlot:
-                ax1.loglog(stepsize, accuracy, marker='.', color='k', label=ltext)
+                ax1.loglog(stepsize, accuracy, marker='.', color='k', label=ltext+rate)
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -198,14 +200,15 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                 accuracy = stsdata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                 medrate = np.nanmedian(rates)
-                ltext = '%s+%s (rate = %.2f)' % (integrator,sts,medrate)
+                ltext = '%s+%s' % (integrator,sts)
+                rate = ' (rate = %.2f)' % (medrate)
                 m,c = strang_line_style(sts)
                 DoPlot = True
                 if (integrators is not None):
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext+rate)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -214,14 +217,15 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                 accuracy = tabledata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                 medrate = np.nanmedian(rates)
-                ltext = '%s (rate = %.2f)' % (ark_table_name(table_id),medrate)
+                ltext = '%s' % (ark_table_name(table_id))
+                rate = ' (rate = %.2f)' % (medrate)
                 m,c = rk_line_style(table_id)
                 DoPlot = True
                 if (integrators is not None):
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext)
+                    ax1.loglog(stepsize, accuracy, marker=m, color=c, label=ltext+rate)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -599,60 +603,66 @@ epsvals = [1e-6, 1e-4, 1e-2]
 bctype = 'stationary'
 #bctype = 'periodic'
 if (Plot_ADR):
+    #integrators = None
+    integrators=['ARS-ARK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'PIROCK', 'Strang+RKC']
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiffRx-adapt.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
 
 if (Plot_AD):
+    #integrators = None
+    integrators=['ARS-ARK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'ExtSTS+Ralston+RKC', 'ExtSTS+ERK22b+RKC', 'ExtSTS+MERK21+RKC', 'ExtSTS+SSP32+RKC', 'PIROCK', 'Strang+RKC']
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiff-fixed.xlsx')
         for d in dvals:
             ddata = data[data['d'] == d]
-            make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad1D_%s_fixed_convergence_d%.2f' % (bctype, d))
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_efficiency_d%.2f' % (bctype, d))
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_runtime_efficiency_d%.2f' % (bctype, d))
+            make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad1D_%s_fixed_convergence_d%.2f' % (bctype, d), integrators=integrators)
+            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_efficiency_d%.2f' % (bctype, d), integrators=integrators)
+            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
     if (Plot_Adaptive):
         data=pd.read_excel('AdvDiff-adapt.xlsx')
         for d in dvals:
             ddata = data[data['d'] == d]
-            make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad1D_%s_adaptive_accuracy_d%.2f' % (bctype, d))
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_efficiency_d%.2f' % (bctype, d))
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (bctype, d))
+            make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad1D_%s_adaptive_accuracy_d%.2f' % (bctype, d), integrators=integrators)
+            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_efficiency_d%.2f' % (bctype, d), integrators=integrators)
+            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
 
 if (Plot_RD):
+    #integrators = None
+    integrators=['Giraldo-DIRK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'ExtSTS+IRK21a+RKC', 'ExtSTS+ESDIRK34a+RKC', 'PIROCK', 'Strang+RKC']
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff-fixed.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
     if (Plot_Adaptive):
         data=pd.read_excel('RxDiff-adapt.xlsx')
         for d in dvals:
             for eps in epsvals:
                 ddata = data[data['d'] == d]
                 ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s__adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps))
+                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s__adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
 
 # display plots
 if (ShowPlots):
