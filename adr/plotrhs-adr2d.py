@@ -26,7 +26,7 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 DoAdvDiffRx = True
-DoRxDiff = True
+DoRxDiff = False
 NumOut = 100
 
 #####################
@@ -168,56 +168,33 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
 
     # load the relevant RHS norm file and return
     rhsnorms = read_rhs_file('rhs_norms.txt')
-    os.remove('rhs_norms.txt')
     return rhsnorms
 
 # utility routine to plot the RHS norms
 def plot_rhsnorms(rhs_norms, titletxt, picname):
-    num_plots = 5
+    num_plots = 2
     rhs_figsize = (1+num_plots*4,4)
     fig = plt.figure(figsize=rhs_figsize)
     gs = GridSpec(1, num_plots, figure=fig)
     idx = 0
     ax = fig.add_subplot(gs[0,idx])
-    ax.semilogy(rhs_norms['time'], rhs_norms['fa'], 'b-', label=r'$\|f_a\|_{rms}$')
-    ax.semilogy(rhs_norms['time'], rhs_norms['fd'], 'g-', label=r'$\|f_d\|_{rms}$')
-    ax.semilogy(rhs_norms['time'], rhs_norms['fr'], 'r-', label=r'$\|f_r\|_{rms}$')
-    ax.set_title(r'Individual Terms')
+    ax.semilogy(rhs_norms['time'], rhs_norms['fa'], 'b-', label=r'$\|f_a\|$')
+    ax.semilogy(rhs_norms['time'], rhs_norms['fd'], 'g-', label=r'$\|f_d\|$')
+    ax.semilogy(rhs_norms['time'], rhs_norms['fr'], 'r-', label=r'$\|f_r\|$')
+    ax.set_title(r'Individual')
     ax.set_xlabel(r'Time')
     ax.set_ylabel(r'Norm')
     ax.legend()
 
-    idx += 1
-    ax_ad = fig.add_subplot(gs[0,idx])
-    ax_ad.semilogy(rhs_norms['time'], rhs_norms['fad'], 'c-')
-    ax_ad.set_title(r'Advection Diffusion')
-    ax_ad.set_xlabel(r'Time')
-    ax_ad.set_ylabel(r'Norm')
-    ax_ad.legend()
-
-    idx += 1
-    ax_ar = fig.add_subplot(gs[0,idx])
-    ax_ar.semilogy(rhs_norms['time'], rhs_norms['far'], 'm-')
-    ax_ar.set_title(r'Advection Reaction')
-    ax_ar.set_xlabel(r'Time')
-    ax_ar.set_ylabel(r'Norm')
-    ax_ar.legend()
-
-    idx += 1
-    ax_rd = fig.add_subplot(gs[0,idx])
-    ax_rd.semilogy(rhs_norms['time'], rhs_norms['frd'], 'y-')
-    ax_rd.set_title(r'Reaction Diffusion')
-    ax_rd.set_xlabel(r'Time')
-    ax_rd.set_ylabel(r'Norm')
-    ax_rd.legend()
-
-    idx += 1
-    ax_adr = fig.add_subplot(gs[0,idx])
-    ax_adr.semilogy(rhs_norms['time'], rhs_norms['fadr'], 'c-')
-    ax_adr.set_title(r'Advection Diffusion Reaction')
-    ax_adr.set_xlabel(r'Time')
-    ax_adr.set_ylabel(r'Norm')
-    ax_adr.legend()
+    idx = 1
+    ax = fig.add_subplot(gs[0,idx])
+    fmax = np.max([np.array(rhs_norms['fa']), np.array(rhs_norms['fd']), np.array(rhs_norms['fr'])], axis=0)
+    ax.semilogy(rhs_norms['time'], fmax, 'c-', label=r'$\max(\|f^A\|, \|f^D\|, \|f^R\|)$')
+    ax.semilogy(rhs_norms['time'], rhs_norms['fadr'], 'm-', label=r'$\|f^A+f^D+f^R\|$')
+    ax.set_title(r'Combined')
+    ax.set_xlabel(r'Time')
+    ax.set_ylabel(r'Norm')
+    ax.legend()
 
     plt.suptitle(titletxt)
     if (Generate_PNG):
@@ -230,10 +207,10 @@ def plot_rhsnorms(rhs_norms, titletxt, picname):
 # testing setup
 
 # Shared testing parameters
-#adrexe='./bin/advection_diffusion_reaction_2D_stationary'
-#bctype = 'stationary'
-adrexe='./bin/advection_diffusion_reaction_2D'
-bctype = 'periodic'
+adrexe='./bin/advection_diffusion_reaction_2D_stationary'
+bctype = 'stationary'
+#adrexe='./bin/advection_diffusion_reaction_2D'
+#bctype = 'periodic'
 rtol = 1e-5
 atol = 1e-11
 
@@ -245,7 +222,7 @@ if (DoAdvDiffRx):
     cvx=0.4
     cvy=0.7
     Bvals=[3.0, 3e1, 3e2]
-    dvals=[1e-2, 1e-1]
+    dvals=[0.01, 0.1]
     A=1.0
     nx=400
     ny=400
@@ -256,9 +233,13 @@ if (DoAdvDiffRx):
                                ststype=None, extststype=None, table_id=1, cux=cux, cuy=cuy,
                                cvx=cvx, cvy=cvy, d=d, A=A, B=B, nx=nx, ny=ny, tf=tf, rtol=rtol,
                                atol=atol, fixedh=0.0, nout=NumOut)
+
+            # rename the rhs_norms.txt file to a more descriptive name
+            os.rename('rhs_norms.txt', 'adr2d_%s_rhsnorms_d%0.2f_B%0.1e.txt' % (bctype, d, B))
+
             # plot the RHS norms
             plot_rhsnorms(rhsnorms,
-                          titletxt=r'Advection-Diffusion-Reaction 2D RHS Norms ($d = %.2f$, $B = %.1e$)' % (d, B), picname='adr2d_%s_rhsnorms_d%0.2f_B%0.1e' % (bctype, d, B))
+                          titletxt=r'Advection-Diffusion-Reaction 2D RHS Norms (%s, $d = %.2f$, $B = %.1e$)' % (bctype, d, B), picname='adr2d_%s_rhsnorms_d%0.2f_B%0.1e' % (bctype, d, B))
 
 # Reaction-diffusion tests
 if (DoRxDiff):
@@ -279,9 +260,12 @@ if (DoRxDiff):
                                ststype=None, extststype=None, table_id=1, cux=cux, cuy=cuy,
                                cvx=cvx, cvy=cvy, d=d, A=A, B=B, nx=nx, ny=ny, tf=tf, rtol=rtol,
                                atol=atol, fixedh=0.0, nout=NumOut)
-    # plot the RHS norms
-    plot_rhsnorms(rhsnorms,
-                 titletxt=r'Reaction-Diffusion 2D RHS Norms ($d = %.2f$, $B = %.1e$)' % (d, B),
-                 picname='rd2d_%s_rhsnorms_d%0.2f_B%0.1e' % (bctype, d, B))
+
+            # rename the rhs_norms.txt file to a more descriptive name
+            os.rename('rhs_norms.txt', 'rd2d_%s_rhsnorms_d%0.2f_B%0.1e.txt' % (bctype, d, B))
+
+            # plot the RHS norms
+            plot_rhsnorms(rhsnorms,
+                         titletxt=r'Reaction-Diffusion 2D RHS Norms (%s, $d = %.2f$, $B = %.1e$)' % (bctype, d, B), picname='rd2d_%s_rhsnorms_d%0.2f_B%0.1e' % (bctype, d, B))
 
 # end of script
