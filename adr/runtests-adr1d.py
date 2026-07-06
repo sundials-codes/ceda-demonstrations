@@ -414,30 +414,51 @@ PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 AdvDiffRxSolvers = [['ARK', None, None, 1],
                     ['ARK', None, None, 2],
                     ['ExtSTS', 'RKC', 'ARS', None],
+                    ['ExtSTS', 'RKL', 'ARS', None],
                     ['ExtSTS', 'RKC', 'Giraldo', None],
-                    ['ExtSTS', 'RKC', 'MRISR21', None]]
+                    ['ExtSTS', 'RKL', 'Giraldo', None],
+                    ['ExtSTS', 'RKC', 'MRISR21', None],
+                    ['ExtSTS', 'RKL', 'MRISR21', None]]
 AdvDiffSolvers = [['ARK', None, None, 1],
                   ['ARK', None, None, 2],
                   ['ExtSTS', 'RKC', 'ARS', None],
+                  ['ExtSTS', 'RKL', 'ARS', None],
                   ['ExtSTS', 'RKC', 'Giraldo', None],
+                  ['ExtSTS', 'RKL', 'Giraldo', None],
                   ['ExtSTS', 'RKC', 'MRISR21', None],
+                  ['ExtSTS', 'RKL', 'MRISR21', None],
                   ['ExtSTS', 'RKC', 'Ralston', None],
+                  ['ExtSTS', 'RKL', 'Ralston', None],
                   ['ExtSTS', 'RKC', 'ERK22a', None],
+                  ['ExtSTS', 'RKL', 'ERK22a', None],
                   ['ExtSTS', 'RKC', 'ERK22b', None],
+                  ['ExtSTS', 'RKL', 'ERK22b', None],
                   ['ExtSTS', 'RKC', 'MERK21', None],
+                  ['ExtSTS', 'RKL', 'MERK21', None],
                   ['ExtSTS', 'RKC', 'MERK32', None],
+                  ['ExtSTS', 'RKL', 'MERK32', None],
                   ['ExtSTS', 'RKC', 'SSP22', None],
+                  ['ExtSTS', 'RKL', 'SSP22', None],
                   ['ExtSTS', 'RKC', 'SSP32', None],
-                  ['ExtSTS', 'RKC', 'SSP42', None]]
+                  ['ExtSTS', 'RKL', 'SSP32', None],
+                  ['ExtSTS', 'RKC', 'SSP42', None],
+                  ['ExtSTS', 'RKL', 'SSP42', None]]
 RxDiffSolvers = [['ARK', None, None, 5],
                  ['ARK', None, None, 6],
                  ['ExtSTS', 'RKC', 'ARS', None],
+                 ['ExtSTS', 'RKL', 'ARS', None],
                  ['ExtSTS', 'RKC', 'Giraldo', None],
+                 ['ExtSTS', 'RKL', 'Giraldo', None],
                  ['ExtSTS', 'RKC', 'MRISR21', None],
+                 ['ExtSTS', 'RKL', 'MRISR21', None],
                  ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                 ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
                  ['ExtSTS', 'RKC', 'IRK21a', None],
-                 ['ExtSTS', 'RKC', 'ESDIRK34a', None]]
-StrangSolvers = [['Strang', 'RKC', None, None]]
+                 ['ExtSTS', 'RKL', 'IRK21a', None],
+                 ['ExtSTS', 'RKC', 'ESDIRK34a', None],
+                 ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
+StrangSolvers = [['Strang', 'RKC', None, None],
+                 ['Strang', 'RKL', None, None]]
 #c = 1e-2
 c = 0.5
 dvals = [1e-2, 1e-1]

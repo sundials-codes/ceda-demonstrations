@@ -488,39 +488,59 @@ def main():
     AdvDiffRxSolvers = [['ARK', None, None, 1],
                         ['ARK', None, None, 2],
                         ['ExtSTS', 'RKC', 'ARS', None],
-                        ['ExtSTS', 'RKC', 'Giraldo', None]]
+                        ['ExtSTS', 'RKL', 'ARS', None],
+                        ['ExtSTS', 'RKC', 'Giraldo', None],
+                        ['ExtSTS', 'RKL', 'Giraldo', None]]
     AdvDiffRxSolversExpRx = [['ARK', None, None, 1],
                              ['ARK', None, None, 2],
                              ['ExtSTS', 'RKC', 'ARS', None],
+                             ['ExtSTS', 'RKL', 'ARS', None],
                              ['ExtSTS', 'RKC', 'Giraldo', None],
+                             ['ExtSTS', 'RKL', 'Giraldo', None],
                              ['ExtSTS', 'RKC', 'Ralston', None],
+                             ['ExtSTS', 'RKL', 'Ralston', None],
                              ['ExtSTS', 'RKC', 'Heun-Euler', None],
+                             ['ExtSTS', 'RKL', 'Heun-Euler', None],
                              ['ExtSTS', 'RKC', 'ERK22a', None],
+                             ['ExtSTS', 'RKL', 'ERK22a', None],
                              ['ExtSTS', 'RKC', 'MERK21', None],
+                             ['ExtSTS', 'RKL', 'MERK21', None],
                              ['ExtSTS', 'RKC', 'MERK32', None],
+                             ['ExtSTS', 'RKL', 'MERK32', None],
                              ['ExtSTS', 'RKC', 'SSP22', None],
+                             ['ExtSTS', 'RKL', 'SSP22', None],
                              ['ExtSTS', 'RKC', 'SSP32', None],
-                             ['ExtSTS', 'RKC', 'SSP42', None]]
-    ADRStrangSolvers = [['Strang', 'RKC', None, None]]
+                             ['ExtSTS', 'RKL', 'SSP32', None],
+                             ['ExtSTS', 'RKC', 'SSP42', None],
+                             ['ExtSTS', 'RKL', 'SSP42', None]]
+    ADRStrangSolvers = [['Strang', 'RKC', None, None],
+                        ['Strang', 'RKL', None, None]]
     RxDiffSolvers = [['ARK', None, None, 1],
                      ['ARK', None, None, 2],
                      ['ARK', None, None, 5],
                      ['ExtSTS', 'RKC', 'ARS', None],
+                     ['ExtSTS', 'RKL', 'ARS', None],
                      ['ExtSTS', 'RKC', 'Giraldo', None],
+                     ['ExtSTS', 'RKL', 'Giraldo', None],
                      ['ExtSTS', 'RKC', 'MRISR21', None],
+                     ['ExtSTS', 'RKL', 'MRISR21', None],
                      ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
+                     ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
                      ['ExtSTS', 'RKC', 'IRK21a', None],
-                     ['ExtSTS', 'RKC', 'ESDIRK34a', None]]
-    RDStrangSolvers = [['Strang', 'RKC', None, None]]
+                     ['ExtSTS', 'RKL', 'IRK21a', None],
+                     ['ExtSTS', 'RKC', 'ESDIRK34a', None],
+                     ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
+    RDStrangSolvers = [['Strang', 'RKC', None, None],
+                       ['Strang', 'RKL', None, None]]
 
     # Advection-diffusion-reaction tests
     if (DoADRFixedTests or DoADRAdaptiveTests):
 
         # shared problem parameters
-        adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
-        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
-        # adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
-        # adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
+        #adrexe=topdir + '/bin/advection_diffusion_reaction_2D'
+        #adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_pirock'
+        adrexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary'
+        adrpirockexe=topdir + '/bin/advection_diffusion_reaction_2D_stationary_pirock'
         probtype='AdvDiffRx'
         cux=-0.5
         cuy=1.0
