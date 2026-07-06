@@ -174,7 +174,7 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
 
 # utility routine to plot the RHS norms
 def plot_rhsnorms(rhs_norms, titletxt, picname):
-    num_plots = 2
+    num_plots = 1
     rhs_figsize = (1+num_plots*4,4)
     fig = plt.figure(figsize=rhs_figsize)
     gs = GridSpec(1, num_plots, figure=fig)
@@ -183,20 +183,20 @@ def plot_rhsnorms(rhs_norms, titletxt, picname):
     ax.semilogy(rhs_norms['time'], rhs_norms['fa'], 'b-', label=r'$\|f^A\|$')
     ax.semilogy(rhs_norms['time'], rhs_norms['fd'], 'g-', label=r'$\|f^D\|$')
     ax.semilogy(rhs_norms['time'], rhs_norms['fr'], 'r-', label=r'$\|f^R\|$')
-    ax.set_title(r'Individual')
+    ax.semilogy(rhs_norms['time'], rhs_norms['fadr'], 'm-', label=r'$\|f^A+f^D+f^R\|$')
     ax.set_xlabel(r'Time')
     ax.set_ylabel(r'Norm')
     ax.legend()
 
-    idx = 1
-    ax = fig.add_subplot(gs[0,idx])
-    fmax = np.max([np.array(rhs_norms['fa']), np.array(rhs_norms['fd']), np.array(rhs_norms['fr'])], axis=0)
-    ax.semilogy(rhs_norms['time'], fmax, 'c-', label=r'$\max(\|f^A\|, \|f^D\|, \|f^R\|)$')
-    ax.semilogy(rhs_norms['time'], rhs_norms['fadr'], 'm-', label=r'$\|f^A+f^D+f^R\|$')
-    ax.set_title(r'Combined')
-    ax.set_xlabel(r'Time')
-    ax.set_ylabel(r'Norm')
-    ax.legend()
+    # idx = 1
+    # ax = fig.add_subplot(gs[0,idx])
+    # fmax = np.max([np.array(rhs_norms['fa']), np.array(rhs_norms['fd']), np.array(rhs_norms['fr'])], axis=0)
+    # ax.semilogy(rhs_norms['time'], fmax, 'c-', label=r'$\max(\|f^A\|, \|f^D\|, \|f^R\|)$')
+    # ax.semilogy(rhs_norms['time'], rhs_norms['fadr'], 'm-', label=r'$\|f^A+f^D+f^R\|$')
+    # ax.set_title(r'Combined')
+    # ax.set_xlabel(r'Time')
+    # ax.set_ylabel(r'Norm')
+    # ax.legend()
 
     plt.suptitle(titletxt)
     if (Generate_PNG):
@@ -209,10 +209,10 @@ def plot_rhsnorms(rhs_norms, titletxt, picname):
 # testing setup
 
 # Shared testing parameters
-#Executable = './bin/advection_diffusion_reaction_1D'
-#bctype = 'stationary'
-Executable = './bin/advection_diffusion_reaction_1D_periodic'
-bctype = 'periodic'
+Executable = './bin/advection_diffusion_reaction_1D'
+bctype = 'stationary'
+# Executable = './bin/advection_diffusion_reaction_1D_periodic'
+# bctype = 'periodic'
 c = 0.5
 #dvals = [1.e-2, 1e-1, 1e0]
 dvals = [1.e-2, 1e-1]

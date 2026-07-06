@@ -193,7 +193,11 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                                 rxtxt = ', expl-R'
                         else:
                             rxtxt = ''
-                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        if (len(intdata['ststype'].unique()) > 1):
+                            ststxt = '+' + sts
+                        else:
+                            ststxt = ''
+                        ltext = '%s+%s%s%s' % (integrator,extsts,ststxt,rxtxt)
                         rate = ' (rate = %.2f)' % (medrate)
                         m,c,l = extsts_line_style(extsts,sts,rxtype)
                         DoPlot = True
@@ -245,7 +249,11 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                             rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s%s%s' % (integrator,ststxt,rxtxt)
                     rate = ' (rate = %.2f)' % (medrate)
                     m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
@@ -334,7 +342,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                                 rxtxt = ', expl-R'
                         else:
                             rxtxt = ''
-                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        if (len(intdata['ststype'].unique()) > 1):
+                            ststxt = '+' + sts
+                        else:
+                            ststxt = ''
+                        ltext = '%s+%s%s%s' % (integrator,extsts,ststxt,rxtxt)
                         m,c,l = extsts_line_style(extsts,sts,rxtype)
                         DoPlot = True
                         if (integrators is not None):
@@ -398,7 +410,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                             rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s%s%s' % (integrator,ststxt,rxtxt)
                     m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
@@ -519,7 +535,11 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                                 rxtxt = ', expl-R'
                         else:
                             rxtxt = ''
-                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        if (len(intdata['ststype'].unique()) > 1):
+                            ststxt = '+' + sts
+                        else:
+                            ststxt = ''
+                        ltext = '%s+%s%s%s' % (integrator,extsts,ststxt,rxtxt)
                         m,c,l = extsts_line_style(extsts,sts,rxtype)
                         DoPlot = True
                         if (integrators is not None):
@@ -581,7 +601,11 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                             rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s%s%s' % (integrator,ststxt,rxtxt)
                     m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
@@ -658,7 +682,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                                 rxtxt = ', expl-R'
                         else:
                             rxtxt = ''
-                        ltext = '%s+%s+%s%s' % (integrator,extsts,sts,rxtxt)
+                        if (len(intdata['ststype'].unique()) > 1):
+                            ststxt = '+' + sts
+                        else:
+                            ststxt = ''
+                        ltext = '%s+%s%s%s' % (integrator,extsts,ststxt,rxtxt)
                         m,c,l = extsts_line_style(extsts,sts,rxtype)
                         DoPlot = True
                         if (integrators is not None):
@@ -704,7 +732,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                             rxtxt = ', expl-R'
                     else:
                         rxtxt = ''
-                    ltext = '%s+%s%s' % (integrator,sts,rxtxt)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s%s%s' % (integrator,ststxt,rxtxt)
                     m,c,l = strang_line_style(sts,rxtype)
                     DoPlot = True
                     if (integrators is not None):
@@ -758,9 +790,9 @@ if (Plot_ADR):
     Bvals=[3.0, 3e1, 3e2]
     #dvals=[1e-2]
     #Bvals=[3.0]
+    #integrators=None
+    integrators=['ARS-ARK21', 'ExtSTS+Giraldo', 'ExtSTS+MERK32', 'ExtSTS+SSP32', 'PIROCK', 'Strang']
     if (Plot_Fixed):
-        integrators=None
-        #integrators=['ExtSTS+ARS+RKC, expl-R', 'ExtSTS+Giraldo+RKC, expl-R', 'ExtSTS+SSP22+RKC', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP42+RKC', 'PIROCK, expl-R', 'Strang+RKC, expl-R']
         data = pd.read_excel('AdvDiffRx2D-fixed.xlsx')
         data = data[data["ReturnCode"] == 0]
         for d in dvals:
@@ -772,8 +804,6 @@ if (Plot_ADR):
                 make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'adr2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
 
     if (Plot_Adaptive):
-        integrators=None
-        #integrators=['ARS-ARK21', 'ExtSTS+Giraldo+RKC, expl-R', 'ExtSTS+Giraldo+RKC, impl-R', 'ExtSTS+SSP22+RKC', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP42+RKC', 'PIROCK, expl-R']
         data = pd.read_excel('AdvDiffRx2D-adapt.xlsx')
         data = data[data["ReturnCode"] == 0]
         for d in dvals:
@@ -787,9 +817,9 @@ if (Plot_ADR):
 if (Plot_RD):
     Bvals=[2.e1, 2.e4, 2.e7]
     dvals=[0.01, 0.1]
+    integrators=None
+    #integrators=['ARS-ARK21', 'Giraldo-ARK21', 'ExtSTS+ARS', 'ExtSTS+Heun-Euler', 'ExtSTS+Giraldo', 'PIROCK']
     if (Plot_Fixed):
-        integrators=None
-        #integrators=['ARS, impl-R', 'Giraldo, impl-R', 'ExtSTS+ARS+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKL', 'PIROCK']
         data = pd.read_excel('RxDiff2D-fixed.xlsx')
         data = data[data["ReturnCode"] == 0]
         for d in dvals:
@@ -800,8 +830,6 @@ if (Plot_RD):
                 make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2D_%s_fixed_efficiency_d%.2f_B%.1e' % (bctype, d, B), plot_adv=False, integrators=integrators)
                 make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, B), 'rd2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (bctype, d, B), integrators=integrators)
     if (Plot_Adaptive):
-        integrators=None
-        #integrators=['ARS-ARK21', 'ExtSTS+Giraldo+RKC', 'ExtSTS+IRK21a', 'PIROCK']
         data = pd.read_excel('RxDiff2D-adapt.xlsx')
         data = data[data["ReturnCode"] == 0]
         for d in dvals:

@@ -169,7 +169,11 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     accuracy = stsdata['Accuracy'].to_numpy()
                     rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                     medrate = np.nanmedian(rates)
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s+%s%s' % (integrator,extsts,ststxt)
                     rate = ' (rate = %.2f)' % (medrate)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
@@ -200,7 +204,11 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                 accuracy = stsdata['Accuracy'].to_numpy()
                 rates = np.log(accuracy[1:] / accuracy[:-1]) / np.log(stepsize[1:] / stepsize[:-1])
                 medrate = np.nanmedian(rates)
-                ltext = '%s+%s' % (integrator,sts)
+                if (len(intdata['ststype'].unique()) > 1):
+                    ststxt = '+' + sts
+                else:
+                    ststxt = ''
+                ltext = '%s%s' % (integrator,ststxt)
                 rate = ' (rate = %.2f)' % (medrate)
                 m,c = strang_line_style(sts)
                 DoPlot = True
@@ -273,7 +281,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         advevals = stsdata['AdvEvals'].to_numpy()
                     if (plot_rx):
                         rxevals = stsdata['RxEvals'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s+%s%s' % (integrator,extsts,ststxt)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
                     if (integrators is not None):
@@ -314,7 +326,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     advevals = stsdata['AdvEvals'].to_numpy()
                 if (plot_rx):
                     rxevals = stsdata['RxEvals'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
+                if (len(intdata['ststype'].unique()) > 1):
+                    ststxt = '+' + sts
+                else:
+                    ststxt = ''
+                ltext = '%s%s' % (integrator,ststxt)
                 m,c = strang_line_style(sts)
                 DoPlot = True
                 if (integrators is not None):
@@ -422,7 +438,11 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                                    DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
                                    RxRhsMean * stsdata['RxEvals'].to_numpy())
                     #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s+%s%s' % (integrator,extsts,ststxt)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
                     if (integrators is not None):
@@ -464,7 +484,11 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
                                RxRhsMean * stsdata['RxEvals'].to_numpy())
                 #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
+                if (len(intdata['ststype'].unique()) > 1):
+                    ststxt = '+' + sts
+                else:
+                    ststxt = ''
+                ltext = '%s%s' % (integrator,ststxt)
                 m,c = strang_line_style(sts)
                 DoPlot = True
                 if (integrators is not None):
@@ -531,7 +555,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
                     rtol = stsdata['rtol'].to_numpy()
                     accuracy = stsdata['Accuracy'].to_numpy()
-                    ltext = '%s+%s+%s' % (integrator,extsts,sts)
+                    if (len(intdata['ststype'].unique()) > 1):
+                        ststxt = '+' + sts
+                    else:
+                        ststxt = ''
+                    ltext = '%s+%s%s' % (integrator,extsts,ststxt)
                     m,c = extsts_line_style(extsts,sts)
                     DoPlot = True
                     if (integrators is not None):
@@ -556,7 +584,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                 stsdata = intdata.groupby(['ststype',]).get_group((sts,))
                 rtol = stsdata['rtol'].to_numpy()
                 accuracy = stsdata['Accuracy'].to_numpy()
-                ltext = '%s+%s' % (integrator,sts)
+                if (len(intdata['ststype'].unique()) > 1):
+                    ststxt = '+' + sts
+                else:
+                    ststxt = ''
+                ltext = '%s%s' % (integrator,ststxt)
                 m,c = strang_line_style(sts)
                 DoPlot = True
                 if (integrators is not None):
@@ -600,11 +632,11 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
 # generate plots, loading data from stored output
 dvals = [1e-2, 1e-1]
 epsvals = [1e-6, 1e-4, 1e-2]
-bctype = 'stationary'
-#bctype = 'periodic'
+#bctype = 'stationary'
+bctype = 'periodic'
 if (Plot_ADR):
     #integrators = None
-    integrators=['ARS-ARK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'PIROCK', 'Strang+RKC']
+    integrators=['ARS-ARK21', 'ExtSTS+ARS', 'ExtSTS+Giraldo', 'PIROCK', 'Strang']
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiffRx-fixed.xlsx')
         for d in dvals:
@@ -626,7 +658,7 @@ if (Plot_ADR):
 
 if (Plot_AD):
     #integrators = None
-    integrators=['ARS-ARK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'ExtSTS+Ralston+RKC', 'ExtSTS+ERK22b+RKC', 'ExtSTS+MERK21+RKC', 'ExtSTS+SSP32+RKC', 'PIROCK', 'Strang+RKC']
+    integrators=['ARS-ARK21', 'ExtSTS+Giraldo', 'ExtSTS+MERK32', 'ExtSTS+SSP32', 'PIROCK', 'Strang']
     if (Plot_Fixed):
         data=pd.read_excel('AdvDiff-fixed.xlsx')
         for d in dvals:
@@ -644,7 +676,7 @@ if (Plot_AD):
 
 if (Plot_RD):
     #integrators = None
-    integrators=['Giraldo-DIRK21', 'ExtSTS+ARS+RKC', 'ExtSTS+Giraldo+RKC', 'ExtSTS+IRK21a+RKC', 'ExtSTS+ESDIRK34a+RKC', 'PIROCK', 'Strang+RKC']
+    integrators=['Giraldo-DIRK21', 'ExtSTS+ARS', 'ExtSTS+Giraldo', 'PIROCK', 'Strang']
     if (Plot_Fixed):
         data=pd.read_excel('RxDiff-fixed.xlsx')
         for d in dvals:
