@@ -45,6 +45,18 @@ def ark_table_name(table_id):
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
+def legend_method_name(method):
+    """Return the display name for a method in plot legends."""
+    method_names = {
+        'ExtSTS+Giraldo': 'Giraldo-ExtSTS',
+        'ExtSTS+ERK22a': 'ERK22a-ExtSTS',
+        'ExtSTS+ESDIRK34a': 'ESDIRK324a-ExtSTS',
+        'Giraldo-ARK21': 'Giraldo-ARK',
+        'ExtSTS+SSP32': 'SSP32-ExtSTS',
+        'Giraldo-DIRK21': 'Giraldo-DIRK',
+    }
+    return method_names.get(method, method)
+
 def rk_line_style(table_id,implicitrx):
     """Return the marker, color, and line style for plotting the ARK table with the given ID."""
     if (implicitrx):
@@ -74,9 +86,9 @@ def strang_line_style(sts,implicitrx):
     else:
         ls = '-'
     if (sts == 'RKL'):
-        return 'x', 'C6', ls
+        return 'o', 'C6', ls
     else:
-        return '+', 'C6', ls
+        return 's', 'C6', ls
 
 def extsts_line_style(extsts,sts,implicitrx):
     """Return the marker, color, and line style for plotting the extended STS method type and
@@ -87,24 +99,24 @@ def extsts_line_style(extsts,sts,implicitrx):
         ls = '-'
     if (extsts == 'ARS'):
         if (sts == 'RKL'):
-            return 'x', 'C2', ls
+            return 'o', 'C2', ls
         else:
-            return '+', 'C2', ls
+            return 's', 'C2', ls
     elif (extsts == 'Giraldo'):
         if (sts == 'RKL'):
-            return 'x', 'C3', ls
+            return 'o', 'C3', ls
         else:
-            return '+', 'C3', ls
+            return 's', 'C3', ls
     elif (extsts == 'Ralston'):
         if (sts == 'RKL'):
-            return 'x', 'C4', ls
+            return 'o', 'C4', ls
         else:
-            return '+', 'C4', ls
+            return 's', 'C4', ls
     elif (extsts == 'SSPSDIRK2'):
         if (sts == 'RKL'):
-            return 'x', 'C5', ls
+            return 'o', 'C5', ls
         else:
-            return '+', 'C5', ls
+            return 's', 'C5', ls
     elif (extsts == 'IRK21a'):
         if (sts == 'RKL'):
             return 'o', 'C6', ls
@@ -142,9 +154,9 @@ def extsts_line_style(extsts,sts,implicitrx):
             return 's', 'C12', ls
     elif (extsts == 'Heun-Euler'):
         if (sts == 'RKL'):
-            return 'x', 'C4', ls
+            return 'o', 'C4', ls
         else:
-            return '+', 'C4', ls
+            return 's', 'C4', ls
     elif (extsts == 'SSP22'):
         if (sts == 'RKL'):
             return 'o', 'C13', ls
@@ -204,8 +216,10 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                         if (integrators is not None):
                             if ltext not in integrators:
                                 DoPlot = False
+                        ltext = '%s+%s%s' % (integrator,extsts,rxtxt)
+                        display_ltext = '%s%s' % (legend_method_name('%s+%s' % (integrator,extsts)),rxtxt)
                         if DoPlot:
-                            ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
+                            ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=display_ltext+rate)
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
@@ -231,7 +245,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax1.loglog(stepsize, accuracy, marker='.', color='k', linestyle=ls, label=ltext+rate)
+                    ax1.loglog(stepsize, accuracy, marker='o', color='k', linestyle=ls, label=legend_method_name(ltext)+rate)
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -260,8 +274,9 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
+                    ltext = '%s%s' % (integrator,rxtxt)
                     if DoPlot:
-                        ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
+                        ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext)+rate)
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -280,6 +295,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                     else:
                         rxtxt = ''
                     ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
+                    display_ltext = '%s%s' % (legend_method_name(ark_table_name(table_id)),rxtxt)
                     rate = ' (rate = %.2f)' % (medrate)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
@@ -287,7 +303,7 @@ def make_convergence_comparison_plot(data, titletxt, picname, integrators=None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
-                        ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=ltext+rate)
+                        ax1.loglog(stepsize, accuracy, marker=m, color=c, linestyle=l, label=display_ltext+rate)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -352,12 +368,14 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                         if (integrators is not None):
                             if ltext not in integrators:
                                 DoPlot = False
+                        ltext = '%s+%s%s' % (integrator,extsts,rxtxt)
+                        display_ltext = '%s%s' % (legend_method_name('%s+%s' % (integrator,extsts)),rxtxt)
                         if DoPlot:
-                            ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
                             if (plot_adv):
-                                ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                                ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
                             if (plot_rx):
-                                ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                                ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
@@ -386,11 +404,11 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax_diff.loglog(diffevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                    ax_diff.loglog(diffevals, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
                     if (plot_adv):
-                        ax_adv.loglog(advevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                        ax_adv.loglog(advevals, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
                     if (plot_rx):
-                        ax_rx.loglog(rxevals, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                        ax_rx.loglog(rxevals, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -420,12 +438,13 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
+                    ltext = '%s%s' % (integrator,rxtxt)
                     if DoPlot:
-                        ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
                         if (plot_adv):
-                            ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
                         if (plot_rx):
-                            ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -446,17 +465,18 @@ def make_efficiency_comparison_plot(data, titletxt, picname, plot_adv=True, plot
                     else:
                         rxtxt = ''
                     ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
+                    display_ltext = '%s%s' % (legend_method_name(ark_table_name(table_id)),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
-                        ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax_diff.loglog(diffevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
                         if (plot_adv):
-                            ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax_adv.loglog(advevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
                         if (plot_rx):
-                            ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax_rx.loglog(rxevals, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -545,8 +565,10 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                         if (integrators is not None):
                             if ltext not in integrators:
                                 DoPlot = False
+                        ltext = '%s+%s%s' % (integrator,extsts,rxtxt)
+                        display_ltext = '%s%s' % (legend_method_name('%s+%s' % (integrator,extsts)),rxtxt)
                         if DoPlot:
-                            ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
@@ -577,7 +599,7 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax1.loglog(runtime, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                    ax1.loglog(runtime, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -611,8 +633,9 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
+                    ltext = '%s%s' % (integrator,rxtxt)
                     if DoPlot:
-                        ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -637,13 +660,14 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     else:
                         rxtxt = ''
                     ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
+                    display_ltext = '%s%s' % (legend_method_name(ark_table_name(table_id)),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
-                        ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax1.loglog(runtime, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -692,8 +716,10 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                         if (integrators is not None):
                             if ltext not in integrators:
                                 DoPlot = False
+                        ltext = '%s+%s%s' % (integrator,extsts,rxtxt)
+                        display_ltext = '%s%s' % (legend_method_name('%s+%s' % (integrator,extsts)),rxtxt)
                         if DoPlot:
-                            ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                            ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
         elif (integrator == 'PIROCK'):
             for rxtype in intdata['implicitrx'].unique():
@@ -716,7 +742,7 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     if ltext not in integrators:
                         DoPlot = False
                 if DoPlot:
-                    ax1.loglog(rtol, accuracy, marker='.', color='k', linestyle=ls, label=ltext)
+                    ax1.loglog(rtol, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
 
         elif (integrator == 'Strang'):
             for sts in intdata['ststype'].unique():
@@ -742,8 +768,9 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
+                    ltext = '%s%s' % (integrator,rxtxt)
                     if DoPlot:
-                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
 
         else:
             for table_id in intdata['table_id'].unique():
@@ -760,13 +787,14 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
                     else:
                         rxtxt = ''
                     ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
+                    display_ltext = '%s%s' % (legend_method_name(ark_table_name(table_id)),rxtxt)
                     m,c,l = rk_line_style(table_id,rxtype)
                     DoPlot = True
                     if (integrators is not None):
                         if ltext not in integrators:
                             DoPlot = False
                     if DoPlot:
-                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=ltext)
+                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
 
     handles, labels = ax1.get_legend_handles_labels()
     ax1.set_title(titletxt)
@@ -790,8 +818,12 @@ if (Plot_ADR):
     Bvals=[3.0, 3e1, 3e2]
     #dvals=[1e-2]
     #Bvals=[3.0]
+    # use all integrators
     #integrators=None
-    integrators=['ARS-ARK21', 'ExtSTS+Giraldo', 'ExtSTS+MERK32', 'ExtSTS+SSP32', 'PIROCK', 'Strang']
+    # list of integrators to use when showing the difference in RKC vs RKL methods
+    #integrators=['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+ERK22a+RKC', 'ExtSTS+ERK22a+RKL', 'ExtSTS+MERK21+RKC', 'ExtSTS+MERK21+RKL', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP32+RKL', 'Strang+RKC', 'Strang+RKL']
+    # pruned list of integrators for final plots
+    integrators=['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKL', 'PIROCK', 'Strang+RKL']
     if (Plot_Fixed):
         data = pd.read_excel('AdvDiffRx2D-fixed.xlsx')
         data = data[data["ReturnCode"] == 0]
@@ -818,7 +850,7 @@ if (Plot_RD):
     Bvals=[2.e1, 2.e4, 2.e7]
     dvals=[0.01, 0.1]
     integrators=None
-    #integrators=['ARS-ARK21', 'Giraldo-ARK21', 'ExtSTS+ARS', 'ExtSTS+Heun-Euler', 'ExtSTS+Giraldo', 'PIROCK']
+    #integrators=['ARS-ARK21', 'Giraldo-ARK21', 'ExtSTS+ARS+RKC', 'ExtSTS+ARS+RKL', 'ExtSTS+Heun-Euler+RKC', 'ExtSTS+Heun-Euler+RKL', 'ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'PIROCK', 'Strang+RKC', 'Strang+RKL']
     if (Plot_Fixed):
         data = pd.read_excel('RxDiff2D-fixed.xlsx')
         data = data[data["ReturnCode"] == 0]

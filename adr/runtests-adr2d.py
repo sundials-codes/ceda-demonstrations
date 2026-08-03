@@ -485,12 +485,7 @@ def main():
     # RDStrangSolvers = [['Strang', 'RKC', None, None],
     #                    ['Strang', 'RKL', None, None]]
 
-    AdvDiffRxSolvers = [['ARK', None, None, 1],
-                        ['ARK', None, None, 2],
-                        ['ExtSTS', 'RKC', 'ARS', None],
-                        ['ExtSTS', 'RKL', 'ARS', None],
-                        ['ExtSTS', 'RKC', 'Giraldo', None],
-                        ['ExtSTS', 'RKL', 'Giraldo', None]]
+    AdvDiffRxSolvers = []
     AdvDiffRxSolversExpRx = [['ARK', None, None, 1],
                              ['ARK', None, None, 2],
                              ['ExtSTS', 'RKC', 'ARS', None],
