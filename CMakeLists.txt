@@ -49,27 +49,6 @@ mark_as_advanced(FORCE CMAKE_INSTALL_RPATH_USE_LINK_PATH)
 # set installation folders
 set(demonstration_bin "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 
-# -------------
-# Build options
-# -------------
-
-option(USE_CUDA "Use CUDA for GPU acceleration" OFF)
-
-option(USE_HIP "Use HIP for GPU acceleration" OFF)
-
-if(USE_CUDA)
-  enable_language(CUDA)
-  show_language_flags(CUDA)
-  set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "CUDA Architecture")
-  set(CMAKE_CUDA_STANDARD ${CMAKE_CXX_STANDARD})
-endif()
-
-# ----
-# MPI
-# ----
-
-find_package(MPI REQUIRED)
-
 # ---------
 # SUNDIALS
 # ---------
@@ -85,15 +64,8 @@ find_package(SUNDIALS REQUIRED
 
 message(STATUS "Found SUNDIALS: ${SUNDIALS_DIR}")
 
-# -----
-# HYPRE
-# -----
-
-option(USE_HYPRE "Use HYPRE for preconditioning" OFF)
-
 # --------------------------------------------------------
 # add subdirectories for specific demonstration test codes
 # --------------------------------------------------------
 
-add_subdirectory(diffusion_2D)
 add_subdirectory(adr)
