@@ -352,7 +352,7 @@ def main():
     DoADRAdaptiveTests = True
     ShowCommand = True
     ShowOutput = True
-    ShowArgs = True
+    ShowArgs = False
 
     # Shared testing parameters: [inttype, ststype, extststype, table_id]
 
