@@ -352,65 +352,10 @@ DoRxDiff = True
 DoFixedTests = True
 DoAdaptiveTests = True
 
-# Shared testing parameters
-Executable = './bin/advection_diffusion_reaction_1D'
-PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
-#Executable = './bin/advection_diffusion_reaction_1D_periodic'
-#PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
-
 # ExtSTS solver options:
 #    ImEx: ARS, Giraldo, MRISR21
 #    Expl: Ralston, Heun-Euler, ERK22a, ERK22b, MERK21, MERK32, SSP22, SSP32, SSP42
 #    Impl: SSPSDIRK2, IRK21a, ESDIRK34a
-
-# AdvDiffRxSolvers = [['ARK', None, None, 1],
-#                     ['ARK', None, None, 2],
-#                     ['ExtSTS', 'RKC', 'ARS', None],
-#                     ['ExtSTS', 'RKL', 'ARS', None],
-#                     ['ExtSTS', 'RKC', 'Giraldo', None],
-#                     ['ExtSTS', 'RKL', 'Giraldo', None],
-#                     ['ExtSTS', 'RKC', 'MRISR21', None],
-#                     ['ExtSTS', 'RKL', 'MRISR21', None]]
-# AdvDiffSolvers = [['ARK', None, None, 1],
-#                   ['ARK', None, None, 2],
-#                   ['ExtSTS', 'RKC', 'ARS', None],
-#                   ['ExtSTS', 'RKL', 'ARS', None],
-#                   ['ExtSTS', 'RKC', 'Giraldo', None],
-#                   ['ExtSTS', 'RKL', 'Giraldo', None],
-#                   ['ExtSTS', 'RKC', 'MRISR21', None],
-#                   ['ExtSTS', 'RKL', 'MRISR21', None],
-#                   ['ExtSTS', 'RKC', 'Ralston', None],
-#                   ['ExtSTS', 'RKL', 'Ralston', None],
-#                   ['ExtSTS', 'RKC', 'ERK22a', None],
-#                   ['ExtSTS', 'RKL', 'ERK22a', None],
-#                   ['ExtSTS', 'RKC', 'ERK22b', None],
-#                   ['ExtSTS', 'RKL', 'ERK22b', None],
-#                   ['ExtSTS', 'RKC', 'MERK21', None],
-#                   ['ExtSTS', 'RKL', 'MERK21', None],
-#                   ['ExtSTS', 'RKC', 'MERK32', None],
-#                   ['ExtSTS', 'RKL', 'MERK32', None],
-#                   ['ExtSTS', 'RKC', 'SSP22', None],
-#                   ['ExtSTS', 'RKL', 'SSP22', None],
-#                   ['ExtSTS', 'RKC', 'SSP32', None],
-#                   ['ExtSTS', 'RKL', 'SSP32', None],
-#                   ['ExtSTS', 'RKC', 'SSP42', None],
-#                   ['ExtSTS', 'RKL', 'SSP42', None]]
-# RxDiffSolvers = [['ARK', None, None, 5],
-#                  ['ARK', None, None, 6],
-#                  ['ExtSTS', 'RKC', 'ARS', None],
-#                  ['ExtSTS', 'RKL', 'ARS', None],
-#                  ['ExtSTS', 'RKC', 'Giraldo', None],
-#                  ['ExtSTS', 'RKL', 'Giraldo', None],
-#                  ['ExtSTS', 'RKC', 'MRISR21', None],
-#                  ['ExtSTS', 'RKL', 'MRISR21', None],
-#                  ['ExtSTS', 'RKC', 'SSPSDIRK2', None],
-#                  ['ExtSTS', 'RKL', 'SSPSDIRK2', None],
-#                  ['ExtSTS', 'RKC', 'IRK21a', None],
-#                  ['ExtSTS', 'RKL', 'IRK21a', None],
-#                  ['ExtSTS', 'RKC', 'ESDIRK34a', None],
-#                  ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
-# StrangSolvers = [['Strang', 'RKC', None, None],
-#                  ['Strang', 'RKL', None, None]]
 AdvDiffRxSolvers = [['ARK', None, None, 1],
                     ['ARK', None, None, 2],
                     ['ExtSTS', 'RKC', 'ARS', None],
@@ -459,7 +404,7 @@ RxDiffSolvers = [['ARK', None, None, 5],
                  ['ExtSTS', 'RKL', 'ESDIRK34a', None]]
 StrangSolvers = [['Strang', 'RKC', None, None],
                  ['Strang', 'RKL', None, None]]
-#c = 1e-2
+
 c = 0.5
 dvals = [1e-2, 1e-1]
 A = 1.0
@@ -473,225 +418,255 @@ nout = 1
 # Advection-diffusion-reaction tests
 if (DoAdvDiffRx):
 
-    # loop over diffusion coefficients
-    FixedStats = []
-    AdaptStats = []
-    for d in dvals:
-        for eps in epsvals:
+    for bctype in ['periodic', 'stationary']:
+        if (bctype == 'periodic'):
+            Executable = './bin/advection_diffusion_reaction_1D_periodic'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
+        else:
+            Executable = './bin/advection_diffusion_reaction_1D'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 
-            # generate reference solution for PIROCK error
-            generate_reference(Executable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B,
-                                eps=eps, nx=nx, tf=tf)
+        # loop over diffusion coefficients
+        FixedStats = []
+        AdaptStats = []
+        for d in dvals:
+            for eps in epsvals:
 
-            if (DoFixedTests):
+                # generate reference solution for PIROCK error
+                generate_reference(Executable, probtype='AdvDiffRx', c=c, d=d, A=A, B=B,
+                                    eps=eps, nx=nx, tf=tf)
 
-                # set step sizes for fixed-step ADR tests
-                if (d == 1e-2):
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                elif (d == 1e-1):
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                else:
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                if (DoFixedTests):
 
-                for solver in AdvDiffRxSolvers:
-                    for h in fixedh:
-                        FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
-                                            nx=nx, tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-                for solver in StrangSolvers:
-                    for h in fixedh_strang:
-                        FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
-                                            nx=nx, tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-                for h in fixedh_pirock:
-                    FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
-                                            B=B, eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
+                    # set step sizes for fixed-step ADR tests
+                    if (d == 1e-2):
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    elif (d == 1e-1):
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    else:
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
-            if (DoAdaptiveTests):
+                    for solver in AdvDiffRxSolvers:
+                        for h in fixedh:
+                            FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
+                                                nx=nx, tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                    for solver in StrangSolvers:
+                        for h in fixedh_strang:
+                            FixedStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], c=c, d=d, A=A, B=B, eps=eps,
+                                                nx=nx, tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                    for h in fixedh_pirock:
+                        FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
+                                                B=B, eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
 
-                # set tolerances for adaptive ADR tests
-                rtol = np.logspace(-2.5, -6.5, 9)
-                atol = 1e-11
+                if (DoAdaptiveTests):
 
-                for solver in AdvDiffRxSolvers:
+                    # set tolerances for adaptive ADR tests
+                    rtol = np.logspace(-2.5, -6.5, 9)
+                    atol = 1e-11
+
+                    for solver in AdvDiffRxSolvers:
+                        for rt in rtol:
+                            AdaptStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], c=c, d=d, A=A, B=B,
+                                                eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
                     for rt in rtol:
-                        AdaptStats.append(runtest(Executable, probtype='AdvDiffRx', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], c=c, d=d, A=A, B=B,
-                                            eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-                for rt in rtol:
-                    AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
-                                            B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
+                        AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiffRx', c=c, d=d, A=A,
+                                                B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
-    if (DoFixedTests):
-        Df = pd.DataFrame.from_records(FixedStats)
-        print("Fixed step AdvDiffRx test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiffRx-fixed.xlsx', index=False)
+        if (DoFixedTests):
+            Df = pd.DataFrame.from_records(FixedStats)
+            print("Fixed step AdvDiffRx test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'AdvDiffRx-fixed_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
-    if (DoAdaptiveTests):
-        Df = pd.DataFrame.from_records(AdaptStats)
-        print("Adaptive step AdvDiffRx test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiffRx-adapt.xlsx', index=False)
+        if (DoAdaptiveTests):
+            Df = pd.DataFrame.from_records(AdaptStats)
+            print("Adaptive step AdvDiffRx test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'AdvDiffRx-adapt_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
 # Advection-diffusion tests
 if (DoAdvDiff):
 
-    # loop over diffusion coefficients
-    FixedStats = []
-    AdaptStats = []
-    for d in dvals:
+    for bctype in ['periodic', 'stationary']:
+        if (bctype == 'periodic'):
+            Executable = './bin/advection_diffusion_reaction_1D_periodic'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
+        else:
+            Executable = './bin/advection_diffusion_reaction_1D'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 
-        # generate reference solution for PIROCK error
-        generate_reference(Executable, probtype='AdvDiff', c=c, d=d, nx=nx, tf=tf)
+        # loop over diffusion coefficients
+        FixedStats = []
+        AdaptStats = []
+        for d in dvals:
+
+            # generate reference solution for PIROCK error
+            generate_reference(Executable, probtype='AdvDiff', c=c, d=d, nx=nx, tf=tf)
+
+            if (DoFixedTests):
+
+                # set step sizes for fixed-step AD tests
+                if (d == 1e-2):
+                    fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                elif (d == 1e-1):
+                    fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                else:
+                    fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+
+                for solver in AdvDiffSolvers:
+                    for h in fixedh:
+                        FixedStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
+                                            ststype=solver[1], extststype=solver[2],
+                                            table_id=solver[3], c=c, d=d, nx=nx,
+                                            tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                for solver in StrangSolvers:
+                    for h in fixedh_strang:
+                        FixedStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
+                                            ststype=solver[1], extststype=solver[2],
+                                            table_id=solver[3], c=c, d=d, nx=nx,
+                                            tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                for h in fixedh_pirock:
+                    FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
+                                                nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
+
+
+            if (DoAdaptiveTests):
+
+                # set tolerances for adaptive AD tests
+                rtol = np.logspace(-2.5, -6.5, 9)
+                atol = 1e-11
+
+                for solver in AdvDiffSolvers:
+                    for rt in rtol:
+                        AdaptStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
+                                            ststype=solver[1], extststype=solver[2],
+                                            table_id=solver[3], c=c, d=d, nx=nx,
+                                            tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
+                for rt in rtol:
+                    AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
+                                                nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
         if (DoFixedTests):
-
-            # set step sizes for fixed-step AD tests
-            if (d == 1e-2):
-                fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            elif (d == 1e-1):
-                fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-            else:
-                fixedh        = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_pirock = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                fixedh_strang = 0.05 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-
-            for solver in AdvDiffSolvers:
-                for h in fixedh:
-                    FixedStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
-                                        ststype=solver[1], extststype=solver[2],
-                                        table_id=solver[3], c=c, d=d, nx=nx,
-                                        tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-            for solver in StrangSolvers:
-                for h in fixedh_strang:
-                    FixedStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
-                                        ststype=solver[1], extststype=solver[2],
-                                        table_id=solver[3], c=c, d=d, nx=nx,
-                                        tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-            for h in fixedh_pirock:
-                FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
-                                            nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
-
+            Df = pd.DataFrame.from_records(FixedStats)
+            print("Fixed step AdvDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'AdvDiff-fixed_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
         if (DoAdaptiveTests):
-
-            # set tolerances for adaptive AD tests
-            rtol = np.logspace(-2.5, -6.5, 9)
-            atol = 1e-11
-
-            for solver in AdvDiffSolvers:
-                for rt in rtol:
-                    AdaptStats.append(runtest(Executable, probtype='AdvDiff', inttype=solver[0],
-                                        ststype=solver[1], extststype=solver[2],
-                                        table_id=solver[3], c=c, d=d, nx=nx,
-                                        tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-            for rt in rtol:
-                AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='AdvDiff', c=c, d=d,
-                                            nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-
-    if (DoFixedTests):
-        Df = pd.DataFrame.from_records(FixedStats)
-        print("Fixed step AdvDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiff-fixed.xlsx', index=False)
-
-    if (DoAdaptiveTests):
-        Df = pd.DataFrame.from_records(AdaptStats)
-        print("Adaptive step AdvDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('AdvDiff-adapt.xlsx', index=False)
+            Df = pd.DataFrame.from_records(AdaptStats)
+            print("Adaptive step AdvDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'AdvDiff-adapt_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
 # Reaction-diffusion tests
 if (DoRxDiff):
 
-    # loop over diffusion coefficients
-    FixedStats = []
-    AdaptStats = []
-    for d in dvals:
-        for eps in epsvals:
+    for bctype in ['periodic', 'stationary']:
+        if (bctype == 'periodic'):
+            Executable = './bin/advection_diffusion_reaction_1D_periodic'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_periodic_pirock'
+        else:
+            Executable = './bin/advection_diffusion_reaction_1D'
+            PIROCKExecutable = './bin/advection_diffusion_reaction_1D_pirock'
 
-            # generate reference solution for PIROCK error
-            generate_reference(Executable, probtype='RxDiff', d=d, A=A, B=B,
-                                eps=eps, nx=nx, tf=tf)
+        # loop over diffusion coefficients
+        FixedStats = []
+        AdaptStats = []
+        for d in dvals:
+            for eps in epsvals:
 
-            if (DoFixedTests):
+                # generate reference solution for PIROCK error
+                generate_reference(Executable, probtype='RxDiff', d=d, A=A, B=B,
+                                    eps=eps, nx=nx, tf=tf)
 
-                # set step sizes for fixed-step RD tests
-                if (d == 1e-2):
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                elif (d == 1e-1):
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                else:
-                    fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
-                    fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                if (DoFixedTests):
 
-                for solver in RxDiffSolvers:
-                    for h in fixedh:
-                        FixedStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
-                                            tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-                for solver in StrangSolvers:
-                    for h in fixedh_strang:
-                        FixedStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
-                                            tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
-                for h in fixedh_pirock:
-                    FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d, A=A, B=B,
-                                            eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
+                    # set step sizes for fixed-step RD tests
+                    if (d == 1e-2):
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    elif (d == 1e-1):
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                    else:
+                        fixedh        = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_strang = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
+                        fixedh_pirock = 0.1 / np.array([4, 8, 16, 32, 64, 128, 256], dtype=float)
 
-            if (DoAdaptiveTests):
+                    for solver in RxDiffSolvers:
+                        for h in fixedh:
+                            FixedStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
+                                                tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                    for solver in StrangSolvers:
+                        for h in fixedh_strang:
+                            FixedStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
+                                                tf=tf, fixedh=h, rtol=max(1e-3*(h*h),1e-9), maxl=fixed_maxl, nout=nout))
+                    for h in fixedh_pirock:
+                        FixedStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d, A=A, B=B,
+                                                eps=eps, nx=nx, tf=tf, rtol=max(1e-3*(h*h),1e-9), fixedh=h, nout=nout))
 
-                # set tolerances for adaptive RD tests
-                rtol = np.logspace(-2.5, -6.5, 9)
-                atol = 1e-11
+                if (DoAdaptiveTests):
 
-                for solver in RxDiffSolvers:
+                    # set tolerances for adaptive RD tests
+                    rtol = np.logspace(-2.5, -6.5, 9)
+                    atol = 1e-11
+
+                    for solver in RxDiffSolvers:
+                        for rt in rtol:
+                            AdaptStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
+                                                ststype=solver[1], extststype=solver[2],
+                                                table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
+                                                tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
                     for rt in rtol:
-                        AdaptStats.append(runtest(Executable, probtype='RxDiff', inttype=solver[0],
-                                            ststype=solver[1], extststype=solver[2],
-                                            table_id=solver[3], d=d, A=A, B=B, eps=eps, nx=nx,
-                                            tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
-                for rt in rtol:
-                    AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d,
-                                            A=A, B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
+                        AdaptStats.append(runtest_pirock(PIROCKExecutable, probtype='RxDiff', d=d,
+                                                A=A, B=B, eps=eps, nx=nx, tf=tf, rtol=rt, atol=atol, fixedh=0.0, nout=nout))
 
-    if (DoFixedTests):
-        Df = pd.DataFrame.from_records(FixedStats)
-        print("Fixed step RxDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('RxDiff-fixed.xlsx', index=False)
+        if (DoFixedTests):
+            Df = pd.DataFrame.from_records(FixedStats)
+            print("Fixed step RxDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'RxDiff-fixed_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
-    if (DoAdaptiveTests):
-        Df = pd.DataFrame.from_records(AdaptStats)
-        print("Adaptive step RxDiff test Df:")
-        print(Df)
-        print("Saving as Excel")
-        Df.to_excel('RxDiff-adapt.xlsx', index=False)
+        if (DoAdaptiveTests):
+            Df = pd.DataFrame.from_records(AdaptStats)
+            print("Adaptive step RxDiff test Df:")
+            print(Df)
+            print("Saving as Excel")
+            fname = 'RxDiff-adapt_' + bctype + '.xlsx'
+            Df.to_excel(fname, index=False)
 
 # end of script
