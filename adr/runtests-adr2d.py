@@ -352,7 +352,7 @@ def main():
     DoExplicitRx = True
     DoADRFixedTests = True
     DoADRAdaptiveTests = True
-    ShowCommand = True
+    ShowCommand = False
     ShowOutput = False
     ShowArgs = False
 
