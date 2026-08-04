@@ -27,7 +27,6 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 Plot_ADR = True
-Plot_RD = False
 Plot_Fixed = True
 Plot_Adaptive = True
 Unknown_ExtSTS_Warnings = set()
@@ -826,8 +825,6 @@ BCTYPE_CHOICES = ('all', 'periodic', 'stationary')
 PLOT_MODE_CHOICES = ('all', 'final', 'rkc-vs-rkl')
 ADR_FINAL_INTEGRATORS = ['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKL', 'PIROCK', 'Strang+RKL']
 ADR_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP32+RKL', 'Strang+RKC', 'Strang+RKL']
-RD_FINAL_INTEGRATORS = ['Giraldo-ARK21', 'ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'Strang+RKC', 'Strang+RKL']
-RD_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'Strang+RKC', 'Strang+RKL']
 
 
 def parse_args():
@@ -854,15 +851,6 @@ def load_data(stem, bctype):
     if not path.exists():
         raise FileNotFoundError(f'Missing required input file: {path}')
     return pd.read_excel(path)
-
-
-def rd_inputs_available(bctype):
-    missing = []
-    for stem in ('RxDiff2D-fixed', 'RxDiff2D-adapt'):
-        path = data_path(stem, bctype)
-        if not path.exists():
-            missing.append(path)
-    return missing
 
 
 def unique_sorted(data, column):
@@ -920,49 +908,6 @@ def generate_for_case(bctype, plot_mode):
                         make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_accuracy_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
                         make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
                         make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
-
-    if (Plot_RD):
-        integrators = integrators_for(plot_mode, RD_FINAL_INTEGRATORS, RD_RKC_INTEGRATORS)
-        missing_rd_inputs = rd_inputs_available(bctype)
-        if missing_rd_inputs:
-            print(f'Skipping RxDiff 2D plots for bctype={bctype}:')
-            for path in missing_rd_inputs:
-                print(f'  missing input: {path}')
-            return
-        if (Plot_Fixed):
-            data = load_data('data/RxDiff2D-fixed', bctype)
-            data = data[data["ReturnCode"] == 0]
-            if plot_mode == 'rkc-vs-rkl':
-                d, bval = 1e-1, 2.e1
-                ddata = subset(data, d, bval)
-                if len(ddata) > 0:
-                    make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_fixed_convergence_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-                    make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/rd2D_%s_fixed_efficiency_RKLvRKC' % (PLOT_DIR, bctype), plot_adv=False, integrators=integrators)
-                    make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/rd2D_%s_fixed_runtime_efficiency_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-            else:
-                for d in unique_sorted(data, 'd'):
-                    for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
-                        ddata = subset(data, d, bval)
-                        make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_fixed_convergence_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
-                        make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/rd2D_%s_fixed_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), plot_adv=False, integrators=integrators)
-                        make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/rd2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
-        if (Plot_Adaptive):
-            data = load_data('data/RxDiff2D-adapt', bctype)
-            data = data[data["ReturnCode"] == 0]
-            if plot_mode == 'rkc-vs-rkl':
-                d, bval = 1e-1, 2.e1
-                ddata = subset(data, d, bval)
-                if len(ddata) > 0:
-                    make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_accuracy_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-                    make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_efficiency_RKLvRKC' % (PLOT_DIR, bctype), plot_adv=False, integrators=integrators)
-                    make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_runtime_efficiency_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-            else:
-                for d in unique_sorted(data, 'd'):
-                    for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
-                        ddata = subset(data, d, bval)
-                        make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_accuracy_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
-                        make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), plot_adv=False, integrators=integrators)
-                        make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/rd2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
 
 
 def main():

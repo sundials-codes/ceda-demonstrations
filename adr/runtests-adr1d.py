@@ -182,13 +182,14 @@ def runtest_pirock(exe='./bin/advection_diffusion_reaction_1D_pirock', probtype=
     # process the run results
     stats['ReturnCode'] = result.returncode
     stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + exe + " FAILURE: " + str(result.returncode))
-        print(result.stderr)
-    else:
-        if(showcommand):
+    if (showcommand):
+        if (result.returncode != 0):
+            print("Run command " + exe + " FAILURE: " + str(result. returncode))
+            print(result.stderr)
+        else:
             print("Run command: " + exe + " SUCCESS\n")
 
+    if (result.returncode == 0):
         # compute solution error and store this in the stats
         stats['Accuracy'] = calc_error(nx, "sol.dat", "reference.dat")
 
@@ -224,12 +225,13 @@ def runtest(exe='./bin/advection_diffusion_reaction_1D', probtype='AdvDiffRx', i
     # process the run results
     stats['ReturnCode'] = result.returncode
     stats['RunTime'] = runtime
-    if (result.returncode != 0):
-        print("Run command " + runcommand + " FAILURE: " + str(result.returncode))
-    else:
-        if (showcommand):
+    if (showcommand):
+        if (result.returncode != 0):
+            print("Run command " + runcommand + " FAILURE: " + str(result.returncode))
+        else:
             print("Run command " + runcommand + " SUCCESS")
 
+    if (result.returncode == 0):
         # compute solution error and store this in the stats
         stats['Accuracy'] = calc_error(nx, "advection_diffusion_reaction.out", "reference.dat")
 
@@ -450,18 +452,14 @@ if (DoAdvDiffRx):
 
         if (DoFixedTests):
             Df = pd.DataFrame.from_records(FixedStats)
-            print("Fixed step AdvDiffRx test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'AdvDiffRx-fixed_' + bctype + '.xlsx'
+            print("Fixed step AdvDiffRx %s tests finished" % bctype)
+            fname = 'data/AdvDiffRx-fixed_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
         if (DoAdaptiveTests):
             Df = pd.DataFrame.from_records(AdaptStats)
-            print("Adaptive step AdvDiffRx test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'AdvDiffRx-adapt_' + bctype + '.xlsx'
+            print("Adaptive step AdvDiffRx %s tests finished" % bctype)
+            fname = 'data/AdvDiffRx-adapt_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
 # Advection-diffusion tests
@@ -530,18 +528,14 @@ if (DoAdvDiff):
 
         if (DoFixedTests):
             Df = pd.DataFrame.from_records(FixedStats)
-            print("Fixed step AdvDiff test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'AdvDiff-fixed_' + bctype + '.xlsx'
+            print("Fixed step AdvDiff %s tests finished" % bctype)
+            fname = 'data/AdvDiff-fixed_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
         if (DoAdaptiveTests):
             Df = pd.DataFrame.from_records(AdaptStats)
-            print("Adaptive step AdvDiff test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'AdvDiff-adapt_' + bctype + '.xlsx'
+            print("Adaptive step AdvDiff %s tests finished" % bctype)
+            fname = 'data/AdvDiff-adapt_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
 # Reaction-diffusion tests
@@ -611,18 +605,14 @@ if (DoRxDiff):
 
         if (DoFixedTests):
             Df = pd.DataFrame.from_records(FixedStats)
-            print("Fixed step RxDiff test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'RxDiff-fixed_' + bctype + '.xlsx'
+            print("Fixed step RxDiff %s tests finished" % bctype)
+            fname = 'data/RxDiff-fixed_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
         if (DoAdaptiveTests):
             Df = pd.DataFrame.from_records(AdaptStats)
-            print("Adaptive step RxDiff test Df:")
-            print(Df)
-            print("Saving as Excel")
-            fname = 'RxDiff-adapt_' + bctype + '.xlsx'
+            print("Adaptive step RxDiff %s tests finished" % bctype)
+            fname = 'data/RxDiff-adapt_' + bctype + '.xlsx'
             Df.to_excel(fname, index=False)
 
 # end of script
