@@ -23,7 +23,13 @@ The following steps describe how to build the demonstration code in a Linux or O
 To obtain the code, clone this repository with Git:
 
 ```bash
-  git clone https://github.com/sundials-codes/ceda-demonstrations.git
+  git clone -b extsts https://github.com/sundials-codes/ceda-demonstrations.git
+```
+
+All remaining steps in these instructions assume that you are sitting inside the top-level folder that was cloned in this step:
+
+```bash
+  cd ceda-demonstrations
 ```
 
 ### Requirements
@@ -41,9 +47,10 @@ The codes for this publication depend on one external library:
 If this is not already available on your system, it may be cloned from GitHub as a submodule.  After cloning this repository using the command above, you can retrieve this submodule via:
 
 ```bash
-  cd ceda-demonstrations/deps
+  cd deps
   git submodule init
   git submodule update
+  cd ..
 ```
 
 We note that a particular benefit of retrieving this dependency as a submodule is that it points to specific revision of the library that is known to work correctly with the codes in this repository.
@@ -61,6 +68,7 @@ mkdir deps/sundials/build
 cd deps/sundials/build
 cmake -DCMAKE_INSTALL_PREFIX=../../sundials-install -DCMAKE_BUILD_TYPE=Release ..
 make -j install
+cd -
 ```
 
 Instructions for building SUNDIALS with additional options [may be found here](https://sundials.readthedocs.io/en/latest/sundials/Install_link.html).
@@ -70,10 +78,11 @@ Instructions for building SUNDIALS with additional options [may be found here](h
 The codes for this paper follow the standard pattern for CMake-based projects: in-source builds are not permitted, so the code should be configured and built from a separate build directory, e.g.,
 
 ```bash
-  mkdir ceda-demonstrations/build
-  cd ceda-demonstrations/build
+  mkdir build
+  cd build
   cmake -DSUNDIALS_ROOT="[sundials-path]" -DCMAKE_BUILD_TYPE=Release ..
   make -j install
+  cd -
 ```
 
 where `[sundials-path]` is the path to the top-level folder containing the SUNDIALS installation.  Upon completion of these commands, the executables for each test problem are saved in the `ceda-demonstrations/bin` directory.
@@ -81,24 +90,29 @@ where `[sundials-path]` is the path to the top-level folder containing the SUNDI
 If SUNDIALS was installed using the submodule-based instructions above, then the following commands should be sufficient:
 
 ```bash
-  mkdir ceda-demonstrations/build
-  cd ceda-demonstrations/build
+  mkdir build
+  cd build
   cmake -DSUNDIALS_ROOT=../deps/sundials-install -DCMAKE_BUILD_TYPE=Release ..
   make -j install
+  cd -
 ```
 
 ### Running the tests for the paper ###
 
-The codes for this paper are contained in the folder `adr`.  After building the executables using the above instructions, the full set of 1D and 2D test may be run using the commands from the top-level repository directory:
+The source code files for this paper are contained in the folder `adr`.  After building the executables using the above instructions, the executables and Python run/plot scripts are in the folder `bin`.  The full set of 1D and 2D tests include a wide range of parameters and time integration methods.  These scripts will store all results in Pandas dataframes, and then save those results to a set of `.xlsx` files into the `data` folder. *Note: these scripts can take some time to complete,* so the `data` folder already contains a set of `.xlsx` files that we generated for the paper and that can be used to create the plots in the paper.  These data files will be overwritten if you run the test scripts again.
+
+To run the full set of tests yourself, use the following commands from the top-level repository directory:
 
 ```bash
 python ./bin/runtests-adr1d.py
 python ./bin/runtests-adr2d.py
 ```
 
-These scripts run a wide range of tests using different diffusion constants, grids, and time integration methods, storing all results in a Pandas dataframe, and then saving those results to a set of `.xlsx` files.  *Note: this repository already includes the `.xlsx` files that we generated and used to create the plots in the paper; the `runtests` scripts above will overwrite those files.*. Once these results files are in place, the plots for the paper may be generated with the commands:
+Once these complete writing the new `.xlsx` files in the `data` folder, the plots for the paper may be generated with the commands:
 
 ```bash
 python ./bin/plot-adr1d.py
 python ./bin/plot-adr2d.py
 ```
+
+These plots will be stored in a new top-level `plots` folder.
