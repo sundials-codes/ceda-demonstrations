@@ -2,12 +2,14 @@
 #------------------------------------------------------------
 # Programmer(s):  Daniel R. Reynolds @ UMBC
 #------------------------------------------------------------
-# Copyright (c) 2025, University of Maryland Baltimore County
+# Copyright (c) 2026, University of Maryland Baltimore County
 # All rights reserved.
 # For details, see the LICENSE file.
 #------------------------------------------------------------
 
 # imports
+import argparse
+from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -22,14 +24,27 @@ plt.rcParams['figure.constrained_layout.use'] = True
 # flags to turn on/off certain plots
 Generate_PDF = True
 Generate_PNG = False
+ShowPlots = False
 Plot_ADR = True
 Plot_AD = True
 Plot_RD = True
 Plot_Fixed = True
 Plot_Adaptive = True
-ShowPlots = False
+Unknown_ExtSTS_Warnings = set()
 
 # utility functions to generate plots
+def legend_method_name(method):
+    """Return the display name for a method in plot legends."""
+    method_names = {
+        'ExtSTS+Giraldo': 'Giraldo-ExtSTS',
+        'ExtSTS+ERK22a': 'ERK22a-ExtSTS',
+        'ExtSTS+ESDIRK34a': 'ESDIRK34a-ExtSTS',
+        'Giraldo-ARK21': 'Giraldo-ARK',
+        'ExtSTS+SSP32': 'SSP32-ExtSTS',
+        'Giraldo-DIRK21': 'Giraldo-DIRK',
+    }
+    return method_names.get(method, method)
+
 def ark_table_name(table_id):
     """Return the name of the ARK table with the given ID."""
     if (table_id == 1):
@@ -47,18 +62,6 @@ def ark_table_name(table_id):
     else:
         raise ValueError('Unknown table ID: %d' % table_id)
 
-def legend_method_name(method):
-    """Return the display name for a method in plot legends."""
-    method_names = {
-        'ExtSTS+Giraldo': 'Giraldo-ExtSTS',
-        'ExtSTS+ERK22a': 'ERK22a-ExtSTS',
-        'ExtSTS+ESDIRK34a': 'ESDIRK34a-ExtSTS',
-        'Giraldo-ARK21': 'Giraldo-ARK',
-        'ExtSTS+SSP32': 'SSP32-ExtSTS',
-        'Giraldo-DIRK21': 'Giraldo-DIRK',
-    }
-    return method_names.get(method, method)
-
 def rk_line_style(table_id):
     """Return the marker and color for plotting the ARK table with the given ID."""
     if (table_id == 1):
@@ -66,9 +69,9 @@ def rk_line_style(table_id):
     elif (table_id == 2):
         return '+', 'C1'
     elif (table_id == 3):
-        return '+', 'C2', ls
+        return '+', 'C2'
     elif (table_id == 4):
-        return '+', 'C3', ls
+        return '+', 'C3'
     elif (table_id == 5):
         return 'x', 'C7'
     elif (table_id == 6):
@@ -158,7 +161,12 @@ def extsts_line_style(extsts,sts):
         else:
             return 's', 'C15'
     else:
-        raise ValueError('Unknown extsts type: %d' % extsts)
+        if extsts not in Unknown_ExtSTS_Warnings:
+            print(f"Warning: unknown extsts type '{extsts}', using fallback marker/color.")
+            Unknown_ExtSTS_Warnings.add(extsts)
+        if (sts == 'RKL'):
+            return 'o', 'k'
+        return 's', 'k'
 
 convergence_figsize = (10,4)
 convergence_bbox = (0.55, 0.95)
@@ -649,85 +657,178 @@ def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
         plt.close(fig)
 
 
-# generate plots, loading data from stored output
-dvals = [1e-2, 1e-1]
-epsvals = [1e-6, 1e-4, 1e-2]
-#bctype = 'stationary'
-bctype = 'periodic'
-if (Plot_ADR):
-    # all integrators
-    #integrators = None
-    # list of integrators to show differences in RKL vs RKC
-    #integrators=['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'Strang+RKC', 'Strang+RKL']
-    # pruned list of integrators for final plots
-    integrators=['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'PIROCK', 'Strang+RKL']
-    if (Plot_Fixed):
-        data=pd.read_excel('AdvDiffRx-fixed.xlsx')
-        for d in dvals:
-            for eps in epsvals:
-                ddata = data[data['d'] == d]
-                ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-    if (Plot_Adaptive):
-        data=pd.read_excel('AdvDiffRx-adapt.xlsx')
-        for d in dvals:
-            for eps in epsvals:
-                ddata = data[data['d'] == d]
-                ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+DATA_DIR = Path(__file__).resolve().parent
+BCTYPE_CHOICES = ('all', 'periodic', 'stationary')
+PLOT_MODE_CHOICES = ('all', 'final', 'rkc-vs-rkl')
+ADR_FINAL_INTEGRATORS = ['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'PIROCK', 'Strang+RKL']
+ADR_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'Strang+RKC', 'Strang+RKL']
+AD_FINAL_INTEGRATORS = ['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKL', 'PIROCK', 'Strang+RKL']
+AD_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+ERK22a+RKC', 'ExtSTS+ERK22a+RKL', 'Strang+RKC', 'Strang+RKL']
+RD_FINAL_INTEGRATORS = ['Giraldo-DIRK21', 'ExtSTS+Giraldo+RKL', 'PIROCK', 'Strang+RKL']
+RD_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+ESDIRK34a+RKC', 'ExtSTS+ESDIRK34a+RKL', 'Strang+RKC', 'Strang+RKL']
 
-if (Plot_AD):
-    # all integrators
-    #integrators = None
-    # list of integrators to show differences in RKL vs RKC
-    #integrators=['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+ERK22a+RKC', 'ExtSTS+ERK22a+RKL', 'Strang+RKC', 'Strang+RKL']
-    # pruned list of integrators for final plots
-    integrators=['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKL', 'PIROCK', 'Strang+RKL']
-    if (Plot_Fixed):
-        data=pd.read_excel('AdvDiff-fixed.xlsx')
-        for d in dvals:
-            ddata = data[data['d'] == d]
-            make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad1D_%s_fixed_convergence_d%.2f' % (bctype, d), integrators=integrators)
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_efficiency_d%.2f' % (bctype, d), integrators=integrators)
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
-    if (Plot_Adaptive):
-        data=pd.read_excel('AdvDiff-adapt.xlsx')
-        for d in dvals:
-            ddata = data[data['d'] == d]
-            make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad1D_%s_adaptive_accuracy_d%.2f' % (bctype, d), integrators=integrators)
-            make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_efficiency_d%.2f' % (bctype, d), integrators=integrators)
-            make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
 
-if (Plot_RD):
-    # all integrators
-    #integrators = None
-    # list of integrators to show differences in RKL vs RKC
-    #integrators=['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+ESDIRK34a+RKC', 'ExtSTS+ESDIRK34a+RKL', 'Strang+RKC', 'Strang+RKL']
-    # pruned list of integrators for final plots
-    integrators=['Giraldo-DIRK21', 'ExtSTS+Giraldo+RKL', 'PIROCK', 'Strang+RKL']
-    if (Plot_Fixed):
-        data=pd.read_excel('RxDiff-fixed.xlsx')
-        for d in dvals:
-            for eps in epsvals:
-                ddata = data[data['d'] == d]
-                ddata = ddata[ddata['eps'] == eps]
-                make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-    if (Plot_Adaptive):
-        data=pd.read_excel('RxDiff-adapt.xlsx')
-        for d in dvals:
-            for eps in epsvals:
-                ddata = data[data['d'] == d]
-                ddata = ddata[ddata['eps'] == eps]
-                make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s__adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
-                make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate ADR 1D plots from unified spreadsheets.')
+    parser.add_argument('--bctype', choices=BCTYPE_CHOICES, default='all',
+                        help='Boundary condition subset to plot (default: all).')
+    parser.add_argument('--plot-mode', choices=PLOT_MODE_CHOICES, default='all',
+                        help='Plot subset to generate (default: all).')
+    return parser.parse_args()
 
-# display plots
-if (ShowPlots):
-    plt.show()
+
+def selected_values(selected, all_values):
+    if selected == 'all':
+        return all_values
+    return (selected,)
+
+
+def get_integrator_subset(plot_mode):
+    return plot_mode
+
+
+def data_path(stem, bctype):
+    return DATA_DIR / f'{stem}_{bctype}.xlsx'
+
+
+def load_data(stem, bctype):
+    path = data_path(stem, bctype)
+    if not path.exists():
+        raise FileNotFoundError(f'Missing required input file: {path}')
+    return pd.read_excel(path)
+
+
+def unique_sorted(data, column):
+    return np.sort(np.unique(data[column].to_numpy(dtype=float)))
+
+
+def subset(data, dvalue, epsvalue=None):
+    dmask = np.isclose(data['d'].to_numpy(dtype=float), dvalue)
+    out = data[dmask]
+    if epsvalue is not None:
+        emask = np.isclose(out['eps'].to_numpy(dtype=float), epsvalue)
+        out = out[emask]
+    return out
+
+
+def integrators_for(plot_mode, final_list, rkc_list):
+    if plot_mode == 'rkc-vs-rkl':
+        return rkc_list
+    return final_list
+
+
+def maybe_name(base, plot_mode):
+    if plot_mode == 'rkc-vs-rkl':
+        return f'{base}_RKLvRKC'
+    return base
+
+
+def generate_for_case(bctype, plot_mode):
+    if (Plot_ADR):
+        integrators = integrators_for(plot_mode, ADR_FINAL_INTEGRATORS, ADR_RKC_INTEGRATORS)
+        if (Plot_Fixed):
+            data = load_data('AdvDiffRx-fixed', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                eps = 1e-2
+                ddata = subset(data, d, eps)
+                if len(ddata) > 0:
+                    make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('adr1D_%s_fixed_convergence' % bctype, plot_mode), integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('adr1D_%s_fixed_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
+                        ddata = subset(data, d, eps)
+                        make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+        if (Plot_Adaptive):
+            data = load_data('AdvDiffRx-adapt', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                eps = 1e-2
+                ddata = subset(data, d, eps)
+                if len(ddata) > 0:
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('adr1D_%s_adaptive_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
+                        ddata = subset(data, d, eps)
+                        make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_efficiency_comparison_plot(ddata, r'AdvDiffRx Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+
+    if (Plot_AD):
+        integrators = integrators_for(plot_mode, AD_FINAL_INTEGRATORS, AD_RKC_INTEGRATORS)
+        if (Plot_Fixed):
+            data = load_data('AdvDiff-fixed', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                ddata = subset(data, d)
+                if len(ddata) > 0:
+                    make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, maybe_name('ad1D_%s_fixed_convergence' % bctype, plot_mode), integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, maybe_name('ad1D_%s_fixed_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    ddata = subset(data, d)
+                    make_convergence_comparison_plot(ddata, r'AdvDiff Convergence ($d=%.2f$)' % d, 'ad1D_%s_fixed_convergence_d%.2f' % (bctype, d), integrators=integrators)
+                    make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_efficiency_d%.2f' % (bctype, d), plot_rx=False, integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, 'ad1D_%s_fixed_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
+        if (Plot_Adaptive):
+            data = load_data('AdvDiff-adapt', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                ddata = subset(data, d)
+                if len(ddata) > 0:
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, maybe_name('ad1D_%s_adaptive_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    ddata = subset(data, d)
+                    make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, 'ad1D_%s_adaptive_accuracy_d%.2f' % (bctype, d), integrators=integrators)
+                    make_efficiency_comparison_plot(ddata, r'AdvDiff Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_efficiency_d%.2f' % (bctype, d), plot_rx=False, integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, 'ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (bctype, d), integrators=integrators)
+
+    if (Plot_RD):
+        integrators = integrators_for(plot_mode, RD_FINAL_INTEGRATORS, RD_RKC_INTEGRATORS)
+        if (Plot_Fixed):
+            data = load_data('RxDiff-fixed', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                eps = 1e-2
+                ddata = subset(data, d, eps)
+                if len(ddata) > 0:
+                    make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('rd1D_%s_fixed_convergence' % bctype, plot_mode), integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('rd1D_%s_fixed_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
+                        ddata = subset(data, d, eps)
+                        make_convergence_comparison_plot(ddata, r'RxDiff Convergence ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_convergence_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), plot_adv=False, integrators=integrators)
+                        make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+        if (Plot_Adaptive):
+            data = load_data('RxDiff-adapt', bctype)
+            if plot_mode == 'rkc-vs-rkl':
+                d = 1e-1
+                eps = 1e-2
+                ddata = subset(data, d, eps)
+                if len(ddata) > 0:
+                    make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), maybe_name('rd1D_%s_adaptive_runtime_efficiency' % bctype, plot_mode), integrators=integrators)
+            else:
+                for d in unique_sorted(data, 'd'):
+                    for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
+                        ddata = subset(data, d, eps)
+                        make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s__adaptive_accuracy_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+                        make_efficiency_comparison_plot(ddata, r'RxDiff Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), plot_adv=False, integrators=integrators)
+                        make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), 'rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (bctype, d, eps), integrators=integrators)
+
+
+def main():
+    args = parse_args()
+    for bctype in selected_values(args.bctype, ('periodic', 'stationary')):
+        for plot_mode in selected_values(args.plot_mode, ('final', 'rkc-vs-rkl')):
+            generate_for_case(bctype, plot_mode)
+
+
+if __name__ == '__main__':
+    main()
