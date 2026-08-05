@@ -27,7 +27,7 @@ plt.rcParams['figure.constrained_layout.use'] = True
 Generate_PDF = True
 Generate_PNG = False
 Plot_ADR = True
-Plot_Fixed = True
+Plot_Fixed = False
 Plot_Adaptive = True
 Unknown_ExtSTS_Warnings = set()
 

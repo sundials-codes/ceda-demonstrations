@@ -350,7 +350,7 @@ def main():
     # Flags to enable/disable categories of tests
     DoImplicitRx = False
     DoExplicitRx = True
-    DoADRFixedTests = True
+    DoADRFixedTests = False
     DoADRAdaptiveTests = True
     ShowCommand = False
     ShowOutput = False
