@@ -108,6 +108,13 @@ python ./bin/runtests-adr1d.py
 python ./bin/runtests-adr2d.py
 ```
 
+*Note: on Linux systems, you may need to update your `LD_LIBRARY_PATH` to include the installation folder for the SUNDIALS libraries, e.g.*
+
+```bash
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/deps/sundials-install/lib
+```
+*before running the above `runtests-X` commands.*
+
 Once these complete writing the new `.xlsx` files in the `data` folder, the plots for the paper may be generated with the commands:
 
 ```bash
