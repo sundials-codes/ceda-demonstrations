@@ -514,17 +514,13 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
 DATA_DIR = Path(__file__).resolve().parent / '..'
 PLOT_DIR = Path(__file__).resolve().parent / '../plots'
 BCTYPE_CHOICES = ('all', 'periodic', 'stationary')
-PLOT_MODE_CHOICES = ('all', 'final', 'rkc-vs-rkl')
 ADR_FINAL_INTEGRATORS = ['Giraldo-ARK21', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKL', 'PIROCK', 'Strang+RKL']
-ADR_RKC_INTEGRATORS = ['ExtSTS+Giraldo+RKC', 'ExtSTS+Giraldo+RKL', 'ExtSTS+SSP32+RKC', 'ExtSTS+SSP32+RKL', 'Strang+RKC', 'Strang+RKL']
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Generate ADR 2D plots from unified spreadsheets.')
     parser.add_argument('--bctype', choices=BCTYPE_CHOICES, default='all',
                         help='Boundary condition subset to plot (default: all).')
-    parser.add_argument('--plot-mode', choices=PLOT_MODE_CHOICES, default='all',
-                        help='Plot subset to generate (default: all).')
     return parser.parse_args()
 
 
@@ -556,44 +552,25 @@ def subset(data, dvalue, bvalue):
     return out[bmask]
 
 
-def integrators_for(plot_mode, final_list, rkc_list):
-    if plot_mode == 'rkc-vs-rkl':
-        return rkc_list
-    return final_list
-
-
-def generate_for_case(bctype, plot_mode):
+def generate_for_case(bctype):
 
     if (Plot_ADR):
-        integrators = integrators_for(plot_mode, ADR_FINAL_INTEGRATORS, ADR_RKC_INTEGRATORS)
+        integrators = ADR_FINAL_INTEGRATORS
         if (Plot_Fixed):
             data = load_data('data/AdvDiffRx2D-fixed', bctype)
             data = data[data["ReturnCode"] == 0]
-            if plot_mode == 'rkc-vs-rkl':
-                d, bval = 1e-1, 3.0
-                ddata = subset(data, d, bval)
-                if len(ddata) > 0:
-                    make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_fixed_convergence_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/adr2D_%s_fixed_runtime_efficiency_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-            else:
-                for d in unique_sorted(data, 'd'):
-                    for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
-                        ddata = subset(data, d, bval)
-                        make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_fixed_convergence_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
-                        make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/adr2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
+            for d in unique_sorted(data, 'd'):
+                for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
+                    ddata = subset(data, d, bval)
+                    make_convergence_comparison_plot(ddata, r'AdvDiffRx Convergence ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_fixed_convergence_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$, Fixed)' % (d, bval), '%s/adr2D_%s_fixed_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
         if (Plot_Adaptive):
             data = load_data('data/AdvDiffRx2D-adapt', bctype)
             data = data[data["ReturnCode"] == 0]
-            if plot_mode == 'rkc-vs-rkl':
-                d, bval = 1e-1, 3.0
-                ddata = subset(data, d, bval)
-                if len(ddata) > 0:
-                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
-            else:
-                for d in unique_sorted(data, 'd'):
-                    for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
-                        ddata = subset(data, d, bval)
-                        make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
+            for d in unique_sorted(data, 'd'):
+                for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
+                    ddata = subset(data, d, bval)
+                    make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
 
 
 def main():
@@ -602,8 +579,7 @@ def main():
     warnings.simplefilter("ignore", RuntimeWarning)
     warnings.simplefilter("ignore", UserWarning)
     for bctype in selected_values(args.bctype, ('periodic', 'stationary')):
-        for plot_mode in selected_values(args.plot_mode, ('final', 'rkc-vs-rkl')):
-            generate_for_case(bctype, plot_mode)
+        generate_for_case(bctype, 'final')
     print('Plot generation complete. Plots saved in:', PLOT_DIR)
 
 if __name__ == '__main__':
