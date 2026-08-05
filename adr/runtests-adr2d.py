@@ -150,7 +150,7 @@ def calc_error(nx, solfile, reffile):
 # utility routine to generate an ADR reference solution for a given problem configuration
 def generate_ADR_reference(exe='./bin/advection_diffusion_reaction_2D', cux=-0.5, cuy=1.0, cvx=0.4, cvy=0.7, d=1e-2, A=1.3, B=1.0, nx=400, ny=400, tf=1.0):
     runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol 1e-6 --atol 1e-11 --nout 1 --calc_error --write_solution" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf) + int_method("AdvDiffRx", False, "ARK", None, None, 1)
-    print("Generating ADR reference solution")
+    print("Generating ADR reference solution with executable " + exe)
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     #print(result.stdout.decode())
     os.rename('reference.dat', 'adr_reference.dat')
