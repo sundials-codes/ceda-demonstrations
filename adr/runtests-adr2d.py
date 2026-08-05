@@ -152,7 +152,7 @@ def generate_ADR_reference(exe='./bin/advection_diffusion_reaction_2D', cux=-0.5
     runcommand = "%s --cux %e --cuy %e --cvx %e --cvy %e --d %e --A %e --B %e --nx %d --ny %d --tf %e --rtol 1e-6 --atol 1e-11 --nout 1 --calc_error --write_solution" % (exe, cux, cuy, cvx, cvy, d, A, B, nx, ny, tf) + int_method("AdvDiffRx", False, "ARK", None, None, 1)
     print("Generating ADR reference solution")
     result = subprocess.run(shlex.split(runcommand), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(result.stdout.decode())
+    #print(result.stdout.decode())
     os.rename('reference.dat', 'adr_reference.dat')
 
 # utility routine to run the PIROCK ADR executable
@@ -192,7 +192,8 @@ def runtest_ADR_pirock(exe='./bin/advection_diffusion_reaction_2D_pirock', cux=-
             if (showoutput):
                 print(result.stdout.decode())
         except subprocess.TimeoutExpired:
-            print('Test exceeded maximum run time and was terminated')
+            if (showoutput):
+                print('Test exceeded maximum run time and was terminated')
             stats['ReturnCode'] = -1
         stats['RunTime'] = time.perf_counter() - tstart
 
@@ -240,8 +241,9 @@ def runtest(exe='./bin/advection_diffusion_reaction_2D', probtype='AdvDiffRx', i
             if (showoutput):
                 print(result.stdout.decode())
         except subprocess.TimeoutExpired:
-            print('Test exceeded maximum run time and was terminated')
-            print('Run command was: ' + runcommand)
+            if (showoutput):
+                print('Test exceeded maximum run time and was terminated')
+                print('Run command was: ' + runcommand)
             stats['ReturnCode'] = -1
         stats['RunTime'] = time.perf_counter() - tstart
 
@@ -350,8 +352,8 @@ def main():
     DoExplicitRx = True
     DoADRFixedTests = True
     DoADRAdaptiveTests = True
-    ShowCommand = True
-    ShowOutput = True
+    ShowCommand = False
+    ShowOutput = False
     ShowArgs = False
 
     # Shared testing parameters: [inttype, ststype, extststype, table_id]
@@ -454,7 +456,7 @@ def main():
                                 ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
                             for a in ar:
                                 st = a.get()
-                                print(st)
+                                #print(st)
                                 AdaptStats.append(st)
 
                     if (DoADRFixedTests):
@@ -519,7 +521,7 @@ def main():
                                 ar.append(pool.apply_async(runtest_ADR_pirock, args=args))
                             for a in ar:
                                 st = a.get()
-                                print(st)
+                                #print(st)
                                 FixedStats.append(st)
 
             # store results
