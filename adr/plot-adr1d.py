@@ -428,101 +428,6 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
     if (not ShowPlots):
         plt.close(fig)
 
-accuracy_figsize = (10,4)
-accuracy_bbox = (0.55, 0.95)
-# accuracy_ylim = None
-accuracy_ylim = 10
-def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
-    fig = plt.figure(figsize=accuracy_figsize)
-    gs = GridSpec(1, 2, figure=fig)
-    ax1 = fig.add_subplot(gs[0,0])
-    for integrator in data['inttype'].unique():
-        intdata = data.groupby(['inttype',]).get_group((integrator,))
-
-        if (integrator == 'ExtSTS'):
-            for extsts in intdata['extststype'].unique():
-                extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
-                for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
-                    rtol = stsdata['rtol'].to_numpy()
-                    accuracy = stsdata['Accuracy'].to_numpy()
-                    if (len(intdata['ststype'].unique()) > 1):
-                        ststxt = '+' + sts
-                    else:
-                        ststxt = ''
-                    ltext = '%s+%s%s' % (integrator,extsts,ststxt)
-                    m,c = extsts_line_style(extsts,sts)
-                    DoPlot = True
-                    if (integrators is not None):
-                        if ltext not in integrators:
-                            DoPlot = False
-                    ltext = '%s+%s' % (integrator,extsts)
-                    if DoPlot:
-                        ax1.loglog(rtol, accuracy, marker=m, color=c, label=legend_method_name(ltext))
-
-        elif (integrator == 'PIROCK'):
-            rtol = intdata['rtol'].to_numpy()
-            accuracy = intdata['Accuracy'].to_numpy()
-            ltext = '%s' % (integrator)
-            DoPlot = True
-            if (integrators is not None):
-                if ltext not in integrators:
-                    DoPlot = False
-            if DoPlot:
-                ax1.loglog(rtol, accuracy, marker='s', color='k', label=legend_method_name(ltext))
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = intdata.groupby(['ststype',]).get_group((sts,))
-                rtol = stsdata['rtol'].to_numpy()
-                accuracy = stsdata['Accuracy'].to_numpy()
-                if (len(intdata['ststype'].unique()) > 1):
-                    ststxt = '+' + sts
-                else:
-                    ststxt = ''
-                ltext = '%s%s' % (integrator,ststxt)
-                m,c = strang_line_style(sts)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                ltext = '%s' % (integrator)
-                if DoPlot:
-                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=legend_method_name(ltext))
-
-        else:
-            for table_id in intdata['table_id'].unique():
-                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
-                rtol = tabledata['rtol'].to_numpy()
-                accuracy = tabledata['Accuracy'].to_numpy()
-                ltext = ark_table_name(table_id)
-                m,c = rk_line_style(table_id)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax1.loglog(rtol, accuracy, marker=m, color=c, label=legend_method_name(ltext))
-
-    handles, labels = ax1.get_legend_handles_labels()
-    ax1.set_title(titletxt)
-    ax1.set_xlabel(r'rtol')
-    ax1.set_ylabel(r'accuracy')
-    if (accuracy_ylim != None):
-        y_bot, y_top = ax1.get_ylim()
-        if (y_top > accuracy_ylim):
-            ax1.set_ylim(bottom=y_bot, top=accuracy_ylim)
-    ax1.grid(linestyle='--', linewidth=0.5)
-    fig.legend(handles, labels, loc='upper left', bbox_to_anchor=accuracy_bbox)
-    if (Generate_PNG):
-        plt.savefig(picname + '.png')
-    if (Generate_PDF):
-        plt.savefig(picname + '.pdf')
-    if (not ShowPlots):
-        plt.close(fig)
-
-
-
 DATA_DIR = Path(__file__).resolve().parent / '..'
 PLOT_DIR = Path(__file__).resolve().parent / '../plots'
 BCTYPE_CHOICES = ('all', 'periodic', 'stationary')
@@ -620,7 +525,6 @@ def generate_for_case(bctype, plot_mode):
                 for d in unique_sorted(data, 'd'):
                     for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
                         ddata = subset(data, d, eps)
-                        make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/adr1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
                         make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/adr1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
 
     if (Plot_AD):
@@ -648,7 +552,6 @@ def generate_for_case(bctype, plot_mode):
             else:
                 for d in unique_sorted(data, 'd'):
                     ddata = subset(data, d)
-                    make_accuracy_comparison_plot(ddata, r'AdvDiff Accuracy ($d=%.2f$)' % d, '%s/ad1D_%s_adaptive_accuracy_d%.2f' % (PLOT_DIR, bctype, d), integrators=integrators)
                     make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$)' % d, '%s/ad1D_%s_adaptive_runtime_efficiency_d%.2f' % (PLOT_DIR, bctype, d), integrators=integrators)
 
     if (Plot_RD):
@@ -680,7 +583,6 @@ def generate_for_case(bctype, plot_mode):
                 for d in unique_sorted(data, 'd'):
                     for eps in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'eps'):
                         ddata = subset(data, d, eps)
-                        make_accuracy_comparison_plot(ddata, r'RxDiff Accuracy ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/rd1D_%s_adaptive_accuracy_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
                         make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/rd1D_%s_adaptive_runtime_efficiency_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
 
 

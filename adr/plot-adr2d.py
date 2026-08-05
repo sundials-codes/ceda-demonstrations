@@ -510,135 +510,6 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
     if (Generate_PDF):
         plt.savefig(picname + '.pdf')
 
-accuracy_figsize = (10,4)
-accuracy_bbox = (0.55, 0.95)
-accuracy_ylim = None
-def make_accuracy_comparison_plot(data, titletxt, picname, integrators=None):
-    fig = plt.figure(figsize=accuracy_figsize)
-    gs = GridSpec(1, 2, figure=fig)
-    ax1 = fig.add_subplot(gs[0,0])
-    for integrator in data['inttype'].unique():
-        intdata = data.groupby(['inttype',]).get_group((integrator,))
-
-        if (integrator == 'ExtSTS'):
-            for extsts in intdata['extststype'].unique():
-                extstsdata = intdata.groupby(['extststype',]).get_group((extsts,))
-                for sts in extstsdata['ststype'].unique():
-                    stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
-                    for rxtype in stsdata['implicitrx'].unique():
-                        pdata = stsdata[stsdata['implicitrx'] == rxtype]
-                        rtol = pdata['rtol'].to_numpy()
-                        accuracy = pdata['Accuracy'].to_numpy()
-                        if (len(extstsdata['implicitrx'].unique()) > 1):
-                            if (rxtype):
-                                rxtxt = ', impl-R'
-                            else:
-                                rxtxt = ', expl-R'
-                        else:
-                            rxtxt = ''
-                        if (len(intdata['ststype'].unique()) > 1):
-                            ststxt = '+' + sts
-                        else:
-                            ststxt = ''
-                        ltext = '%s+%s%s%s' % (integrator,extsts,ststxt,rxtxt)
-                        m,c,l = extsts_line_style(extsts,sts,rxtype)
-                        DoPlot = True
-                        if (integrators is not None):
-                            if ltext not in integrators:
-                                DoPlot = False
-                        ltext = '%s+%s%s' % (integrator,extsts,rxtxt)
-                        display_ltext = '%s%s' % (legend_method_name('%s+%s' % (integrator,extsts)),rxtxt)
-                        if DoPlot:
-                            ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
-
-        elif (integrator == 'PIROCK'):
-            for rxtype in intdata['implicitrx'].unique():
-                pdata = intdata[intdata['implicitrx'] == rxtype]
-                rtol = pdata['rtol'].to_numpy()
-                accuracy = pdata['Accuracy'].to_numpy()
-                if (len(intdata['implicitrx'].unique()) > 1):
-                    if (rxtype):
-                        rxtxt = ', impl-R'
-                        ls = '--'
-                    else:
-                        rxtxt = ', expl-R'
-                        ls = '-'
-                else:
-                    rxtxt = ''
-                    ls = '-'
-                ltext = '%s%s' % (integrator,rxtxt)
-                DoPlot = True
-                if (integrators is not None):
-                    if ltext not in integrators:
-                        DoPlot = False
-                if DoPlot:
-                    ax1.loglog(rtol, accuracy, marker='s', color='k', linestyle=ls, label=legend_method_name(ltext))
-
-        elif (integrator == 'Strang'):
-            for sts in intdata['ststype'].unique():
-                stsdata = extstsdata.groupby(['ststype',]).get_group((sts,))
-                for rxtype in stsdata['implicitrx'].unique():
-                    pdata = stsdata[stsdata['implicitrx'] == rxtype]
-                    rtol = pdata['rtol'].to_numpy()
-                    accuracy = pdata['Accuracy'].to_numpy()
-                    if (len(intdata['implicitrx'].unique()) > 1):
-                        if (rxtype):
-                            rxtxt = ', impl-R'
-                        else:
-                            rxtxt = ', expl-R'
-                    else:
-                        rxtxt = ''
-                    if (len(intdata['ststype'].unique()) > 1):
-                        ststxt = '+' + sts
-                    else:
-                        ststxt = ''
-                    ltext = '%s%s%s' % (integrator,ststxt,rxtxt)
-                    m,c,l = strang_line_style(sts,rxtype)
-                    DoPlot = True
-                    if (integrators is not None):
-                        if ltext not in integrators:
-                            DoPlot = False
-                    ltext = '%s%s' % (integrator,rxtxt)
-                    if DoPlot:
-                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=legend_method_name(ltext))
-
-        else:
-            for table_id in intdata['table_id'].unique():
-                tabledata = intdata.groupby(['table_id',]).get_group((table_id,))
-                for rxtype in tabledata['implicitrx'].unique():
-                    pdata = tabledata[tabledata['implicitrx'] == rxtype]
-                    rtol = pdata['rtol'].to_numpy()
-                    accuracy = pdata['Accuracy'].to_numpy()
-                    if (len(tabledata['implicitrx'].unique()) > 1):
-                        if (rxtype):
-                            rxtxt = ', impl-R'
-                        else:
-                            rxtxt = ', expl-R'
-                    else:
-                        rxtxt = ''
-                    ltext = '%s%s' % (ark_table_name(table_id),rxtxt)
-                    display_ltext = '%s%s' % (legend_method_name(ark_table_name(table_id)),rxtxt)
-                    m,c,l = rk_line_style(table_id,rxtype)
-                    DoPlot = True
-                    if (integrators is not None):
-                        if ltext not in integrators:
-                            DoPlot = False
-                    if DoPlot:
-                        ax1.loglog(rtol, accuracy, marker=m, color=c, linestyle=l, label=display_ltext)
-
-    handles, labels = ax1.get_legend_handles_labels()
-    ax1.set_title(titletxt)
-    ax1.set_xlabel(r'rtol')
-    ax1.set_ylabel(r'accuracy')
-    if (accuracy_ylim != None):
-        ax1.set_ylim(accuracy_ylim)
-    ax1.grid(linestyle='--', linewidth=0.5)
-    fig.legend(handles, labels, loc='upper left', bbox_to_anchor=accuracy_bbox)
-    if (Generate_PNG):
-        plt.savefig(picname + '.png')
-    if (Generate_PDF):
-        plt.savefig(picname + '.pdf')
-
 
 DATA_DIR = Path(__file__).resolve().parent / '..'
 PLOT_DIR = Path(__file__).resolve().parent / '../plots'
@@ -717,13 +588,11 @@ def generate_for_case(bctype, plot_mode):
                 d, bval = 1e-1, 3.0
                 ddata = subset(data, d, bval)
                 if len(ddata) > 0:
-                    make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_accuracy_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
                     make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_RKLvRKC' % (PLOT_DIR, bctype), integrators=integrators)
             else:
                 for d in unique_sorted(data, 'd'):
                     for bval in unique_sorted(data[np.isclose(data['d'].to_numpy(dtype=float), d)], 'B'):
                         ddata = subset(data, d, bval)
-                        make_accuracy_comparison_plot(ddata, r'AdvDiffRx Accuracy ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_accuracy_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
                         make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $B=%.1e$)' % (d, bval), '%s/adr2D_%s_adaptive_runtime_efficiency_d%.2f_B%.1e' % (PLOT_DIR, bctype, d, bval), integrators=integrators)
 
 
