@@ -10,6 +10,11 @@ endif()
 # default build type
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type")
 
+# adjust the RPATH settings
+set(CMAKE_SKIP_RPATH FALSE)
+set(CMAKE_SKIP_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # Show/hide compiler and flags based on the current build type
 macro(show_language_flags lang)
   set(_build_types DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
@@ -61,6 +66,8 @@ find_package(SUNDIALS REQUIRED
   "${SUNDIALS_ROOT}/lib64/cmake/sundials"
   "${SUNDIALS_ROOT}/lib/cmake/sundials"
   "${SUNDIALS_ROOT}")
+
+  set(CMAKE_INSTALL_RPATH "${SUNDIALS_ROOT}/lib64" "${SUNDIALS_ROOT}/lib")
 
 message(STATUS "Found SUNDIALS: ${SUNDIALS_DIR}")
 
