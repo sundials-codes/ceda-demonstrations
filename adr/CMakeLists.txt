@@ -1,3 +1,7 @@
+# Add the automatically determined parts of the RPATH which point to directories
+# outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 ### Set up C++ executable for 1D advection_diffusion_reaction ###
 
 set(sources ${shared_sources}
