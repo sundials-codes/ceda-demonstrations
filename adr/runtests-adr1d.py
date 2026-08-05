@@ -552,6 +552,7 @@ if (DoRxDiff):
         # loop over diffusion coefficients
         FixedStats = []
         AdaptStats = []
+        dvals = [1e-1]
         for d in dvals:
             for eps in epsvals:
 
