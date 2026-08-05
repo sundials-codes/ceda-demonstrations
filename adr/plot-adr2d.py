@@ -914,6 +914,7 @@ def main():
     args = parse_args()
     os.makedirs(PLOT_DIR, exist_ok=True)
     warnings.simplefilter("ignore", RuntimeWarning)
+    warnings.simplefilter("ignore", UserWarning)
     for bctype in selected_values(args.bctype, ('periodic', 'stationary')):
         for plot_mode in selected_values(args.plot_mode, ('final', 'rkc-vs-rkl')):
             generate_for_case(bctype, plot_mode)
