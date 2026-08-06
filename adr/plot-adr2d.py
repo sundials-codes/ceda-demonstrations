@@ -13,6 +13,8 @@ import os
 import warnings
 from pathlib import Path
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
@@ -579,7 +581,7 @@ def main():
     warnings.simplefilter("ignore", RuntimeWarning)
     warnings.simplefilter("ignore", UserWarning)
     for bctype in selected_values(args.bctype, ('periodic', 'stationary')):
-        generate_for_case(bctype, 'final')
+        generate_for_case(bctype)
     print('Plot generation complete. Plots saved in:', PLOT_DIR)
 
 if __name__ == '__main__':

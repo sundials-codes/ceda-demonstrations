@@ -13,6 +13,8 @@ import os
 import warnings
 from pathlib import Path
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
