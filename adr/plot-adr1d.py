@@ -373,7 +373,6 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     runtime = (AdvRhsMean * stsdata['AdvEvals'].to_numpy() +
                                DiffRhsMean * stsdata['DiffEvals'].to_numpy() +
                                RxRhsMean * stsdata['RxEvals'].to_numpy())
-                #runtime = stsdata['AdvTime'].to_numpy() + stsdata['DiffTime'].to_numpy() + stsdata['RxTime'].to_numpy()
                 if (len(intdata['ststype'].unique()) > 1):
                     ststxt = '+' + sts
                 else:
@@ -401,7 +400,6 @@ def make_runtime_efficiency_comparison_plot(data, titletxt, picname, integrators
                     runtime = (AdvRhsMean * tabledata['AdvEvals'].to_numpy() +
                                 DiffRhsMean * tabledata['DiffEvals'].to_numpy() +
                                 RxRhsMean * tabledata['RxEvals'].to_numpy())
-                #runtime = tabledata['AdvTime'].to_numpy() + tabledata['DiffTime'].to_numpy() + tabledata['RxTime'].to_numpy()
                 ltext = ark_table_name(table_id)
                 m,c = rk_line_style(table_id)
                 DoPlot = True
