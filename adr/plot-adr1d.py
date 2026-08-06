@@ -496,6 +496,8 @@ def maybe_name(base, plot_mode):
 
 
 def generate_for_case(bctype, plot_mode):
+    if (plot_mode == 'rkc-vs-rkl' and bctype == 'periodic'):
+        return
     if (Plot_ADR):
         integrators = integrators_for(plot_mode, ADR_FINAL_INTEGRATORS, ADR_RKC_INTEGRATORS)
         if (Plot_Fixed):
@@ -529,7 +531,7 @@ def generate_for_case(bctype, plot_mode):
 
     if (Plot_AD):
         integrators = integrators_for(plot_mode, AD_FINAL_INTEGRATORS, AD_RKC_INTEGRATORS)
-        if (Plot_Fixed):
+        if (Plot_Fixed and (bctype != 'periodic')):
             data = load_data('data/AdvDiff-fixed', bctype)
             if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
@@ -556,7 +558,7 @@ def generate_for_case(bctype, plot_mode):
 
     if (Plot_RD):
         integrators = integrators_for(plot_mode, RD_FINAL_INTEGRATORS, RD_RKC_INTEGRATORS)
-        if (Plot_Fixed):
+        if (Plot_Fixed and (bctype != 'periodic')):
             data = load_data('data/RxDiff-fixed', bctype)
             if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
