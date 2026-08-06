@@ -500,7 +500,7 @@ def generate_for_case(bctype, plot_mode):
         integrators = integrators_for(plot_mode, ADR_FINAL_INTEGRATORS, ADR_RKC_INTEGRATORS)
         if (Plot_Fixed):
             data = load_data('data/AdvDiffRx-fixed', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 eps = 1e-2
                 ddata = subset(data, d, eps)
@@ -515,7 +515,7 @@ def generate_for_case(bctype, plot_mode):
                         make_runtime_efficiency_comparison_plot(ddata, r'AdvDiffRx Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/adr1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
         if (Plot_Adaptive):
             data = load_data('data/AdvDiffRx-adapt', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 eps = 1e-2
                 ddata = subset(data, d, eps)
@@ -531,7 +531,7 @@ def generate_for_case(bctype, plot_mode):
         integrators = integrators_for(plot_mode, AD_FINAL_INTEGRATORS, AD_RKC_INTEGRATORS)
         if (Plot_Fixed):
             data = load_data('data/AdvDiff-fixed', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 ddata = subset(data, d)
                 if len(ddata) > 0:
@@ -544,7 +544,7 @@ def generate_for_case(bctype, plot_mode):
                     make_runtime_efficiency_comparison_plot(ddata, r'AdvDiff Runtime Efficiency ($d=%.2f$, Fixed)' % d, '%s/ad1D_%s_fixed_runtime_efficiency_d%.2f' % (PLOT_DIR, bctype, d), integrators=integrators)
         if (Plot_Adaptive):
             data = load_data('data/AdvDiff-adapt', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 ddata = subset(data, d)
                 if len(ddata) > 0:
@@ -558,7 +558,7 @@ def generate_for_case(bctype, plot_mode):
         integrators = integrators_for(plot_mode, RD_FINAL_INTEGRATORS, RD_RKC_INTEGRATORS)
         if (Plot_Fixed):
             data = load_data('data/RxDiff-fixed', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 eps = 1e-2
                 ddata = subset(data, d, eps)
@@ -573,7 +573,7 @@ def generate_for_case(bctype, plot_mode):
                         make_runtime_efficiency_comparison_plot(ddata, r'RxDiff Runtime Efficiency ($d=%.2f$, $\varepsilon=%.1e$)' % (d, eps), '%s/rd1D_%s_fixed_runtime_efficiency_d%.2f_eps%.1e' % (PLOT_DIR, bctype, d, eps), integrators=integrators)
         if (Plot_Adaptive):
             data = load_data('data/RxDiff-adapt', bctype)
-            if (plot_mode == 'rkc-vs-rkl') and (bctype == 'stationary'):
+            if plot_mode == 'rkc-vs-rkl':
                 d = 1e-1
                 eps = 1e-2
                 ddata = subset(data, d, eps)
