@@ -801,15 +801,15 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
 
   // Create MRIStep EstSTS solver memory
-  *arkode_mem = MRIStepCreateExtSTS(f_diffusion, fe_RHS, fi_RHS, ZERO, y, ctx);
-  if (check_ptr(*arkode_mem, "MRIStepCreateExtSTS")) { return 1; }
+  *arkode_mem = MRIStepExtSTSCreate(f_diffusion, fe_RHS, fi_RHS, ZERO, y, ctx);
+  if (check_ptr(*arkode_mem, "MRIStepExtSTSCreate")) { return 1; }
 
   // Access inner LSRKStep solver
-  *lsrkstep_mem = MRIStepGetSTSStepper(*arkode_mem);
-  if (check_ptr(*lsrkstep_mem, "MRIStepGetSTSStepper")) { return 1; }
+  int flag = MRIStepExtSTSGetSTS(*arkode_mem, lsrkstep_mem);
+  if (check_flag(flag, "MRIStepExtSTSGetSTS")) { return 1; }
 
   // Attach user data (this attaches to both MRIStep and LSRKStep)
-  int flag = ARKodeSetUserData(*arkode_mem, &udata);
+  flag = ARKodeSetUserData(*arkode_mem, &udata);
   if (check_flag(flag, "ARKodeSetUserData")) { return 1; }
 
   // Select STS method
