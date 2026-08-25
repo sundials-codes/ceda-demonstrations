@@ -885,7 +885,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
     {
       if (uopts.extsts_method == 0) // ARS(2,2,2) ERK
       {
-        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ARS222_ERK_3_1_2);
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ASCHER_ERK_3_1_2);
         C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
         ARKodeButcherTable_Free(B);
       }
