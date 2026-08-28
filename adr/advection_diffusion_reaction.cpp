@@ -802,8 +802,8 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   if (check_flag(flag, "LSRKStepSetSTSMethod")) { return 1; }
 
   // Set dominant eigenvalue function and frequency
-  flag = MRIStepExtSTSSetDomEigFn(*arkode_mem, diffusion_domeig);
-  if (check_flag(flag, "MRIStepExtSTSSetDomEigFn")) { return 1; }
+  flag = LSRKStepSetDomEigFn(*lsrkstep_mem, diffusion_domeig);
+  if (check_flag(flag, "LSRKStepSetDomEigFn")) { return 1; }
   flag = LSRKStepSetDomEigFrequency(*lsrkstep_mem, uopts.ls_setup_freq);
   if (check_flag(flag, "LSRKStepSetDomEigFrequency")) { return 1; }
 
