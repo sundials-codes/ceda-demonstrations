@@ -801,12 +801,12 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   }
 
   // Create MRIStep EstSTS solver memory
-  *arkode_mem = MRIStepExtSTSCreate(f_diffusion, fe_RHS, fi_RHS, ZERO, y, ctx);
-  if (check_ptr(*arkode_mem, "MRIStepExtSTSCreate")) { return 1; }
+  *arkode_mem = MRIStepCreateExtSTS(f_diffusion, fe_RHS, fi_RHS, ZERO, y, ctx);
+  if (check_ptr(*arkode_mem, "MRIStepCreateExtSTS")) { return 1; }
 
   // Access inner LSRKStep solver
-  int flag = MRIStepExtSTSGetSTS(*arkode_mem, lsrkstep_mem);
-  if (check_flag(flag, "MRIStepExtSTSGetSTS")) { return 1; }
+  int flag = MRIStepGetSTS(*arkode_mem, lsrkstep_mem);
+  if (check_flag(flag, "MRIStepGetSTS")) { return 1; }
 
   // Attach user data (this attaches to both MRIStep and LSRKStep)
   flag = ARKodeSetUserData(*arkode_mem, &udata);
@@ -901,7 +901,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   {
     if (udata.impl_reaction)
     {
-      C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GIRALDO2);
+      C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARK2);
     }
     else
     {
