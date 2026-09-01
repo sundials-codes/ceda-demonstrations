@@ -901,11 +901,11 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
   {
     if (udata.impl_reaction)
     {
-      C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARK2);
+      C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GKC21);
     }
     else
     {
-      ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ARK2_ERK_3_1_2);
+      ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_GKC21_ERK_3_1_2);
       C                    = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
       ARKodeButcherTable_Free(B);
     }

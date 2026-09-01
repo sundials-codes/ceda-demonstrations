@@ -878,7 +878,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       }
       else // Giraldo ARK2
       {
-        C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARK2);
+        C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GKC21);
       }
     }
     else if (!udata.reaction) // advection + diffusion -or- just diffusion (both are fully explicit)
@@ -891,7 +891,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       }
       else if (uopts.extsts_method == 1) // Giraldo ERK2
       {
-        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_ARK2_ERK_3_1_2);
+        ARKodeButcherTable B = ARKodeButcherTable_LoadERK(ARKODE_GKC21_ERK_3_1_2);
         C = MRIStepCoupling_MIStoMRI(B, B->q, B->p);
         ARKodeButcherTable_Free(B);
       }
@@ -986,7 +986,7 @@ int SetupExtSTS(SUNContext ctx, UserData& udata, UserOptions& uopts, N_Vector y,
       }
       else if (uopts.extsts_method == 1) // Giraldo DIRK2
       {
-        C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_ARK2);
+        C = MRIStepCoupling_LoadTable(ARKODE_IMEX_MRI_GARK_GKC21);
       }
       else
       {
