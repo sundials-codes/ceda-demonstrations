@@ -2,7 +2,7 @@
 	path = deps/sundials
 	url = git@github.com:LLNL/sundials.git
 [submodule "deps/gkylzero"]
-	path = deps/gkylzero
+	path = deps/gkeyll
 	url = git@github.com:ammarhakim/gkylzero.git
 [submodule "deps/postgkyl"]
 	path = deps/postgkyl
