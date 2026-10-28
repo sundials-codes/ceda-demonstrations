@@ -15,11 +15,21 @@ final output frame (t = t_end) of the electron and ion distribution functions an
 (relative L2 norm), and on the final field energy; observed orders come from consecutive levels.
 The table is written to convergence.md and the error plot to convergence.png.
 
+Gkeyll's run loop (gyrokinetic_run.c) lets the last step overshoot t_end, which would put the
+final frame at t_end + O(dt) and spoil the error measurement. The scratch copy of the input
+therefore replaces gkyl_gyrokinetic_run_simulation() with the explicit loop below, which clips
+the last step to land on t_end. The SUNDIALS steppers honor a shortened step only with the
+fork's stop-time support (gkyl_sundials_get_fixed_step / ARKodeSetStopTime in gkyl_sundials_evolve);
+without it they overshoot t_end as before. The script checks the final time of every run and, if
+any overshoots, still reports the results but marks them with a warning that the errors and
+orders are inaccurate.
+
 Daniel R. Reynolds
 Math & Stat @ UMBC
 """
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -30,6 +40,7 @@ from fractions import Fraction
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 import numpy as np
 
 from compare_runs import load_values
@@ -47,6 +58,52 @@ METHODS = {
 }
 FRAMES = ["elc_1", "ion_1", "field_1"]
 
+# Explicit time loop that lands exactly on t_end; replaces the gkyl_gyrokinetic_run_simulation()
+# call of the input file. It prints the same "Taking time-step N ..." and "Total simulation time"
+# lines that parse_log() reads.
+TIME_LOOP = r"""
+  // Convergence study: explicit time loop whose last step lands exactly on t_end.
+  struct timespec tm_init = gkyl_wall_clock();
+  gkyl_gyrokinetic_app *app = gkyl_gyrokinetic_app_new(&app_inp);
+  double t_curr = 0.0, t_end = ctx.t_end;
+  gkyl_gyrokinetic_app_apply_ic(app, t_curr);
+
+  struct gkyl_tm_trigger trig_calc_intdiag =
+    { .dt = t_end/GKYL_MAX2(ctx.num_frames, ctx.int_diag_calc_num), .tcurr = t_curr, .curr = 0 };
+  gkyl_gyrokinetic_app_calc_field_energy(app, t_curr);
+  gkyl_gyrokinetic_app_calc_integrated_mom(app, t_curr);
+  gkyl_gyrokinetic_app_write(app, t_curr, 0);
+
+  double dt = t_end - t_curr;
+  long step = 1;
+  while (t_end - t_curr > 1e-10*t_end) {
+    dt = fmin(dt, t_end - t_curr); // Don't step beyond t_end.
+    struct gkyl_update_status status = gkyl_gyrokinetic_update(app, dt);
+    if (!status.success) {
+      fprintf(stderr, "** Update method failed! Aborting simulation ....\n");
+      break;
+    }
+    t_curr += status.dt_actual;
+    dt = status.dt_suggested;
+    printf("Taking time-step %ld at t = %.8e ...\tdt = %.6e\n", step, t_curr, status.dt_actual);
+    if (gkyl_tm_trigger_check_and_bump(&trig_calc_intdiag, t_curr) || !(t_end - t_curr > 1e-10*t_end)) {
+      gkyl_gyrokinetic_app_calc_field_energy(app, t_curr);
+      gkyl_gyrokinetic_app_calc_integrated_mom(app, t_curr);
+      gkyl_gyrokinetic_app_save_dt(app, t_curr, status.dt_actual);
+    }
+    step += 1;
+  }
+  printf("Final time t = %.16e (t_end = %.16e)\n", t_curr, t_end);
+
+  gkyl_gyrokinetic_app_write(app, t_curr, 1);
+  gkyl_gyrokinetic_app_write_field_energy(app);
+  gkyl_gyrokinetic_app_write_integrated_mom(app);
+  gkyl_gyrokinetic_app_write_dt(app);
+  gkyl_gyrokinetic_app_stat_write(app);
+  printf("\nTotal simulation time: %g sec\n", gkyl_time_diff_now_sec(tm_init));
+  gkyl_gyrokinetic_app_release(app);
+"""
+
 
 def run_one(method, level, t_end, workroot):
     """Build and run one (method, level) in scratch; return the run directory or None."""
@@ -58,6 +115,7 @@ def run_one(method, level, t_end, workroot):
         (r"^  double cfl_frac = 1\.0;", f"  double cfl_frac = {CFL_FRAC * level!r};"),
         (r"^//    \.cfl_frac_omegaH = 1e10,", f"    .cfl_frac_omegaH = {CFL_FRAC_OMEGAH * level!r},"),
         (r"^  double t_end = 6\.0e-6;", f"  double t_end = {t_end!r};"),
+        (r"^  gkyl_gyrokinetic_run_simulation\(&run_inp\);\n", lambda m: TIME_LOOP.lstrip("\n")),
     ]
     edit_input(os.path.join(HERE, INPUT + ".c"), edits, os.path.join(rundir, INPUT + ".c"))
     build = compile_input(HERE, rundir, INPUT)
@@ -75,6 +133,15 @@ def run_one(method, level, t_end, workroot):
     return rundir
 
 
+def final_time(rundir):
+    """Final time reached by a run and its t_end, from the loop's "Final time" line."""
+    for line in open(os.path.join(rundir, "run.log")):
+        m = re.match(r"Final time t = (\S+) \(t_end = (\S+)\)", line)
+        if m:
+            return float(m.group(1)), float(m.group(2))
+    raise RuntimeError(f"{rundir}: no 'Final time' line in run.log")
+
+
 def errors(rundir, refdir):
     """Relative L2 errors of the final frames and of the final field energy vs. the reference."""
     out = {}
@@ -86,6 +153,29 @@ def errors(rundir, refdir):
     _, e_ref = load_series(os.path.join(refdir, f"{INPUT}-field_energy.gkyl"))
     out["field_energy"] = float(abs(e[-1, 0] - e_ref[-1, 0]) / abs(e_ref[-1, 0]))
     return out
+
+
+def plot_results(results, methods, levels, cols, outfile):
+    """Log-log plot of the errors against the mean step, one panel per error column."""
+    fig, axes = plt.subplots(1, len(cols), figsize=(4 * len(cols), 3.8), sharey=True)
+    dts = [r["dt"] for r in results.values()]
+    for ax, c in zip(axes, cols):
+        for m in methods:
+            pts = [(results[(m, l)]["dt"], results[(m, l)]["err"][c]) for l in levels if (m, l) in results]
+            if pts:
+                ax.loglog(*zip(*pts), "o-", label=m)
+        if dts:
+            d = np.array([min(dts), max(dts)])
+            for p in (1, 2, 3):
+                ax.loglog(d, 1e-3 * (d / d[1]) ** p, "k:", lw=0.8)
+                ax.annotate(f"$h^{p}$", (d[0], 1e-3 * (d[0] / d[1]) ** p), fontsize=8)
+        ax.set_title(c, fontsize=10)
+        ax.set_xlabel("mean dt")
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    axes[0].set_ylabel("relative L2 error vs reference")
+    axes[0].legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(outfile, dpi=120)
 
 
 def main():
@@ -110,6 +200,13 @@ def main():
         refdir = dirs[("native", args.ref_level)]
         if refdir is None:
             sys.exit("reference run failed")
+        # Runs whose last step overshot t_end (SUNDIALS steppers without the fork's stop-time support).
+        overshoot = {}
+        for job, d in dirs.items():
+            if d is not None:
+                t_final, t_end = final_time(d)
+                if abs(t_final - t_end) > 1e-8 * t_end:
+                    overshoot[job] = t_final - t_end
         results = {}
         for m in args.methods:
             for l in levels:
@@ -124,7 +221,6 @@ def main():
 
     cols = FRAMES + ["field_energy"]
     lines = []
-    fig, axes = plt.subplots(1, len(cols), figsize=(4 * len(cols), 3.8), sharey=True)
     for m in args.methods:
         lines += [f"\n**{m}** (expected order {METHODS[m][1]})\n",
                   "| level | steps | mean dt | wall (s) | " + " | ".join(f"{c} err | order" for c in cols) + " |",
@@ -144,30 +240,28 @@ def main():
                 cells.append(f"{e:.2e} | {order}")
             lines.append(f"| {l} | {r['steps']} | {r['dt']:.3e} | {r['wall']:.1f} | " + " | ".join(cells) + " |")
             prev = r
-        for ax, c in zip(axes, cols):
-            pts = [(results[(m, l)]["dt"], results[(m, l)]["err"][c]) for l in levels if (m, l) in results]
-            if pts:
-                ax.loglog(*zip(*pts), "o-", label=m)
-    for ax, c in zip(axes, cols):
-        dts = [r["dt"] for r in results.values()]
-        if dts:
-            d = np.array([min(dts), max(dts)])
-            for p in (1, 2, 3):
-                ax.loglog(d, 1e-3 * (d / d[1]) ** p, "k:", lw=0.8)
-                ax.annotate(f"$h^{p}$", (d[0], 1e-3 * (d[0] / d[1]) ** p), fontsize=8)
-        ax.set_title(c, fontsize=10); ax.set_xlabel("mean dt")
-    axes[0].set_ylabel("relative L2 error vs reference"); axes[0].legend(fontsize=8)
-    fig.tight_layout(); fig.savefig(os.path.join(HERE, "convergence.png"), dpi=120)
+    plot_results(results, args.methods, levels, cols, os.path.join(HERE, "convergence.png"))
 
     fork_commit = subprocess.run(["git", "-C", os.path.join(HERE, "..", "..", "deps", "gkeyll-extsts"),
                                   "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    warning = ""
+    if overshoot:
+        worst = max(overshoot.items(), key=lambda kv: abs(kv[1]))
+        warning = ("**WARNING: the final time was not enforced.** The last step overshot t_end in "
+                   f"{len(overshoot)} of {len(dirs)} runs (worst: {worst[0][0]} level {worst[0][1]}, by "
+                   f"{worst[1]:.3e}); the installed fork lacks the stop-time support that makes the SUNDIALS "
+                   "steppers honor a shortened step. The final frames are at t_end + O(dt), so the reported "
+                   "errors and convergence orders are inaccurate.")
     table = "\n".join(lines)
     print(table)
+    if warning:
+        print("\n" + warning)
     with open(os.path.join(HERE, "convergence.md"), "w") as f:
         f.write(f"# Temporal convergence, `rt_gk_sheath_2x2v_p1`\n\n"
                 f"Made by `convergence.py` on {subprocess.run(['date', '-I'], capture_output=True, text=True).stdout.strip()} "
                 f"on {os.uname().nodename}, fork commit `{fork_commit}`; t_end = {args.t_end:g}, jobs = {args.jobs} "
                 f"(runs were concurrent, so wall times are indicative only).\n\n"
+                + (warning + "\n\n" if warning else "") +
                 f"Level = factor applied to both `cfl_frac` ({CFL_FRAC:g}) and `cfl_frac_omegaH` ({CFL_FRAC_OMEGAH:g}); "
                 f"the step is the CFL-set step of the explicit terms at that level. "
                 f"Reference: native SSP-RK3 at level {args.ref_level} ({ref_steps} steps, {ref_wall:.1f} s). "
