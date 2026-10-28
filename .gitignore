@@ -63,3 +63,9 @@ bin/
 
 # macOS system files
 .DS_Store
+# Python bytecode caches
+__pycache__/
+
+# Gkeyll run statistics and the staging-folder executable
+*-stat.json
+results/gk_sheath/rt_gk_sheath_2x2v_p1
